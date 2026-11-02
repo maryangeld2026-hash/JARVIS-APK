@@ -28,6 +28,7 @@ GRADE = {"legible": True, "nota": 3.8, "resumen": "Planteó bien la ecuación $2
 STEPS = {"titulo": "Resolver $2x+3=11$", "pasos": [{"titulo": "Restar 3", "explicacion": "$2x=8$"}, {"titulo": "Dividir entre 2", "explicacion": "$x=4$"},
                                                    {"titulo": "Comprobación", "explicacion": "$2(4)+3=11$"}]}
 TICKET = {"titulo": "Ticket: fracciones", "preguntas": ["¿Qué es una fracción equivalente?", "Simplifica $\\frac{4}{8}$", "Explica con tus palabras cómo comparar fracciones."]}
+CARDS = {"titulo": "Potencias", "tarjetas": [{"frente": "$2^3$", "reverso": "8"}, {"frente": "$5^0$", "reverso": "1"}]}
 ANSWER = ("Claro, profe. Para explicar los números negativos, empieza con algo cotidiano, como la temperatura o un ascensor que baja al sótano. "
           "Luego usa la recta numérica: $-3 < 0 < 3$. Así ven que el signo indica la dirección.")
 
@@ -78,7 +79,7 @@ def gemini(route):
     BODIES.append(body)
     asked = json.dumps(body, ensure_ascii=False)
     if ":generateContent" in url:
-        out = (GRADE if "inline_data" in asked else STEPS if "paso a paso" in asked.lower() else TICKET if "ticket de salida" in asked.lower()
+        out = (GRADE if "inline_data" in asked else CARDS if "tarjetas de estudio" in asked.lower() else STEPS if "paso a paso" in asked.lower() else TICKET if "ticket de salida" in asked.lower()
                else QUIZ if "quiz" in asked.lower() else {"ok": True})
         if "MODO TUTOR" in asked:
             out = "¿Qué crees que pasa si multiplicas arriba y abajo por 2?"
@@ -86,6 +87,10 @@ def gemini(route):
             out = "listo"
         text = out if isinstance(out, str) else json.dumps(out, ensure_ascii=False)
         return route.fulfill(json={"candidates": [{"content": {"parts": [{"text": text}]}}]})
+    if body.get("tools"):
+        ev = "data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": "Según el ICFES, los resultados de 2026 mejoraron en matemáticas."}]},
+                                                    "groundingMetadata": {"groundingChunks": [{"web": {"uri": "https://www.icfes.gov.co/resultados", "title": "icfes.gov.co"}}]}}]}) + "\r\n\r\n"
+        return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=ev)
     tutor = "MODO TUTOR" in asked
     return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=sse("¿Qué crees que pasa si multiplicas arriba y abajo por 2?" if tutor else ANSWER))
 
@@ -307,6 +312,44 @@ def main():
         # respaldo sin claves
         back = pg.evaluate("JSON.stringify(window.JD.backup())")
         check("AIzaPRUEBA" not in back and '"7A"' in back, "la copia de seguridad no lleva la clave")
+
+        # ================= 3.0: habilidades del computador
+        pg.click(".tabs button[data-tab=hablar]")
+        def say_(txt, wait):
+            pg.fill("#in-texto", txt); pg.press("#in-texto", "Enter")
+            pg.wait_for_function(f"LASTJ().includes({json.dumps(wait)})", timeout=15000)
+        say_("planéame la clase de fracciones equivalentes", "Plan de clase")
+        pg.wait_for_function("window.__jarvis.D.docs && window.__jarvis.D.docs.length >= 1", timeout=15000)
+        check(pg.locator(".msg.jarvis >> nth=-1").locator(".doc-acts .chip").count() >= 3, "documento con IA (plan de clase) con Word/PDF/compartir")
+        say_("grafica y = x^2 - 4", "Gráfica")
+        check(pg.locator("canvas.plot").count() == 1, "gráfica de una función")
+        pg.screenshot(path=f"{OUT}/13-grafica.png")
+        say_("anota en el observador de Pablo Mora que hoy participó mucho", "Anotado en el observador")
+        say_("hoy en 8B vimos potencias", "diario de 8B")
+        say_("quedé en mandarle la guía a la coordinadora", "compromiso")
+        say_("ya le mandé la guía a la coordinadora", "cumplido")
+        say_("¿cuánto necesita Vega Tomás para pasar?", "necesita")
+        say_("ficha de Pablo Mora", "Promedio")
+        check("participó mucho" in LASTJ_PY(pg), "ficha del estudiante con observador")
+        say_("¿quién viene bajando?", "")
+        pg.evaluate("window.__jarvis.D.ajustes.horario = 'lunes 0:00-23:59 8B Potencias'")
+        say_("¿qué clase tengo ahora?", "Ahora tienes 8B")
+        say_("tarjetas de estudio sobre potencias", "tarjetas")
+        check(pg.locator(".flash").count() == 1, "tarjetas de estudio (para voltear y exportar a Anki)")
+        pg.click("#mazo-ver .sheet-h button")
+        say_("investiga los resultados de las pruebas Saber 2026", "Fuentes")
+        check("icfes.gov.co" in LASTJ_PY(pg), "investiga en internet con fuentes")
+        pg.set_input_files("#chat-foto-in", os.path.join(OUT, "_trabajo.jpg"))
+        pg.wait_for_function("document.querySelectorAll('.msg-img').length === 1 && !document.querySelector('.msg.typing')", timeout=15000)
+        check(True, "pregunta por una foto desde la conversación")
+        pg.click(".tabs button[data-tab=quices]")
+        check(pg.locator("#docs-box .lista li").count() >= 1, "Material: documentos guardados")
+        pg.click("#quices li >> nth=0")
+        with pg.expect_download() as dl:
+            pg.click(".quiz-acts >> text=Kahoot")
+        data = open(dl.value.path(), "rb").read()
+        check(data[:2] == b"PK", "quiz para Kahoot (hoja de cálculo)")
+        pg.screenshot(path=f"{OUT}/14-material.png", full_page=True)
         pg.click(".tabs button[data-tab=hablar]")
         pg.fill("#in-texto", "escúchame siempre en segundo plano"); pg.press("#in-texto", "Enter")
         pg.wait_for_timeout(300)

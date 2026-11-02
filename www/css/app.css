@@ -296,3 +296,23 @@ table.grid td.prom { font-weight: 800; }
 .hi.warn { color: #ffd48a; border-color: rgba(255, 181, 71, .45); }
 .hoy-chips { display: flex; gap: 6px; overflow-x: auto; margin-top: 7px; padding-bottom: 2px; scrollbar-width: none; }
 .hoy-chips .chip { flex-shrink: 0; height: 32px; font-size: 13px; }
+
+/* ================================================================= 3.0 */
+.doc-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.doc-acts .chip { height: 34px; font-size: 13px; }
+.doc-md { max-width: 100%; }
+.msg-img { display: block; max-width: 220px; max-height: 200px; border-radius: 10px; margin-bottom: 6px; }
+canvas.plot { display: block; width: 100%; max-width: 520px; height: auto; border-radius: 10px; border: 1px solid var(--line); margin: 8px 0; }
+.plot-full { position: fixed; inset: 0; z-index: 45; background: #050b14; }
+.plot-full canvas { width: 100%; height: 100%; display: block; }
+.plot-full .icon-btn { position: absolute; top: calc(10px + var(--safe-t)); right: 10px; }
+.flash { min-height: 220px; display: grid; place-items: center; text-align: center; padding: 24px; border-radius: 18px; background: #f8fbff; color: #0b1a2a; font-size: 22px; cursor: pointer; position: relative; box-shadow: 0 10px 30px rgba(0, 0, 0, .4); }
+.flash.back { background: #0b2236; color: #e8f4ff; border: 2px solid var(--a); }
+.flash small { position: absolute; top: 10px; left: 14px; font-size: 12px; opacity: .6; }
+#f-escribir #btn-foto-chat { flex-shrink: 0; border-radius: 50%; }
+/* el panel «Hoy» ocupa poco: una fila que se desliza; las sugerencias solo con la conversación vacía */
+.hoy-items { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.hi { flex-shrink: 0; white-space: nowrap; }
+#v-hablar:has(.msg) .hoy-chips { display: none; }
+.hoy { padding-top: 6px; padding-bottom: 6px; }
+.hoy-top b { font-size: 19px; }

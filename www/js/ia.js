@@ -38,7 +38,7 @@
       await fetch(url, { headers: c.prov === "gemini" ? {} : L.modelsRequest(c.prov, c.key).headers, cache: "no-store" });
     } catch (e) { /* solo era para calentar */ }
   }
-  let last = { ms: 0 };
+  let last = { ms: 0 }, fuentes = [];
   async function chat(opts) {
     const c = cfg();
     const m = await model();
@@ -51,12 +51,14 @@
       throw e;
     }
   }
-  async function chat1({ system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true, fast = true }) {
+  async function chat1({ system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true, fast = true, buscar = false }) {
     const c = cfg();
     if (!c.key) { const e = new Error("Falta la clave de la IA. Ponla en Ajustes (el engranaje de arriba)."); e.code = "sin_clave"; throw e; }
     if (!navigator.onLine) throw new Error("No hay internet. Las herramientas de la clase siguen funcionando; la IA necesita conexión.");
     const m = await model();
     const req = L.chatRequest(c.prov, { key: c.key, model: m, system, messages, stream, json, maxTokens, temperature, fast });
+    if (buscar && c.prov === "gemini") req.body.tools = [{ google_search: {} }];     // 3.0: «investiga…» con la Búsqueda de Google
+    fuentes = [];
     const t0 = performance.now();
     warmAt = Date.now();
     stop();
@@ -92,6 +94,8 @@
           buf = p.resto;
           p.datos.forEach((ev) => {
             if (ev.error) throw new Error(L.apiError(c.prov, 500, ev));
+            const gm = c.prov === "gemini" && ev.candidates && ev.candidates[0] && ev.candidates[0].groundingMetadata;
+            if (gm && gm.groundingChunks) gm.groundingChunks.forEach((g) => { if (g.web && g.web.uri && !fuentes.some((f) => f.uri === g.web.uri)) fuentes.push({ uri: g.web.uri, titulo: g.web.title || g.web.uri }); });
             const d = L.deltaText(c.prov, ev);
             if (d) { if (!full) last = { ms: Math.round(performance.now() - t0), modelo: m }; full += d; if (onDelta) onDelta(d, full); }
           });
@@ -119,5 +123,5 @@
     const t = await chat({ system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: 20 });
     return { ok: true, texto: t.trim(), ms: Math.round(performance.now() - t0), modelo: await model() };
   }
-  window.JIA = { chat, json, test, stop, model, warm, last: () => last };
+  window.JIA = { chat, json, test, stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov };
 })();

@@ -72,6 +72,7 @@
       if (st.riesgo.length) { const r = mk("span", "hi warn", `⚠ ${st.riesgo.length} en riesgo en ${c.nombre}`); r.dataset.cmd = `¿quiénes están en riesgo en ${c.nombre}?`; items.append(r); }
     }
     if (D.tutor && D.tutor.on) items.append(mk("span", "hi", "🎓 Tutor" + (D.tutor.tema ? " · " + D.tutor.tema : "")));
+    if (window.JX.hoyExtra) window.JX.hoyExtra().forEach((x) => { const e = mk("span", "hi" + (x.cls ? " " + x.cls : ""), x.txt); if (x.cmd) e.dataset.cmd = x.cmd; items.append(e); });
     if (items.childElementCount) box.append(items);
     // sugerencias según el momento del día (como los botones del HUD)
     const sug = h < 7 ? ["¿Qué tengo hoy?", "Recuérdame llevar las guías a las 7"] : h < 13 ? [c ? `Escoge un estudiante de ${c.nombre}` : "Escoge un estudiante", "Pon 5 minutos", "Haz 4 grupos", "Modo proyector"]

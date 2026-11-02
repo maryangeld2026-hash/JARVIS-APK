@@ -1,3 +1,41 @@
+# Jarvis para Android 3.0: las habilidades del Jarvis del computador
+
+Revisé una por una las 102 habilidades del Jarvis de Windows. Con esta versión, la app hace la gran mayoría.
+
+## 📄 Material con IA (se guarda en la pestaña **Material**, para Word, PDF, compartir o escuchar)
+- «Planéame la clase de fracciones», «hazme una guía de funciones», «rúbrica para la exposición», «hazme el solucionario del taller de…».
+- «Redacta un correo a los padres de 7A sobre…», «escribe una circular para…», «agenda de la reunión de área», «haz el acta de la reunión: …».
+- «Planea mi periodo de geometría», «actividades de refuerzo de…», «adapta la clase de fracciones para un estudiante con TDAH», «explícale a los padres…».
+- «Retroalimenta este texto de Ana: …», «nivela este texto para grado 5: …».
+- «Podcast de repaso de porcentajes»: guion que Jarvis te lee en voz alta.
+- «Informe para la familia de Pablo Mora» y «plan de recuperación de 8B». A la IA solo van las notas, sin el nombre: el nombre lo pone el celular.
+
+## 👩‍🏫 Seguimiento y clase
+- **Observador:** «anota en el observador de Pablo que…», «¿qué hay en el observador de Pablo?».
+- **Diario de clase:** «hoy en 7A vimos fracciones», «¿qué vimos en 7A?».
+- **Compromisos:** «quedé en mandar la guía…», «¿qué compromisos tengo?», «ya le mandé la guía».
+- **Horario** (en Ajustes): «¿qué clase tengo ahora?». La clase actual y la siguiente salen en el panel Hoy.
+- **Periodo:** «el periodo termina el 28 de noviembre», «¿cuánto falta para cerrar el periodo?».
+- «¿Cuánto necesita Tomás para pasar?», «¿quiénes pueden perder el año?», «¿quién viene bajando?», «¿a quién debo felicitar?», «ficha de Pablo».
+- «¿Cómo viene mi día?», «¿qué hiciste hoy?», «resumen semanal», «haz mi retrospectiva».
+- **Mapa de errores:** los errores más comunes de los trabajos calificados con foto, con actividades de refuerzo.
+
+## 🧮 Herramientas
+- **Gráficas:** «grafica y = x^2 - 4», con pantalla completa para proyectar. Usa un evaluador propio: nunca ejecuta código.
+- **Investigar en internet:** «investiga…», con las fuentes. Usa la Búsqueda de Google a través de Gemini.
+- **Pregunta por una foto:** el botón 📷 junto al campo de escribir («¿qué dice el tablero?», «resuelve este ejercicio»).
+- **Tarjetas de estudio:** «tarjetas de estudio sobre potencias». Se voltean y se exportan a Anki.
+- **Simulacro Saber:** «hazme un simulacro Saber de geometría».
+- **Kahoot:** botón en cada quiz, junto a Word, PDF, Forms y Proyectar.
+- **Personalidad** («ponte relajado», «ponte serio») y **asignatura** («estamos en tecnología»).
+
+## Lo que solo hace el computador
+Controlar el computador (abrir programas, teclado y mouse), llenar Zeti en su navegador, el copiloto que mira la pantalla, el quiz en vivo con los celulares de los estudiantes, leer hojas de respuesta con la cámara y el turno de noche. Para eso, desde el celular di «en el computador…».
+
+*Se instala encima de la 2.2, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 2.2.1: conversación continua, «Jarvis» en segundo plano y el HUD
 
 ## 💬 La conversación sigue sola
