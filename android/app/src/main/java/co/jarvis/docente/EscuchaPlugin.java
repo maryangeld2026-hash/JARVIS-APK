@@ -1,0 +1,194 @@
+package co.jarvis.docente;
+
+import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
+
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+/**
+ * Jarvis: «Jarvis» en segundo plano. La app lo usa así:
+ *   modelo() → ¿ya está el modelo de voz en el celular?   descargar() → lo baja una vez (≈ 40 MB, con eventos «progreso»)
+ *   activar() / desactivar()   pausar() / reanudar() (mientras Jarvis conversa usa el micrófono)
+ *   evento «despertar» {resto}: dijiste «Jarvis…» (resto = lo que dijiste después).
+ */
+@CapacitorPlugin(name = "Escucha", permissions = { @Permission(strings = { Manifest.permission.RECORD_AUDIO }, alias = "microfono") })
+public class EscuchaPlugin extends Plugin {
+    static final String EXTRA_DESPERTAR = "jarvis_despertar", EXTRA_RESTO = "jarvis_resto";
+    static final String URL_MODELO = "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip";
+    private static EscuchaPlugin instancia;
+    private static String pendiente = null;
+
+    @Override
+    public void load() {
+        instancia = this;
+        if (pendiente != null) { String r = pendiente; pendiente = null; despertar(r); }
+    }
+
+    static void emitir(String evento, String valor) {
+        if (instancia == null) return;
+        JSObject o = new JSObject();
+        o.put("valor", valor);
+        instancia.notifyListeners(evento, o);
+    }
+
+    static void despertar(String resto) {
+        if (instancia == null) { pendiente = resto == null ? "" : resto; return; }
+        JSObject o = new JSObject();
+        o.put("resto", resto == null ? "" : resto);
+        instancia.notifyListeners("despertar", o, true);
+    }
+
+    /** La actividad llama esto al abrirse por «Jarvis». */
+    static void revisar(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_DESPERTAR, false)) return;
+        intent.removeExtra(EXTRA_DESPERTAR);
+    }
+
+    static File carpeta(Context c) { return new File(c.getFilesDir(), "vosk"); }
+
+    /** La carpeta del modelo (la que tiene «conf» y «am»), o null si no está. */
+    static String rutaModelo(Context c) {
+        File base = carpeta(c);
+        File[] hijos = base.listFiles();
+        if (hijos == null) return null;
+        for (File h : hijos) if (h.isDirectory() && new File(h, "conf").isDirectory() && new File(h, "am").isDirectory()) return h.getAbsolutePath();
+        return null;
+    }
+
+    @PluginMethod
+    public void modelo(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("listo", rutaModelo(getContext()) != null);
+        r.put("activo", EscuchaService.activo);
+        r.put("pausado", EscuchaService.pausado);
+        r.put("superponer", Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(getContext()));
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        r.put("bateria", Build.VERSION.SDK_INT < Build.VERSION_CODES.M || (pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName())));
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void descargar(final PluginCall call) {
+        if (rutaModelo(getContext()) != null) { call.resolve(); return; }
+        call.setKeepAlive(true);
+        new Thread(() -> {
+            File base = carpeta(getContext());
+            File tmp = new File(getContext().getCacheDir(), "vosk.zip");
+            try {
+                HttpURLConnection con = (HttpURLConnection) new URL(URL_MODELO).openConnection();
+                con.setConnectTimeout(20000); con.setReadTimeout(30000);
+                con.setInstanceFollowRedirects(true);
+                long total = con.getContentLengthLong();
+                try (InputStream in = new BufferedInputStream(con.getInputStream()); FileOutputStream out = new FileOutputStream(tmp)) {
+                    byte[] b = new byte[65536];
+                    long hecho = 0; int n, ultimo = -1;
+                    while ((n = in.read(b)) > 0) {
+                        out.write(b, 0, n); hecho += n;
+                        int p = total > 0 ? (int) (hecho * 90 / total) : -1;
+                        if (p != ultimo) { ultimo = p; JSObject o = new JSObject(); o.put("p", p); notifyListeners("progreso", o); }
+                    }
+                }
+                base.mkdirs();
+                try (ZipInputStream z = new ZipInputStream(new BufferedInputStream(new java.io.FileInputStream(tmp)))) {
+                    ZipEntry e;
+                    byte[] b = new byte[65536];
+                    String raiz = base.getCanonicalPath() + File.separator;
+                    while ((e = z.getNextEntry()) != null) {
+                        File f = new File(base, e.getName());
+                        if (!f.getCanonicalPath().startsWith(raiz)) continue;                 // nada fuera de la carpeta
+                        if (e.isDirectory()) { f.mkdirs(); continue; }
+                        File p = f.getParentFile(); if (p != null) p.mkdirs();
+                        try (FileOutputStream out = new FileOutputStream(f)) { int n; while ((n = z.read(b)) > 0) out.write(b, 0, n); }
+                    }
+                }
+                tmp.delete();
+                JSObject o = new JSObject(); o.put("p", 100); notifyListeners("progreso", o);
+                if (rutaModelo(getContext()) == null) throw new IllegalStateException("El modelo descargado no quedó completo.");
+                call.resolve();
+            } catch (Exception ex) {
+                tmp.delete();
+                call.reject("No pude descargar el modelo de voz: " + ex.getMessage());
+            } finally {
+                call.setKeepAlive(false);
+            }
+        }, "jarvis-modelo").start();
+    }
+
+    @PluginMethod
+    public void activar(PluginCall call) {
+        if (getPermissionState("microfono") != PermissionState.GRANTED) { requestPermissionForAlias("microfono", call, "trasPermiso"); return; }
+        iniciar(call);
+    }
+
+    @PermissionCallback
+    private void trasPermiso(PluginCall call) {
+        if (getPermissionState("microfono") != PermissionState.GRANTED) { call.reject("Jarvis necesita el micrófono para oír «Jarvis»."); return; }
+        iniciar(call);
+    }
+
+    private void iniciar(PluginCall call) {
+        if (rutaModelo(getContext()) == null) { call.reject("Primero hay que descargar el modelo de voz."); return; }
+        Intent i = new Intent(getContext(), EscuchaService.class).setAction(EscuchaService.ACCION_REANUDAR);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getContext().startForegroundService(i); else getContext().startService(i);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void desactivar(PluginCall call) {
+        getContext().stopService(new Intent(getContext(), EscuchaService.class));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void pausar(PluginCall call) {
+        if (EscuchaService.activo) {
+            Intent i = new Intent(getContext(), EscuchaService.class).setAction(EscuchaService.ACCION_PAUSAR);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getContext().startForegroundService(i); else getContext().startService(i);
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void reanudar(PluginCall call) {
+        if (EscuchaService.activo) {
+            Intent i = new Intent(getContext(), EscuchaService.class).setAction(EscuchaService.ACCION_REANUDAR);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getContext().startForegroundService(i); else getContext().startService(i);
+        }
+        call.resolve();
+    }
+
+    /** Abre el ajuste para que Android no apague a Jarvis por ahorro de batería. */
+    @PluginMethod
+    public void bateria(PluginCall call) {
+        try {
+            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        } catch (Exception e) {
+            Intent i = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        }
+        call.resolve();
+    }
+}

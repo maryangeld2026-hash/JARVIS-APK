@@ -43,6 +43,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Burbuja flotante que abre el asistente de voz de la docente con un toque" />
         </service>
+        <!-- Jarvis: «Jarvis» en segundo plano (escucha sin internet) -->
+        <service
+            android:name=".EscuchaService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
     </application>
 
     <!-- Permissions -->
@@ -59,6 +64,9 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- 2.2: «Jarvis» en segundo plano -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Android 11+: para encontrar el reconocimiento de voz y la voz del teléfono -->
     <queries>

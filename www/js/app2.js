@@ -478,6 +478,7 @@
   }
   async function tickHF() {
     if (!hfOn) return;
+    if (window.__jarvisFondo) { hfLoop = setTimeout(tickHF, 3000); return; }     // 2.2: ya escucha el servicio de fondo
     if (document.hidden || A.getState() !== "idle" || V.isSpeaking()) { hfLoop = setTimeout(tickHF, 1200); return; }
     hfMode = true;
     await A.listen(true);

@@ -1,3 +1,27 @@
+# Jarvis para Android 2.2: conversación continua, «Jarvis» en segundo plano y el HUD
+
+## 💬 La conversación sigue sola
+- Después de responder, Jarvis vuelve a escucharte sin que toques el micrófono, como en el computador. Si no dices nada, se queda en espera.
+- Si prefieres tocar cada vez, apaga **Seguir** (junto al micrófono).
+
+## 👂 Di «Jarvis» aunque estés en otra app
+- *Ajustes › «Jarvis» en segundo plano › Escuchar «Jarvis» siempre.*
+- Jarvis escucha su nombre aunque estés en otra app o con la pantalla apagada, y se abre para atenderte. Si dices «Jarvis, pon 5 minutos» de corrido, hace la orden de una vez.
+- **Sin internet:** el reconocimiento de la palabra corre en el celular (Vosk, el mismo motor del Jarvis del computador) y el audio no sale de ahí. La primera vez descarga el modelo de voz, unos 40 MB.
+- Pide dos permisos: el micrófono y «Mostrar sobre otras apps». Mientras escucha, se ve un aviso fijo de Jarvis. Mientras conversan, la escucha de fondo se pausa sola.
+- Para que Android no lo apague: *Ajustes › Que Android no lo apague*. Gasta algo más de batería.
+- Por voz: «escúchame siempre» o «deja de escuchar en segundo plano».
+
+## 🟦 El HUD del computador, en el celular
+- **El reactor:** el botón del micrófono ahora es el reactor de Jarvis. Los anillos giran y cambian de color según lo que hace: verde cuando escucha, ámbar cuando piensa, y late cuando habla.
+- **Las luces de estado**, arriba: micrófono, IA, internet y escucha de fondo.
+- **El panel «Hoy»:** la hora, el temporizador que corre, el próximo recordatorio, cuántos van en riesgo en el curso y botones de sugerencia según el momento del día.
+- **La burbuja flotante** cambia de color con el estado y muestra la última respuesta en un globo. Así sigues a Jarvis desde otra app, como con la vista previa del HUD.
+
+*Se instala encima de la 2.1, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 2.1: respuestas más rápidas
 
 ## ⚡ La IA empieza a contestar antes

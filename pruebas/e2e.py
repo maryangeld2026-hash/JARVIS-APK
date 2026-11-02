@@ -90,6 +90,10 @@ def gemini(route):
     return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=sse("¿Qué crees que pasa si multiplicas arriba y abajo por 2?" if tutor else ANSWER))
 
 
+def LASTJ_PY(pg):
+    return pg.evaluate("LASTJ()")
+
+
 def main():
     srv = serve()
     base = f"http://127.0.0.1:{srv.server_address[1]}/index.html"
@@ -118,6 +122,14 @@ def main():
         pg.click("#btn-mic")
         pg.wait_for_function("document.querySelectorAll('.msg').length >= 2")
         check("3 minutos" in pg.inner_text(".msg.jarvis >> nth=-1"), "temporizador por voz (sin clave de IA)")
+        # 2.2: la conversación sigue sola (sin volver a tocar el micrófono) y el HUD
+        pg.evaluate("window.__heard.push('escoge un estudiante'); window.__heard.push('qué hora es')")
+        pg.click("#btn-mic")
+        pg.wait_for_function("LASTJ().includes('Son las')", timeout=15000)
+        check(True, "la conversación sigue: respondió la 2ª orden sin tocar el micrófono")
+        check(pg.locator("#btn-mic .rx").count() == 1 and pg.locator("#leds i").count() == 4, "HUD: reactor y luces de estado")
+        check(pg.locator("#hoy .hoy-chips .chip").count() >= 2, "HUD: panel Hoy con sugerencias")
+        pg.screenshot(path=f"{OUT}/0-hud.png")
         check(pg.evaluate("window.__said.some(s => s.includes('3 minutos'))"), "lo dice en voz alta")
 
         # ajustes: clave de Gemini y prueba
@@ -147,7 +159,7 @@ def main():
 
         # clase: curso, azar, grupos
         pg.click(".tabs button[data-tab=clase]")
-        pg.click("text=+ Curso")
+        pg.click("#cursos >> text=+ Curso")
         pg.fill("#c-nombre", "7A")
         pg.fill("#c-lista", "1. Ana Rojas\n2. Beto Díaz\n3. Caro Gil\n4. Dani Ruiz\n5. Eva Mora\n6. Fabio Paz\n7. Gina Sol\n8. Hugo Rey\n9. Iris Mar\n10. Juan Luz")
         check("10 estudiantes" in pg.inner_text("#c-cuenta"), "cuenta los estudiantes pegados")
@@ -295,6 +307,10 @@ def main():
         # respaldo sin claves
         back = pg.evaluate("JSON.stringify(window.JD.backup())")
         check("AIzaPRUEBA" not in back and '"7A"' in back, "la copia de seguridad no lleva la clave")
+        pg.click(".tabs button[data-tab=hablar]")
+        pg.fill("#in-texto", "escúchame siempre en segundo plano"); pg.press("#in-texto", "Enter")
+        pg.wait_for_timeout(300)
+        check("APK" in LASTJ_PY(pg), "«Jarvis» en segundo plano: en el navegador explica que es del APK")
         check(not errs, "sin errores de JavaScript" + (": " + "; ".join(errs) if errs else ""))
         b.close()
     srv.shutdown()

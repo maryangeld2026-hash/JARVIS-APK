@@ -23,8 +23,15 @@ import android.widget.ImageView;
 public class BurbujaService extends Service {
 
     private static final String CANAL = "jarvis_burbuja";
+    static final String ACCION_ESTADO = "estado";
+    static volatile boolean vivo = false;
     private WindowManager wm;
     private View burbuja;
+    private GradientDrawable aro;
+    private android.widget.TextView globo;
+    private WindowManager.LayoutParams lpB, lpG;
+    private final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable ocultarGlobo = () -> { if (globo != null) globo.setVisibility(View.GONE); };
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -35,6 +42,8 @@ public class BurbujaService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         aviso();
         if (burbuja == null) crear();
+        vivo = true;
+        if (intent != null && ACCION_ESTADO.equals(intent.getAction())) estado(intent.getStringExtra("modo"), intent.getStringExtra("texto"));
         return START_STICKY;
     }
 
@@ -76,6 +85,7 @@ public class BurbujaService extends Service {
 
         FrameLayout cont = new FrameLayout(this);
         GradientDrawable fondo = new GradientDrawable();
+        aro = fondo;
         fondo.setShape(GradientDrawable.OVAL);
         fondo.setColor(0xEE03060C);
         fondo.setStroke((int) (2 * d), 0xFF2EE6FF);
@@ -118,11 +128,52 @@ public class BurbujaService extends Service {
             }
         });
         burbuja = cont;
+        lpB = lp;
         wm.addView(burbuja, lp);
+        // el globo con la última respuesta, como la línea de vista previa del HUD del computador
+        globo = new android.widget.TextView(this);
+        globo.setTextColor(0xFFE8F4FF);
+        globo.setTextSize(14);
+        globo.setMaxLines(4);
+        globo.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        int pad = (int) (10 * d);
+        globo.setPadding(pad, (int) (7 * d), pad, (int) (7 * d));
+        GradientDrawable gf = new GradientDrawable();
+        gf.setCornerRadius(14 * d);
+        gf.setColor(0xF0081422);
+        gf.setStroke((int) (1 * d), 0xFF2EE6FF);
+        globo.setBackground(gf);
+        globo.setVisibility(View.GONE);
+        globo.setOnClickListener(v -> startActivity(abrirJarvis()));
+        int ancho = (int) (getResources().getDisplayMetrics().widthPixels * 0.7);
+        lpG = new WindowManager.LayoutParams(ancho, WindowManager.LayoutParams.WRAP_CONTENT, tipo,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
+        lpG.gravity = Gravity.TOP | Gravity.START;
+        wm.addView(globo, lpG);
+    }
+
+    /** idle (azul), listening (verde), thinking (ámbar), speaking (cian brillante). */
+    private void estado(String modo, String texto) {
+        if (aro == null) return;
+        float d = getResources().getDisplayMetrics().density;
+        int c = "listening".equals(modo) ? 0xFF3DFF9A : "thinking".equals(modo) ? 0xFFFFB547 : "speaking".equals(modo) ? 0xFF7FF3FF : 0xFF2EE6FF;
+        aro.setStroke((int) (("idle".equals(modo) ? 2 : 4) * d), c);
+        if (texto != null && !texto.trim().isEmpty() && globo != null) {
+            globo.setText(texto.trim());
+            int sw = getResources().getDisplayMetrics().widthPixels;
+            lpG.x = Math.max((int) (8 * d), Math.min(lpB.x - lpG.width + lpB.width, sw - lpG.width - (int) (8 * d)));
+            lpG.y = Math.max(0, lpB.y - (int) (90 * d));
+            try { wm.updateViewLayout(globo, lpG); } catch (Exception ignored) { }
+            globo.setVisibility(View.VISIBLE);
+            main.removeCallbacks(ocultarGlobo);
+            main.postDelayed(ocultarGlobo, 8000);
+        }
     }
 
     @Override
     public void onDestroy() {
+        vivo = false;
+        if (globo != null && wm != null) { try { wm.removeView(globo); } catch (Exception ignored) { } globo = null; }
         if (burbuja != null && wm != null) {
             try { wm.removeView(burbuja); } catch (Exception ignored) { }
             burbuja = null;

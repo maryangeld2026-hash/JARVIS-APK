@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "2.1";
+  const VERSION = "2.2";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -13,7 +13,7 @@
   // ======================================================================== ESTADO Y AVISOS
   let state = "idle";
   const LABEL = { idle: "Listo", listening: "Escuchando…", thinking: "Pensando…", speaking: "Hablando" };
-  function setState(s) { state = s; document.body.dataset.state = s; $("#status").textContent = LABEL[s] || ""; }
+  function setState(s) { const was = state; state = s; document.body.dataset.state = s; $("#status").textContent = LABEL[s] || ""; if (window.JX && was !== s) window.JX.onState(s); }
   V.onSpeaking((on) => { if (on) setState("speaking"); else if (state === "speaking") setState("idle"); });
   let toastT = null;
   function toast(text, ms = 3200) { const t = $("#toast"); t.textContent = text; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms); }
@@ -70,7 +70,7 @@
     return { m, e };
   }
   /** Jarvis contesta algo propio (herramientas): lo muestra y lo dice. */
-  function reply(text, cls = "tool", spoken) { add("assistant", text, cls); say(spoken || text); }
+  function reply(text, cls = "tool", spoken) { add("assistant", text, cls); say(spoken || text); if (window.JX) window.JX.onReply(spoken || text); }
 
   let pendingReminder = null, lastByVoice = false;
   async function handle(text, byVoice) {
@@ -148,6 +148,7 @@
     e.append(mk("span", "t", hora(m.t) + (gotFirst && lt && lt.ms ? ` · ⚡ ${(lt.ms / 1000).toFixed(1).replace(".", ",")} s` : "")));
     save();
     if (state === "thinking") setState(V.isSpeaking() ? "speaking" : "idle");
+    if (window.JX && m.cls !== "err") window.JX.onReply(m.content);
     void spoken;
   }
 
@@ -157,6 +158,7 @@
     if (state === "listening") { V.stopListening(); return; }
     if (V.isSpeaking()) V.hush();
     if (state === "thinking") { IA.stop(); }
+    if (window.JX && window.JX.beforeListen) await window.JX.beforeListen();   // 2.2: suelta el micrófono de «Jarvis» en segundo plano
     setState("listening");
     if (IA.warm) IA.warm();                                   // mientras hablas, ya se abre la conexión con la IA
     $("#live").textContent = "Te escucho…";
@@ -187,7 +189,7 @@
     const now = new Date();
     switch (it.kind) {
       case "callar": V.hush(); IA.stop(); return;
-      case "hora": return reply(`Son las ${hora(now)}.`);
+      case "hora": return reply(`Son las ${hora(now).replace(/\.$/, "")}.`);
       case "fecha": return reply(`Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`);
       case "tiempo": { const s = it.segundos || D.ultimoTiempo || 300; startTimer(s); return reply(`Listo: ${L.spokenDuration(s)}. Te aviso cuando termine.`); }
       case "tiempo_parar": stopTimer(); return reply("Temporizador detenido.");

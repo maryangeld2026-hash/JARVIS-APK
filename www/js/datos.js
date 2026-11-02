@@ -4,7 +4,7 @@
   const KEY = "jarvis.android.v1";
   const DEF = () => ({
     ajustes: { proveedor: "gemini", claves: { gemini: "", openai: "", claude: "" }, modelo: "", modeloAuto: {}, velocidad: 1.0, tono: 1.0,
-      voz: true, seguir: false, nombre: "", escala: { basico: 3.0, alto: 4.0, superior: 4.6 } },
+      voz: true, seguir: true, nombre: "", escala: { basico: 3.0, alto: 4.0, superior: 4.6 } },
     cursos: [], cursoActual: "", recordatorios: [], quices: [], fotos: [], chat: [], ultimoTiempo: 300,
   });
   let mem = null;
@@ -13,6 +13,7 @@
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { raw = null; }
     mem = merge(DEF(), raw || {});
+    if (!mem.v22) { mem.ajustes.seguir = true; mem.v22 = true; }          // 2.2: la conversación sigue sola (antes había que tocar «Seguir»)
     return mem;
   }
   function merge(base, over) {

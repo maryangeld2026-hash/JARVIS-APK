@@ -72,6 +72,17 @@ public class BurbujaPlugin extends Plugin {
         call.resolve();
     }
 
+    /** El estado de Jarvis en la burbuja (color del aro) y, si hay texto, un globo con la respuesta por unos segundos. */
+    @PluginMethod
+    public void estado(PluginCall call) {
+        if (BurbujaService.vivo) {
+            Intent i = new Intent(getContext(), BurbujaService.class).setAction(BurbujaService.ACCION_ESTADO)
+                .putExtra("modo", call.getString("modo", "idle")).putExtra("texto", call.getString("texto", ""));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getContext().startForegroundService(i); else getContext().startService(i);
+        }
+        call.resolve();
+    }
+
     @PluginMethod
     public void ocultar(PluginCall call) {
         getContext().stopService(new Intent(getContext(), BurbujaService.class));

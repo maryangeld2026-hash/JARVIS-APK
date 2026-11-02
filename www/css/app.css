@@ -255,3 +255,44 @@ table.grid td.prom { font-weight: 800; }
 .p-ops.two { grid-template-columns: repeat(2, minmax(0, auto)); column-gap: 3em; }
 .p-k .katex { text-transform: none; }
 .p-q, .p-ops { font-size: clamp(18px, min(4.4vw, 7vh), 46px); }
+
+/* ================================================================= 2.2: HUD */
+.leds { display: flex; gap: 5px; margin-left: auto; }
+.leds i { width: 8px; height: 8px; border-radius: 50%; background: #23374a; }
+.leds i[data-s="on"] { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.leds i[data-s="warn"] { background: var(--a2); box-shadow: 0 0 6px var(--a2); }
+.leds i[data-s="err"] { background: var(--err); box-shadow: 0 0 6px var(--err); }
+#led-fondo[data-s="on"] { background: var(--a); box-shadow: 0 0 8px var(--a); }
+#led-mic[data-s="idle"] { background: #3b5368; }
+.top .status { flex: 0 0 auto; margin-left: 8px; }
+.top .leds + .status { min-width: 0; }
+/* el reactor del HUD dentro del botón del micrófono */
+.mic.reactor { width: 96px; height: 96px; background: radial-gradient(circle, rgba(var(--a-rgb), .18), var(--bg2) 68%); border-color: rgba(var(--a-rgb), .35); color: var(--a); }
+.mic.reactor > svg:not(.rx) { position: relative; z-index: 2; width: 30px; height: 30px; color: #fff; filter: drop-shadow(0 0 4px rgba(0, 0, 0, .8)); }
+.mic .rx { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); fill: none; stroke: currentColor; overflow: visible; }
+.rx-ticks { stroke-width: 2.2; stroke-dasharray: 1.2 4.6; opacity: .55; transform-origin: 50% 50%; animation: rxspin 18s linear infinite; }
+.rx-a { transform-origin: 50% 50%; animation: rxspin 7s linear infinite; }
+.rx-b { transform-origin: 50% 50%; animation: rxspin 5s linear infinite reverse; }
+.rx-arc-a { stroke-width: 3; stroke-dasharray: 60 20 30 20 60 49; opacity: .9; }
+.rx-arc-b { stroke-width: 2; stroke-dasharray: 22 10 40 12; opacity: .7; }
+.rx-in { stroke-width: 1; opacity: .4; }
+.rx-core { fill: rgba(var(--a-rgb), .28); stroke: none; filter: drop-shadow(0 0 8px currentColor); }
+[data-state="listening"] .mic.reactor { color: var(--ok); }
+[data-state="listening"] .rx-a, [data-state="listening"] .rx-b { animation-duration: 2.2s; }
+[data-state="thinking"] .mic.reactor { color: var(--a2); }
+[data-state="thinking"] .rx-a { animation-duration: 1.2s; } [data-state="thinking"] .rx-b { animation-duration: .9s; }
+[data-state="speaking"] .rx-core { animation: rxbeat .5s ease-in-out infinite alternate; }
+@keyframes rxspin { to { transform: rotate(360deg); } }
+@keyframes rxbeat { from { r: 15; opacity: .7; } to { r: 20; opacity: 1; } }
+/* panel «Hoy» */
+.hoy { padding: 8px 14px 6px; border-bottom: 1px solid var(--line); background: rgba(3, 10, 20, .6); }
+.hoy-top { display: flex; align-items: baseline; gap: 10px; }
+.hoy-top b { font: 800 22px/1 var(--mono); color: #fff; font-variant-numeric: tabular-nums; }
+.hoy-top span { color: var(--muted); font-size: 13.5px; text-transform: capitalize; }
+.hoy-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.hi { font-size: 13px; padding: 3px 9px; border-radius: 9px; background: #0b1726; border: 1px solid var(--line); cursor: default; }
+.hi[data-cmd] { cursor: pointer; }
+.hi.run { color: var(--a); border-color: rgba(var(--a-rgb), .5); font-family: var(--mono); }
+.hi.warn { color: #ffd48a; border-color: rgba(255, 181, 71, .45); }
+.hoy-chips { display: flex; gap: 6px; overflow-x: auto; margin-top: 7px; padding-bottom: 2px; scrollbar-width: none; }
+.hoy-chips .chip { flex-shrink: 0; height: 32px; font-size: 13px; }
