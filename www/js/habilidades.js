@@ -19,6 +19,8 @@
   const ab64 = (buf) => { let bin = ""; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(bin); };
   function loadScript(src) { return new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => no(new Error("No pude cargar " + src)); document.head.appendChild(s); }); }
   const today = () => new Date().toDateString();
+  /** Pinta el markdown mientras llega, pero como mucho 4 veces por segundo (con KaTeX, pintar en cada trozo traba el celular). */
+  function painter(e) { let t = 0, pend = null; return (txt) => { pend = txt; const now = performance.now(); if (now - t > 250) { t = now; e.innerHTML = A.md(pend); } }; }
 
   function ensure() {
     D.docs = D.docs || []; D.observador = D.observador || {}; D.diario = D.diario || []; D.compromisos = D.compromisos || [];
@@ -44,7 +46,7 @@
     try {
       const full = await IA.chat({ system: "Eres un docente experto de un colegio en Colombia. Escribe en español, en markdown claro (títulos con ###, listas, tablas si ayudan).",
         messages: [{ role: "user", content: d.prompt(args, ctx()) }], maxTokens: 3500, temperature: 0.5,
-        onDelta: (_, all) => { m.content = all; const now = performance.now(); if (now - last > 120) { last = now; e.innerHTML = A.md(all); } } });
+        onDelta: (_, all) => { m.content = all; const now = performance.now(); if (now - last > 250) { last = now; e.innerHTML = A.md(all); } } });
       m.content = `### ${titulo}\n\n` + full.replace(/^\s*#{1,3}\s+.*\n/, "");
       e.classList.remove("typing"); e.innerHTML = A.md(m.content);
       const doc = { id: uid(), titulo, md: m.content, fecha: Date.now(), tipo: id, podcast: !!d.podcast };
@@ -216,7 +218,7 @@
     const gem = IA.proveedor() === "gemini";
     try {
       const full = await IA.chat({ system: "Eres un asistente de investigación para una docente en Colombia. Responde en español con datos actuales y concretos" + (fondo ? ", en un informe con secciones (### ) y conclusiones" : ", breve") + ". Si algo no es seguro, dilo.",
-        messages: [{ role: "user", content: q }], buscar: true, maxTokens: fondo ? 3500 : 1200, onDelta: (_, all) => { m.content = all; e.innerHTML = A.md(all); } });
+        messages: [{ role: "user", content: q }], buscar: true, maxTokens: fondo ? 3500 : 1200, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
       const f = IA.fuentes();
       m.content = full + (f.length ? "\n\n**Fuentes:**\n" + f.slice(0, 6).map((x) => `- ${x.titulo} ${x.uri}`).join("\n") : gem ? "" : "\n\n*(Con ChatGPT o Claude la respuesta no busca en internet: usa lo que el modelo ya sabe.)*");
       e.classList.remove("typing"); e.innerHTML = A.md(m.content);
@@ -237,7 +239,7 @@
     const { m, e } = A.add("assistant", "", ""); e.classList.add("typing"); A.setState("thinking");
     try {
       const full = await IA.chat({ system: "Eres Jarvis, asistente de una docente de matemáticas en Colombia. Responde en español; fórmulas en LaTeX entre $…$.",
-        messages: [{ role: "user", content: q, image: { mime: "image/jpeg", data: url.split(",")[1] } }], maxTokens: 2500, onDelta: (_, all) => { m.content = all; e.innerHTML = A.md(all); } });
+        messages: [{ role: "user", content: q, image: { mime: "image/jpeg", data: url.split(",")[1] } }], maxTokens: 2500, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
       m.content = full; e.classList.remove("typing"); e.innerHTML = A.md(full);
       A.say(L.forSpeech(full).split(/(?<=[.!?])\s+/).slice(0, 3).join(" "));
     } catch (er) { e.classList.remove("typing"); e.classList.add("err"); m.content = er.message; m.cls = "err"; e.textContent = er.message; }
@@ -341,7 +343,7 @@
     }
     const { m, e } = A.add("assistant", "", ""); e.classList.add("typing"); A.setState("thinking");
     try {
-      const full = await IA.chat({ system: "Eres un experto en pedagogía de las matemáticas en Colombia. Escribe en markdown.", messages: [{ role: "user", content: prompt }], maxTokens: 2500, onDelta: (_, all) => { m.content = all; e.innerHTML = A.md(all); } });
+      const full = await IA.chat({ system: "Eres un experto en pedagogía de las matemáticas en Colombia. Escribe en markdown.", messages: [{ role: "user", content: prompt }], maxTokens: 2500, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
       m.content = full; e.classList.remove("typing"); e.innerHTML = A.md(full);
       const doc = { id: uid(), titulo: kind === "errores" ? "Mapa de errores" : "Retrospectiva", md: "### " + (kind === "errores" ? "Mapa de errores" : "Retrospectiva") + "\n\n" + full, fecha: Date.now(), tipo: kind };
       D.docs.unshift(doc); e.append(docActions(doc)); A.say(`Listo: ${doc.titulo}. Está en la pantalla y en Material.`);
@@ -358,7 +360,7 @@
       `Notas: ${L3.anonGrades(n, f.nombre) || "sin notas"}. Promedio: ${L2.fmtNota(prom)} (${L.performance(prom, D.ajustes.escala) || "—"}).` + (obs ? ` Observaciones: ${obs}.` : "") + ` Firma: ${D.ajustes.nombre || "la docente"}. Usa siempre «[ESTUDIANTE]» en lugar del nombre.`;
     const { m, e } = A.add("assistant", "", ""); e.classList.add("typing"); A.setState("thinking");
     try {
-      const full = await IA.chat({ system: "Eres una docente en Colombia que escribe a las familias con calidez.", messages: [{ role: "user", content: prompt }], maxTokens: 1800, onDelta: (_, all) => { m.content = all.replace(/\[ESTUDIANTE\]/g, f.nombre); e.innerHTML = A.md(m.content); } });
+      const full = await IA.chat({ system: "Eres una docente en Colombia que escribe a las familias con calidez.", messages: [{ role: "user", content: prompt }], maxTokens: 1800, onDelta: ((pt) => (_, all) => { m.content = all.replace(/\[ESTUDIANTE\]/g, f.nombre); pt(m.content); })(painter(e)) });
       m.content = `### Informe para la familia de ${f.nombre}\n\n` + full.replace(/\[ESTUDIANTE\]/g, f.nombre);
       e.classList.remove("typing"); e.innerHTML = A.md(m.content);
       const doc = { id: uid(), titulo: "Informe para la familia: " + f.nombre, md: m.content, fecha: Date.now(), tipo: "familia" };
@@ -382,7 +384,7 @@
   async function makeDocCustom(titulo, prompt) {
     const { m, e } = A.add("assistant", "", ""); e.classList.add("typing"); A.setState("thinking");
     try {
-      const full = await IA.chat({ system: "Eres un docente experto de un colegio en Colombia. Escribe en markdown.", messages: [{ role: "user", content: prompt }], maxTokens: 3000, onDelta: (_, all) => { m.content = all; e.innerHTML = A.md(all); } });
+      const full = await IA.chat({ system: "Eres un docente experto de un colegio en Colombia. Escribe en markdown.", messages: [{ role: "user", content: prompt }], maxTokens: 3000, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
       m.content = `### ${titulo}\n\n` + full; e.classList.remove("typing"); e.innerHTML = A.md(m.content);
       const doc = { id: uid(), titulo, md: m.content, fecha: Date.now(), tipo: "custom" }; D.docs.unshift(doc); e.append(docActions(doc));
       A.say(`Listo: ${titulo}. Está en Material.`);

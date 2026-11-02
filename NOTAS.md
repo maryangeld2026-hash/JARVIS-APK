@@ -1,3 +1,14 @@
+# Jarvis para Android 3.0.1: se ve bien y va más fluido en el celular
+
+- **Ya no queda debajo de las barras de Android.** En Android 15 y más nuevos, la app quedaba detrás de la barra de estado (arriba) y de los botones de Android (abajo). Ahora respeta esos márgenes en todos los celulares.
+- **Barra superior que cabe** en celulares angostos: en pantallas chicas se oculta el texto del estado, pero quedan las luces de colores.
+- **Más fluido:** las animaciones del reactor son más livianas, y las respuestas largas (documentos, investigaciones) se dibujan menos veces mientras llegan, así que el celular no se traba.
+- **Menos interrupciones:** cuando la conversación continua no te oye, ya no sale el aviso «No te oí» encima de los botones. Solo dice «En espera». Los avisos ahora salen arriba.
+
+*Se instala encima de la 3.0, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 3.0: las habilidades del Jarvis del computador
 
 Revisé una por una las 102 habilidades del Jarvis de Windows. Con esta versión, la app hace la gran mayoría.

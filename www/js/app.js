@@ -118,7 +118,7 @@
     const ackT = D.ajustes.voz && lastByVoice ? setTimeout(() => { if (!gotFirst && !V.isSpeaking()) V.say(L.ackFor(text)); }, 700) : null;
     const draw = (force) => {
       const now = performance.now();
-      if (!force && now - lastDraw < 90) return;
+      if (!force && now - lastDraw < 160) return;
       lastDraw = now;
       e.innerHTML = md(m.content || "…");
       chat.scrollTop = chat.scrollHeight;
@@ -167,7 +167,7 @@
     catch (e) { setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
     $("#live").textContent = "";
     setState("idle");
-    if (!text) { if (auto && !D.ajustes.manosLibres && ++misses >= 1) { misses = 0; toast("No te oí. Toca el micrófono cuando quieras."); } return; }
+    if (!text) { if (auto && !D.ajustes.manosLibres) { $("#live").textContent = "En espera · toca el micrófono para hablar"; setTimeout(() => { if (state === "idle") $("#live").textContent = ""; }, 4000); } return; }
     misses = 0;
     if (window.JX && window.JX.heard && window.JX.heard(text, auto)) return;   // 2.0: manos libres decide si iba para Jarvis
     handle(text, true);
