@@ -189,6 +189,8 @@
     if (/^(?:callate|silencio|deten(?:te)?|para|basta|stop|ya)$/.test(t)) return { kind: "callar" };
     if (/\b(?:que hora es|dime la hora)\b/.test(t)) return { kind: "hora" };
     if (/^(?:(?:abre|abrir|muestrame|ve a|ir a|entra a)\s+(?:los\s+|la\s+)?)?(?:ajustes|configuracion|opciones)$/.test(t)) return { kind: "ajustes" };
+    if (/^(?:minimizate|minimiza(?:te)?(?: jarvis| la app)?|vete al fondo|escondete)$/.test(t)) return { kind: "minimizar" };
+    if (/^(?:sal(?:ir)?(?: de (?:jarvis|la app))?|cierra(?:te)?(?: jarvis| la app)?|apagate|chao jarvis)$/.test(t)) return { kind: "salir" };
     if (/\b(?:que (?:dia|fecha) es hoy|que fecha es|a como estamos)\b/.test(t)) return { kind: "fecha" };
     if (/\b(?:(?:para|deten|cancela|quita|apaga)\s+(?:el\s+)?(?:temporizador|cronometro|tiempo|alarma)|ya (?:termino|paso) el tiempo)\b/.test(t)) return { kind: "tiempo_parar" };
     if (/\b(?:cuanto (?:tiempo )?(?:falta|queda)|cuanto le queda)\b/.test(t)) return { kind: "tiempo_falta" };
@@ -233,7 +235,22 @@
       prefer: [/^gpt-[\d.]+-mini$/, /^gpt-[\d.]+-nano$/, /^gpt-[\d.]+$/], clave: "https://platform.openai.com/api-keys", pista: "sk-…" },
     claude: { nombre: "Claude (Anthropic)", modelo: "claude-haiku-5-5", base: "https://api.anthropic.com/v1",
       prefer: [/^claude-haiku/, /^claude-sonnet/, /^claude/], clave: "https://console.anthropic.com/settings/keys", pista: "sk-ant-…" },
+    // 3.2: más proveedores (todos hablan el formato de OpenAI)
+    groq: { nombre: "Groq", tipo: "openai", modelo: "llama-3.1-8b-instant", base: "https://api.groq.com/openai/v1", nota: "muy rápida, con nivel gratuito",
+      prefer: [/instant/, /^llama-[\d.]+-\d+b/, /^llama/, /gemma|qwen|mistral/], clave: "https://console.groq.com/keys", pista: "gsk_…" },
+    openrouter: { nombre: "OpenRouter", tipo: "openai", modelo: "", base: "https://openrouter.ai/api/v1", nota: "muchos modelos, algunos gratis",
+      prefer: [/^google\/gemini-[\d.]+-flash-lite$/, /^google\/gemini-[\d.]+-flash$/, /^openai\/gpt-[\d.]+-mini$/, /:free$/], clave: "https://openrouter.ai/keys", pista: "sk-or-…" },
+    deepseek: { nombre: "DeepSeek", tipo: "openai", modelo: "deepseek-chat", base: "https://api.deepseek.com/v1", nota: "pago por uso, barata",
+      prefer: [/^deepseek-chat$/], clave: "https://platform.deepseek.com/api_keys", pista: "sk-…" },
+    mistral: { nombre: "Mistral", tipo: "openai", modelo: "mistral-small-latest", base: "https://api.mistral.ai/v1", nota: "con nivel gratuito",
+      prefer: [/^mistral-small-latest$/, /^ministral-8b-latest$/, /small/], clave: "https://console.mistral.ai/api-keys", pista: "…" },
+    propio: { nombre: "Servidor propio (Ollama o LM Studio en tu PC)", tipo: "openai", modelo: "", base: "", propio: true, sinClave: true, nota: "en tu wifi, sin costo",
+      prefer: [/qwen|llama|gemma|mistral|phi/i], clave: "https://ollama.com/download", pista: "(no necesita clave)" },
+    local: { nombre: "IA del celular (sin internet)", tipo: "local", modelo: "", base: "", sinClave: true, nota: "funciona sin internet; más lenta y sencilla",
+      prefer: [], clave: "", pista: "" },
   };
+  /** Formato de la petición: gemini, openai (también Groq, OpenRouter…), claude o local. */
+  const tipo = (provider) => (PROVIDERS[provider] && PROVIDERS[provider].tipo) || provider;
   /** El mejor modelo de la lista que da la cuenta (el rápido y barato de cada proveedor). */
   function pickModel(provider, ids) {
     const p = PROVIDERS[provider];
@@ -263,10 +280,10 @@
     const st = err.status || 0;
     return st === 408 || st === 429 || st === 500 || st === 502 || st === 503 || st === 504 || st === 529;
   }
-  function modelsRequest(provider, key) {
-    const p = PROVIDERS[provider];
-    if (provider === "gemini") return { url: `${p.base}/models?pageSize=200&key=${encodeURIComponent(key)}`, headers: {} };
-    if (provider === "openai") return { url: `${p.base}/models`, headers: { Authorization: `Bearer ${key}` } };
+  function modelsRequest(provider, key, base) {
+    const p = PROVIDERS[provider], b = String(base || p.base).replace(/\/+$/, "");
+    if (provider === "gemini") return { url: `${b}/models?pageSize=200&key=${encodeURIComponent(key)}`, headers: {} };
+    if (tipo(provider) === "openai") return { url: `${b}/models`, headers: key ? { Authorization: `Bearer ${key}` } : {} };
     return { url: `${p.base}/models?limit=100`, headers: claudeHeaders(key) };
   }
   function modelsFrom(provider, json) {
@@ -292,12 +309,24 @@
     }
     return null;
   }
-  function chatRequest(provider, { key, model, system, messages, stream = true, json = false, maxTokens = 1500, temperature = 0.6, fast = true }) {
+  function chatRequest(provider, { key, model, system, messages, stream = true, json = false, maxTokens = 1500, temperature = 0.6, fast = true, base = "" }) {
     const p = PROVIDERS[provider];
+    if (tipo(provider) === "openai" && provider !== "openai") {          // Groq, OpenRouter, DeepSeek, Mistral, servidor propio
+      if (messages.some((m) => m.doc)) throw new Error(`${p.nombre} no lee PDF directamente. Para PDF usa Gemini, ChatGPT o Claude (o mándalo como Word o texto).`);
+      const b = String(base || p.base).replace(/\/+$/, "");
+      const msgs = (system ? [{ role: "system", content: system }] : []).concat(messages.map((m) => ({ role: m.role,
+        content: m.image ? [{ type: "text", text: String(m.content || "") }, { type: "image_url", image_url: { url: `data:${m.image.mime};base64,${m.image.data}` } }] : String(m.content || "") })));
+      const body = { model, messages: msgs, stream, max_tokens: maxTokens, temperature };
+      if (json) body.response_format = { type: "json_object" };
+      const headers = { "content-type": "application/json" };
+      if (key) headers.Authorization = `Bearer ${key}`;
+      if (provider === "openrouter") { headers["X-Title"] = "Jarvis Docente"; }
+      return { url: `${b}/chat/completions`, headers, body, rapido: false };
+    }
     const sp = fast ? speedOptions(provider, model) : null;
     if (provider === "gemini") {
       const contents = messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user",
-        parts: [...(m.image ? [{ inline_data: { mime_type: m.image.mime, data: m.image.data } }] : []), { text: String(m.content || "") }] }));
+        parts: [...(m.image ? [{ inline_data: { mime_type: m.image.mime, data: m.image.data } }] : []), ...(m.doc ? [{ inline_data: { mime_type: m.doc.mime, data: m.doc.data } }] : []), { text: String(m.content || "") }] }));
       const body = { contents, generationConfig: { temperature, maxOutputTokens: maxTokens } };
       if (system) body.systemInstruction = { parts: [{ text: system }] };
       if (json) body.generationConfig.responseMimeType = "application/json";
@@ -307,7 +336,9 @@
     }
     if (provider === "openai") {
       const msgs = (system ? [{ role: "system", content: system }] : []).concat(messages.map((m) => ({ role: m.role,
-        content: m.image ? [{ type: "text", text: String(m.content || "") }, { type: "image_url", image_url: { url: `data:${m.image.mime};base64,${m.image.data}` } }] : String(m.content || "") })));
+        content: m.image ? [{ type: "text", text: String(m.content || "") }, { type: "image_url", image_url: { url: `data:${m.image.mime};base64,${m.image.data}` } }]
+          : m.doc ? [{ type: "file", file: { filename: m.doc.nombre || "documento.pdf", file_data: `data:${m.doc.mime};base64,${m.doc.data}` } }, { type: "text", text: String(m.content || "") }]
+          : String(m.content || "") })));
       const body = { model, messages: msgs, stream, max_completion_tokens: maxTokens };
       if (json) body.response_format = { type: "json_object" };
       if (sp) Object.assign(body, sp);
@@ -315,6 +346,7 @@
     }
     const msgs = messages.map((m) => ({ role: m.role, content: m.image
       ? [{ type: "image", source: { type: "base64", media_type: m.image.mime, data: m.image.data } }, { type: "text", text: String(m.content || "") }]
+      : m.doc ? [{ type: "document", source: { type: "base64", media_type: m.doc.mime, data: m.doc.data } }, { type: "text", text: String(m.content || "") }]
       : String(m.content || "") }));
     const body = { model, max_tokens: maxTokens, messages: msgs, stream };
     if (system) body.system = system + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "");
@@ -335,12 +367,12 @@
   function deltaText(provider, ev) {
     if (!ev) return "";
     if (provider === "gemini") return ((((ev.candidates || [])[0] || {}).content || {}).parts || []).filter((p) => !p.thought).map((p) => p.text || "").join("");
-    if (provider === "openai") return ((((ev.choices || [])[0] || {}).delta || {}).content) || "";
+    if (tipo(provider) === "openai") return ((((ev.choices || [])[0] || {}).delta || {}).content) || "";
     return ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta" ? ev.delta.text || "" : "";
   }
   function fullText(provider, json) {
     if (provider === "gemini") return deltaText("gemini", json);
-    if (provider === "openai") return ((((json.choices || [])[0] || {}).message || {}).content) || "";
+    if (tipo(provider) === "openai") return ((((json.choices || [])[0] || {}).message || {}).content) || "";
     return ((json.content || []).filter((c) => c.type === "text").map((c) => c.text).join("")) || "";
   }
   function apiError(provider, status, json) {
@@ -352,6 +384,20 @@
     if (status >= 500) return "El servicio de IA está fallando ahora mismo. Intenta de nuevo en un momento.";
     return msg ? `La IA respondió con un error: ${msg.slice(0, 160)}` : `La IA respondió con un error (${status}).`;
   }
+  /** 3.2: la conversación en el formato de chat de Qwen, para la IA del celular (corta: el modelo pequeño tiene poca memoria). */
+  function localPrompt(system, messages, maxChars = 3500) {
+    const turns = [];
+    let total = 0;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i], t = String(m.content || "").slice(0, 1800);
+      if (turns.length && total + t.length > maxChars) break;
+      total += t.length;
+      turns.unshift(`<|im_start|>${m.role === "assistant" ? "assistant" : "user"}\n${t}<|im_end|>`);
+    }
+    return `<|im_start|>system\n${String(system || "").slice(0, 1200)}<|im_end|>\n${turns.join("\n")}\n<|im_start|>assistant\n`;
+  }
+  /** Lo que devuelve el modelo local, sin marcas de chat. */
+  function cleanLocal(text) { return String(text || "").split(/<\|im_end\|>|<\|im_start\|>|<\|endoftext\|>/)[0].trim(); }
   /** El primer objeto JSON de un texto (la IA a veces lo envuelve en ```json … ```). */
   function extractJSON(text) {
     const s = String(text || "").replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "");
@@ -502,7 +548,7 @@
     return l[Math.floor(rnd() * l.length) % l.length];
   }
 
-  return { pickModels, retryable, norm, speedOptions, ackFor, toNum, parseNames, namesFromTable, findCourse, pickStudent, shuffle, makeGroups, parseDuration, fmtClock, spokenDuration,
+  return { tipo, localPrompt, cleanLocal, pickModels, retryable, norm, speedOptions, ackFor, toNum, parseNames, namesFromTable, findCourse, pickStudent, shuffle, makeGroups, parseDuration, fmtClock, spokenDuration,
     parseReminder, spokenWhen, intent, PROVIDERS, pickModel, modelsRequest, modelsFrom, chatRequest, parseSSE, deltaText, fullText, apiError,
     extractJSON, takeSentences, forSpeech, mathWords, trimHistory, quizPrompt, cleanQuiz, shuffleQuiz, quizText, plainMath, gradePrompt,
     cleanGrade, performance };

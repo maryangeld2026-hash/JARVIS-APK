@@ -1,14 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
+    packagingOptions { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }
     namespace = "co.jarvis.docente"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "co.jarvis.docente"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "3.1.0"
+        versionCode 10
+        versionName "3.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // solo los procesadores de los celulares Android (el motor de voz pesa ~10 MB por cada uno)
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
@@ -54,6 +55,8 @@ dependencies {
     // 2.2: reconocimiento de voz sin internet para «Jarvis» en segundo plano (el mismo motor del Jarvis del computador)
     implementation 'com.alphacephei:vosk-android:0.3.47@aar'
     implementation 'net.java.dev.jna:jna:5.13.0@aar'
+    // 3.2: la IA dentro del celular (MediaPipe LLM Inference)
+    implementation 'com.google.mediapipe:tasks-genai:0.10.24'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

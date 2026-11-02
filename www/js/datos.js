@@ -3,7 +3,8 @@
   "use strict";
   const KEY = "jarvis.android.v1";
   const DEF = () => ({
-    ajustes: { proveedor: "gemini", claves: { gemini: "", openai: "", claude: "" }, modelo: "", modeloAuto: {}, velocidad: 1.0, tono: 1.0,
+    ajustes: { proveedor: "gemini", claves: { gemini: "", openai: "", claude: "", groq: "", openrouter: "", deepseek: "", mistral: "", propio: "" }, modelo: "", modeloAuto: {},
+      respaldo: "", propioUrl: "", localModelo: "qwen05", velocidad: 1.0, tono: 1.0,
       voz: true, seguir: true, nombre: "", escala: { basico: 3.0, alto: 4.0, superior: 4.6 } },
     cursos: [], cursoActual: "", recordatorios: [], quices: [], fotos: [], chat: [], ultimoTiempo: 300,
   });
@@ -33,7 +34,7 @@
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   function backup() {
     const d = JSON.parse(JSON.stringify(load()));
-    d.ajustes.claves = { gemini: "", openai: "", claude: "" };          // la copia nunca lleva las claves
+    Object.keys(d.ajustes.claves || {}).forEach((k) => { d.ajustes.claves[k] = ""; });   // la copia nunca lleva las claves
     return { app: "jarvis-android", version: 1, fecha: new Date().toISOString(), datos: d };
   }
   function restore(obj) {
@@ -43,6 +44,11 @@
     mem.ajustes.claves = keys;                                           // conserva las claves de este celular
     save(true);
     return mem;
+  }
+  // 3.2: al salir o minimizar se guarda de una vez (no se pierde lo último que cambiaste)
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => { if (document.hidden && mem) save(true); });
+    window.addEventListener("pagehide", () => { if (mem) save(true); });
   }
   window.JD = { load, save, uid, backup, restore, KEY };
 })();

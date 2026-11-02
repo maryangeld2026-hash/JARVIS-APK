@@ -34,7 +34,12 @@
   <div class="brand"><span class="dot"></span>JARVIS</div>
   <div class="status" id="status" aria-live="polite">Listo</div>
   <button class="icon-btn" id="btn-ajustes" type="button" aria-label="Ajustes"><svg><use href="#i-gear"/></svg></button>
+  <button class="icon-btn" id="btn-salir" type="button" aria-label="Minimizar o salir"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button>
 </header>
+<div class="salir-menu" id="salir-menu" hidden>
+  <button class="adj-op" id="btn-minimizar" type="button"><span class="adj-ic">⤵️</span><span>Minimizar<small>Jarvis sigue abierto detrás (y escuchando «Jarvis», si lo activaste)</small></span></button>
+  <button class="adj-op" id="btn-cerrar-app" type="button"><span class="adj-ic">⏻</span><span>Salir de Jarvis<small>Cierra la app</small></span></button>
+</div>
 
 <main>
   <!-- ============================================================== HABLAR -->
@@ -149,8 +154,28 @@
       <input class="inp" id="a-clave" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
       <label class="lbl" for="a-modelo">Modelo</label>
       <input class="inp" id="a-modelo" type="text" spellcheck="false" placeholder="Automático (el rápido de tu cuenta)">
+      <div id="a-propio-box" hidden>
+        <label class="lbl" for="a-propio">Dirección de tu servidor (Ollama o LM Studio en tu PC)</label>
+        <input class="inp" id="a-propio" type="url" spellcheck="false" placeholder="http://192.168.1.20:11434/v1">
+        <p class="hint">En el PC: instala Ollama, descarga un modelo (por ejemplo <code>ollama pull qwen2.5:3b</code>) y ábrelo para la red con <code>OLLAMA_HOST=0.0.0.0</code>. El celular y el PC deben estar en el mismo wifi. En LM Studio, la dirección termina en <code>:1234/v1</code>.</p>
+      </div>
       <div class="row"><button class="btn" id="btn-probar" type="button">Probar la IA</button><span class="hint" id="probar-res"></span></div>
       <p class="hint">La clave se guarda solo en este celular y se usa para hablar directo con el proveedor que escojas.</p>
+
+      <h3 class="sub">IA de respaldo (sin internet o conexión lenta)</h3>
+      <p class="hint">Si no hay internet, o la IA principal tarda o está saturada, Jarvis responde con esta.</p>
+      <select class="inp" id="a-respaldo"></select>
+      <div id="a-resp-clave-box" hidden>
+        <label class="lbl" for="a-resp-clave">Clave de <span id="a-resp-nombre"></span> <a href="#" id="a-resp-link" target="_blank" rel="noopener">conseguir una</a></label>
+        <input class="inp" id="a-resp-clave" type="password" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="a-local-box" hidden>
+        <label class="lbl" for="a-local-modelo">IA del celular (funciona sin internet)</label>
+        <select class="inp" id="a-local-modelo"></select>
+        <div class="row wrap"><button class="btn" id="btn-local-bajar" type="button">Descargar</button><button class="btn" id="btn-local-probar" type="button">Probar</button><button class="btn danger" id="btn-local-borrar" type="button">Borrar</button></div>
+        <p class="hint" id="a-local-st">Revisando…</p>
+        <p class="hint">Se descarga una sola vez, mejor por wifi. Corre dentro del celular: es más lenta y sencilla que las de internet, no ve fotos y nada sale del celular.</p>
+      </div>
 
       <h3 class="sub">Voz</h3>
       <label class="lbl" for="a-velocidad">Velocidad <output id="a-velocidad-v"></output></label>
@@ -176,6 +201,7 @@
       <input id="restaurar-in" type="file" accept="application/json,.json" hidden>
       <p class="hint about" id="acerca"></p>
     </div>
+    <div class="sheet-f"><button class="btn primary" id="btn-guardar-aj" type="button">Guardar ajustes</button></div>
   </div>
 </div>
 

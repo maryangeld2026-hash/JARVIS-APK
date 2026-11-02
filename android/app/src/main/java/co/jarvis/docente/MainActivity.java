@@ -24,6 +24,8 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(BurbujaPlugin.class);
         registerPlugin(EscuchaPlugin.class);
         registerPlugin(OidoPlugin.class);
+        registerPlugin(IALocalPlugin.class);
+        registerPlugin(VentanaPlugin.class);
         super.onCreate(savedInstanceState);
         // 3.0.2: con la letra del celular muy grande, la barra de arriba no cabía y el botón de Ajustes quedaba por fuera
         try {

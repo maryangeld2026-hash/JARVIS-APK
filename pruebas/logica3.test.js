@@ -116,3 +116,21 @@ test("modelos de respaldo y reintentos", () => {
   assert.equal(L.retryable({ status: 401 }), false);
   assert.equal(L.retryable({ code: "abort" }), false);
 });
+
+test("3.2: minimizar, salir, proveedores y documentos", () => {
+  assert.equal(L.intent("minimízate", []).kind, "minimizar");
+  assert.equal(L.intent("sal de jarvis", []).kind, "salir");
+  assert.equal(L.intent("sal del modo tutor", []), null);
+  const r = L.chatRequest("propio", { key: "", model: "qwen2.5:3b", system: "s", messages: [{ role: "user", content: "hola" }], base: "http://192.168.1.20:11434/v1/" });
+  assert.equal(r.url, "http://192.168.1.20:11434/v1/chat/completions");
+  assert.equal(r.headers.Authorization, undefined);
+  assert.equal(L.chatRequest("groq", { key: "k", model: "m", messages: [{ role: "user", content: "x" }] }).headers.Authorization, "Bearer k");
+  assert.equal(L.deltaText("groq", { choices: [{ delta: { content: "hi" } }] }), "hi");
+  const g = L.chatRequest("gemini", { key: "k", model: "m", messages: [{ role: "user", content: "x", doc: { mime: "application/pdf", data: "AAA" } }] });
+  assert.equal(g.body.contents[0].parts[0].inline_data.mime_type, "application/pdf");
+  const c = L.chatRequest("claude", { key: "k", model: "m", messages: [{ role: "user", content: "x", doc: { mime: "application/pdf", data: "AAA" } }] });
+  assert.equal(c.body.messages[0].content[0].type, "document");
+  assert.throws(() => L.chatRequest("groq", { key: "k", model: "m", messages: [{ role: "user", content: "x", doc: { mime: "application/pdf", data: "A" } }] }), /no lee PDF/);
+  assert.equal(L.cleanLocal("Hola profe<|im_end|>basura"), "Hola profe");
+  assert.match(L.localPrompt("sys", [{ role: "user", content: "a" }, { role: "assistant", content: "b" }, { role: "user", content: "c" }]), /user\na<\|im_end\|>\n<\|im_start\|>assistant\nb<\|im_end\|>\n<\|im_start\|>user\nc<\|im_end\|>\n<\|im_start\|>assistant\n$/);
+});

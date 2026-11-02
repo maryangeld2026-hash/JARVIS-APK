@@ -1,3 +1,30 @@
+# Jarvis para Android 3.2: IA sin internet, documentos, cámara y más
+
+## 🎙️ El orbe del micrófono
+- Tocar el orbe siempre hace algo. Si Jarvis ya estaba escuchando y no habías dicho nada, vuelve a escuchar desde cero (antes parecía no responder). Si ya dijiste algo, tocarlo lo envía.
+- Vibra un poco al tocarlo, y responde al toque en todo el círculo.
+- Si el oído nuevo de la 3.1 no arranca en tu celular, Jarvis vuelve solo al reconocimiento de antes.
+
+## 💾 Botón «Guardar ajustes»
+- Abajo en Ajustes, siempre visible. Guarda todo de una vez y cierra. Además, Jarvis guarda solo cuando minimizas o sales.
+
+## 🧠 Otras IA e IA sin internet
+- **Más proveedores:** Groq (muy rápida, con nivel gratuito), OpenRouter, DeepSeek, Mistral y **tu propio servidor** (Ollama o LM Studio en el PC, por el wifi y sin costo). Están en *Ajustes › Otra IA*.
+- **IA de respaldo:** si no hay internet, o la principal tarda o está saturada, Jarvis responde con la de respaldo. Debajo de la respuesta dice cuál contestó.
+- **IA del celular (sin internet):** un modelo abierto (Qwen 2.5) que corre dentro del celular. Se descarga una vez: la liviana pesa 550 MB y la mejor 1,6 GB (para celulares con 6 GB de RAM o más). Es más lenta y sencilla que las de internet, y no ve fotos. Está en *Ajustes › IA de respaldo › IA del celular*.
+
+## 📎 Adjuntar en el chat
+- El botón junto al campo de escribir ahora abre un menú: **Tomar foto** (abre la cámara), **Foto de la galería** o **Documento**.
+- Documentos: PDF, Word (.docx), Excel (.xlsx, .xls, .ods, .csv), PowerPoint (.pptx), OpenDocument (.odt) y texto. Escribe tu pregunta antes de escogerlo («hazme un quiz con esto»). Si no escribes nada, te lo resume.
+- **La cámara ya abre de verdad.** Faltaba un permiso de Android 11 y más nuevos, y por eso abría la galería en vez de la cámara. También se arregla «Tomar foto» en la pestaña Clase.
+
+## ⏻ Minimizar o salir
+- Nuevo botón arriba a la derecha: **Minimizar** (Jarvis sigue detrás y, si lo activaste, escuchando «Jarvis») o **Salir de Jarvis**. También por voz: «minimízate» o «sal de Jarvis».
+
+*Se instala encima de la 3.1, sin perder tus datos. El APK pesa más porque trae el motor de la IA del celular. El modelo se descarga aparte, solo si lo pides.*
+
+---
+
 # Jarvis para Android 3.1: la conversación ya no se traba
 
 ## 👂 Escucha de verdad

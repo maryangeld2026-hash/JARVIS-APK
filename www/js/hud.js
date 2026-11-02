@@ -128,7 +128,7 @@
   }
   async function beforeListen() {
     const S = E();
-    if (S && fondoOn && !fondoPausa) { fondoPausa = true; paintLeds(); try { await S.pausar(); } catch (e) { /* nada */ } await new Promise((r) => setTimeout(r, 250)); }
+    if (S && fondoOn && !fondoPausa) { fondoPausa = true; paintLeds(); try { await Promise.race([S.pausar(), new Promise((r) => setTimeout(r, 900))]); } catch (e) { /* nada */ } await new Promise((r) => setTimeout(r, 250)); }
   }
   function resumeLater() {
     const S = E();

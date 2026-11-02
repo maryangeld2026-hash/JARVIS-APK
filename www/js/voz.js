@@ -19,7 +19,7 @@
   /** Escucha una frase. onPartial(texto) mientras hablas. → texto final ("" si no se oyó nada). */
   async function listen(onPartial) {
     stopListening();
-    if (native() && plug("Oido")) return listenOido(onPartial);
+    if (native() && plug("Oido") && oidoFallas < 2) return listenOido(onPartial);
     if (native() && plug("SpeechRecognition")) return listenNative(onPartial);
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!R) throw new Error("Este navegador no reconoce la voz. Escribe la orden, o instala la app de Jarvis.");
@@ -47,7 +47,7 @@
     });
   }
   /** 3.1: el oído propio de la app (OidoPlugin.java). Siempre termina: con lo que oyó, o vacío si no oyó nada. */
-  let oidoOk = false;
+  let oidoOk = false, oidoFallas = 0;
   async function listenOido(onPartial) {
     const O = plug("Oido");
     if (!oidoOk) {
@@ -62,6 +62,13 @@
       if (r && r.error === "permiso") { oidoOk = false; throw new Error("Jarvis no tiene permiso para el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos."); }
       if (r && !r.texto && r.error === "red") throw new Error("El reconocimiento de voz de Android necesita internet en este celular. Revisa la conexión o escribe la orden.");
       if (r && !r.texto && r.error === "idioma") throw new Error("Falta el español en el reconocimiento de voz del celular: Ajustes del teléfono › Google › Voz.");
+      // 3.2: si el oído propio no arranca en este celular, se usa el reconocimiento de antes
+      if (r && !r.texto && r.error && !/^(?:cancelado|otra|sin_respuesta)$/.test(r.error) && plug("SpeechRecognition")) {
+        oidoFallas++; console.warn("Oído:", r.error);
+        nativeStop = null; if (h && h.remove) h.remove();
+        return listenNative(onPartial);
+      }
+      if (r && r.texto) oidoFallas = 0;
       return ((r && r.texto) || "").trim();
     } finally { nativeStop = null; if (h && h.remove) h.remove(); }
   }

@@ -466,15 +466,77 @@
     const q = document.querySelector('.tabs button[data-tab="quices"]'); if (q) q.addEventListener("click", () => setTimeout(renderDocs, 50));
   };
   function camButton() {
-    // foto en la conversación: el botón de la cámara junto al campo de escribir
+    // 3.2: el botón junto al campo de escribir abre un menú: tomar foto con la cámara, escoger de la galería o subir un documento
     const f = $("#f-escribir");
-    if (f && !$("#btn-foto-chat")) {
-      const b = mk("button", "icon-btn"); b.type = "button"; b.id = "btn-foto-chat"; b.setAttribute("aria-label", "Preguntar por una foto"); b.innerHTML = '<svg><use href="#i-cam"/></svg>';
-      const inp = mk("input"); inp.type = "file"; inp.accept = "image/*"; inp.hidden = true; inp.id = "chat-foto-in";
-      b.addEventListener("click", () => inp.click());
-      inp.addEventListener("change", () => { const file = inp.files[0]; inp.value = ""; if (file) photoQuestion(file); });
-      f.prepend(b); f.append(inp);
-    }
+    if (!f || $("#btn-foto-chat")) return;
+    const b = mk("button", "icon-btn"); b.type = "button"; b.id = "btn-foto-chat"; b.setAttribute("aria-label", "Adjuntar: cámara, foto o documento");
+    b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 11.5 12.6 20a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4L15.6 7.4"/></svg>';
+    const file = (id, accept, capture) => { const i = mk("input"); i.type = "file"; i.id = id; i.accept = accept; i.hidden = true; if (capture) i.setAttribute("capture", "environment"); f.append(i); return i; };
+    const cam = file("chat-cam-in", "image/*", true), gal = file("chat-foto-in", "image/*", false);
+    const doc = file("chat-doc-in", ".pdf,.doc,.docx,.odt,.rtf,.txt,.md,.csv,.tsv,.json,.html,.xml,.xls,.xlsx,.ods,.pptx,application/pdf,text/*,application/*", false);
+    const menu = mk("div", "adj-menu"); menu.id = "adj-menu"; menu.hidden = true;
+    [["📷", "Tomar foto", cam], ["🖼️", "Foto de la galería", gal], ["📄", "Documento (PDF, Word, Excel, texto…)", doc]].forEach(([ic, t, inp]) => {
+      const o = mk("button", "adj-op"); o.type = "button"; o.append(mk("span", "adj-ic", ic), mk("span", "", t));
+      o.addEventListener("click", () => { menu.hidden = true; inp.click(); });
+      menu.append(o);
+    });
+    $(".dock").append(menu);
+    b.addEventListener("click", (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; });
+    document.addEventListener("click", (e) => { if (!menu.hidden && !menu.contains(e.target)) menu.hidden = true; });
+    const go = (inp, fn) => inp.addEventListener("change", () => { const fl = inp.files[0]; inp.value = ""; if (fl) fn(fl); });
+    go(cam, photoQuestion); go(gal, photoQuestion); go(doc, (fl) => (/^image\//.test(fl.type) ? photoQuestion(fl) : docQuestion(fl)));
+    f.prepend(b);
   }
-  X._h = { makeDoc, plot, research, data, familyReport, recoveryPlan, kahoot, renderDocs, openCards };
+
+  // ======================================================================== 3.2: DOCUMENTOS EN LA CONVERSACIÓN
+  /** Saca el texto de un documento en el celular. PDF va tal cual a la IA (Gemini, ChatGPT y Claude lo leen). */
+  async function docText(file) {
+    const name = file.name || "documento", ext = (name.split(".").pop() || "").toLowerCase();
+    if (ext === "pdf" || file.type === "application/pdf") {
+      if (file.size > 15 * 1024 * 1024) throw new Error("Ese PDF es muy grande (más de 15 MB). Prueba con uno más liviano o solo las páginas que necesitas.");
+      const b64 = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = () => no(new Error("No pude leer el PDF.")); r.readAsDataURL(file); });
+      return { pdf: { mime: "application/pdf", data: b64, nombre: name } };
+    }
+    if (/^(xlsx|xls|ods|csv|tsv)$/.test(ext)) {
+      if (!window.XLSX) await loadScript("vendor/xlsx.mini.min.js");
+      const wb = window.XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
+      return { texto: wb.SheetNames.slice(0, 8).map((n) => `## Hoja «${n}»\n` + window.XLSX.utils.sheet_to_csv(wb.Sheets[n], { blankrows: false })).join("\n\n") };
+    }
+    if (/^(docx|odt|pptx)$/.test(ext)) {
+      if (!window.XLSX) await loadScript("vendor/xlsx.mini.min.js");
+      const z = window.XLSX.CFB.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
+      const paths = ext === "docx" ? ["/word/document.xml"] : ext === "odt" ? ["/content.xml"]
+        : z.FullPaths.filter((p) => /\/ppt\/slides\/slide\d+\.xml$/.test(p)).sort((a, b) => parseInt(a.match(/(\d+)\.xml/)[1]) - parseInt(b.match(/(\d+)\.xml/)[1]));
+      const out = paths.map((p, i) => { const e = window.XLSX.CFB.find(z, p); if (!e || !e.content) return "";
+        const xml = new TextDecoder().decode(e.content instanceof Uint8Array ? e.content : new Uint8Array(e.content));
+        const t = xml.replace(/<\/(?:w:p|text:p|text:h|a:p)>/g, "\n").replace(/<w:tab\/>/g, "\t").replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+        return ext === "pptx" ? `## Diapositiva ${i + 1}\n${t.trim()}` : t; });
+      return { texto: out.join("\n").replace(/\n{3,}/g, "\n\n").trim() };
+    }
+    if (ext === "doc") throw new Error("Los .doc viejos de Word no se pueden leer aquí. Ábrelo en Word y guárdalo como .docx o PDF.");
+    const t = await file.text();
+    if (/[\u0000-\u0008\u000E-\u001F]/.test(t.slice(0, 2000))) throw new Error("No sé leer ese tipo de archivo. Sirven PDF, Word (.docx), Excel, PowerPoint (.pptx), texto y CSV.");
+    return { texto: ext === "html" || ext === "xml" ? t.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s{2,}/g, " ") : ext === "rtf" ? t.replace(/\\[a-z]+-?\d* ?|[{}]/g, "") : t };
+  }
+  async function docQuestion(file) {
+    const q = $("#in-texto").value.trim() || "Resume este documento en puntos clave y dime qué puedo hacer con él en clase.";
+    $("#in-texto").value = "";
+    const u = A.add("user", q); u.e.prepend(mk("div", "msg-doc", "📄 " + (file.name || "documento")));
+    const { m, e } = A.add("assistant", "", ""); e.classList.add("typing"); e.textContent = "Leyendo el documento…"; A.setState("thinking");
+    try {
+      const d = await docText(file);
+      if (d.texto != null && !d.texto.trim()) throw new Error("El documento no tiene texto que pueda leer (¿es una imagen escaneada? Mándalo como foto o PDF).");
+      const MAX = 60000, corto = d.texto && d.texto.length > MAX;
+      const content = d.pdf ? q : `${q}\n\n--- Documento «${file.name}» ---\n${d.texto.slice(0, MAX)}${corto ? "\n[… el documento sigue; solo se leyó el comienzo]" : ""}`;
+      e.textContent = "";
+      const full = await IA.chat({ system: "Eres Jarvis, asistente de una docente de matemáticas en Colombia. Te comparten un documento: respóndele sobre él en español, claro y ordenado; fórmulas en LaTeX entre $…$.",
+        messages: [{ role: "user", content, doc: d.pdf || null }], maxTokens: 3000, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
+      m.content = full + (corto ? "\n\n*(El documento era largo: leí las primeras páginas.)*" : "");
+      e.classList.remove("typing"); e.innerHTML = A.md(m.content);
+      A.say(L.forSpeech(full).split(/(?<=[.!?])\s+/).slice(0, 2).join(" "));
+    } catch (er) { e.classList.remove("typing"); e.classList.add("err"); m.content = er.message; m.cls = "err"; e.textContent = er.message; }
+    save();
+    if (A.getState() === "thinking") A.setState(V.isSpeaking() ? "speaking" : "idle");
+  }
+  X._h = { docText, docQuestion, makeDoc, plot, research, data, familyReport, recoveryPlan, kahoot, renderDocs, openCards };
 })();

@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.1";
+  const VERSION = "3.2";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -146,7 +146,8 @@
     e.classList.remove("typing");
     draw(true);
     const lt = IA.last ? IA.last() : null;
-    e.append(mk("span", "t", hora(m.t) + (gotFirst && lt && lt.ms ? ` · ⚡ ${(lt.ms / 1000).toFixed(1).replace(".", ",")} s` : "")));
+    const quien = lt && lt.prov && lt.prov !== D.ajustes.proveedor ? " · " + (lt.prov === "local" ? "IA del celular" : (L.PROVIDERS[lt.prov] || {}).nombre || lt.prov) : "";
+    e.append(mk("span", "t", hora(m.t) + (gotFirst && lt && lt.ms ? ` · ⚡ ${(lt.ms / 1000).toFixed(1).replace(".", ",")} s` : "") + quien));
     save();
     if (state === "thinking") setState(V.isSpeaking() ? "speaking" : "idle");
     if (window.JX && m.cls !== "err") window.JX.onReply(m.content);
@@ -154,18 +155,25 @@
   }
 
   // ---------------------------------------------------------------- micrófono
-  let misses = 0;
+  let misses = 0, listenGen = 0, heardPart = false;
   async function listen(auto) {
-    if (state === "listening") { V.stopListening(); return; }
+    if (navigator.vibrate && !auto) { try { navigator.vibrate(20); } catch (e) { /* nada */ } }
+    if (state === "listening") {
+      // 3.2: si ya dijiste algo, tocar el orbe lo envía; si todavía no, vuelve a escuchar desde cero (antes parecía no hacer nada)
+      if (heardPart || auto) { V.stopListening(); return; }
+      (V.cancelListening || V.stopListening)();
+    }
     if (V.isSpeaking()) V.hush();
     if (state === "thinking") { IA.stop(); }
-    if (window.JX && window.JX.beforeListen) await window.JX.beforeListen();   // 2.2: suelta el micrófono de «Jarvis» en segundo plano
+    if (window.JX && window.JX.beforeListen) { try { await Promise.race([window.JX.beforeListen(), new Promise((r) => setTimeout(r, 1200))]); } catch (e) { /* sigue */ } }   // 2.2: suelta el micrófono de «Jarvis» en segundo plano
     setState("listening");
     if (IA.warm) IA.warm();                                   // mientras hablas, ya se abre la conexión con la IA
-    $("#live").textContent = "Te escucho…";
+    $("#live").textContent = auto ? "Te escucho…" : "Te escucho… (habla ahora)";
     let text = "";
-    try { text = await V.listen((p) => ($("#live").textContent = p)); }
-    catch (e) { setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
+    const my = ++listenGen; heardPart = false;
+    try { text = await V.listen((p) => { heardPart = true; $("#live").textContent = p; }); }
+    catch (e) { if (my !== listenGen) return; setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
+    if (my !== listenGen) return;                              // otra escucha ya empezó (tocaste el orbe de nuevo)
     $("#live").textContent = "";
     setState("idle");
     if (!text) { if (auto && !D.ajustes.manosLibres) { $("#live").textContent = "En espera · toca el micrófono para hablar"; setTimeout(() => { if (state === "idle") $("#live").textContent = ""; }, 4000); } return; }
@@ -191,6 +199,8 @@
     switch (it.kind) {
       case "callar": V.hush(); IA.stop(); return;
       case "ajustes": openSettings(); return reply("Abrí los Ajustes.");
+      case "minimizar": reply("Listo, me minimizo. Aquí sigo."); await V.idle(); return appWindow("minimizar");
+      case "salir": reply("Hasta luego."); await V.idle(); return appWindow("salir");
       case "hora": return reply(`Son las ${hora(now).replace(/\.$/, "")}.`);
       case "fecha": return reply(`Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`);
       case "tiempo": { const s = it.segundos || D.ultimoTiempo || 300; startTimer(s); return reply(`Listo: ${L.spokenDuration(s)}. Te aviso cuando termine.`); }
@@ -566,12 +576,25 @@
   }
   function fillSettings() {
     const box = $("#a-proveedor"); box.textContent = "";
-    Object.entries(L.PROVIDERS).forEach(([k, p]) => {
-      const l = mk("label"), r = mk("input"); r.type = "radio"; r.name = "prov"; r.value = k; r.checked = A.proveedor === k;
-      r.addEventListener("change", () => { A.proveedor = k; save(); fillKey(); });
-      l.append(r, mk("span", "", p.nombre + (k === "gemini" ? " · tiene nivel gratuito" : " · pago por uso"))); box.append(l);
+    const nota = (k, p) => p.nota || (k === "gemini" ? "tiene nivel gratuito" : "pago por uso");
+    // 3.2: los tres de siempre como opciones, y los demás en una lista
+    const main = ["gemini", "openai", "claude"];
+    main.forEach((k) => {
+      const p = L.PROVIDERS[k], l = mk("label"), r = mk("input"); r.type = "radio"; r.name = "prov"; r.value = k; r.checked = A.proveedor === k;
+      r.addEventListener("change", () => { A.proveedor = k; A.modelo = ""; save(); fillKey(); markOther(); });
+      l.append(r, mk("span", "", p.nombre + " · " + nota(k, p))); box.append(l);
     });
+    const ol = mk("label"), orr = mk("input"); orr.type = "radio"; orr.name = "prov"; orr.value = "_otra"; orr.checked = !main.includes(A.proveedor);
+    const sel = mk("select", "inp"); sel.id = "a-otra";
+    Object.entries(L.PROVIDERS).filter(([k]) => !main.includes(k)).forEach(([k, p]) => sel.append(new Option(p.nombre + " · " + nota(k, p), k)));
+    sel.value = main.includes(A.proveedor) ? "groq" : A.proveedor;
+    const useOther = () => { A.proveedor = sel.value; A.modelo = ""; orr.checked = true; save(); fillKey(); };
+    orr.addEventListener("change", useOther); sel.addEventListener("change", useOther);
+    const sp = mk("span", "grow"); sp.append(document.createTextNode("Otra IA"), sel);
+    ol.append(orr, sp); ol.classList.add("otra"); box.append(ol);
+    function markOther() { orr.checked = !main.includes(A.proveedor); }
     fillKey();
+    fillBackup();
     $("#a-velocidad").value = A.velocidad; $("#a-tono").value = A.tono; showRanges();
     $("#a-voz").checked = !!A.voz; $("#a-seguir").checked = !!A.seguir;
     $("#a-nombre").value = A.nombre || "";
@@ -581,12 +604,102 @@
     if (window.JX) window.JX.settings();
   }
   function fillKey() {
-    const p = L.PROVIDERS[A.proveedor];
+    const p = L.PROVIDERS[A.proveedor] || L.PROVIDERS.gemini;
     $("#a-clave").value = A.claves[A.proveedor] || ""; $("#a-clave").placeholder = p.pista;
-    $("#a-clave-link").href = p.clave; $("#a-modelo").value = A.modelo || "";
+    $("#a-clave").disabled = A.proveedor === "local";
+    $("#a-clave").closest(".scroll").querySelector('label[for="a-clave"]').hidden = $("#a-clave").hidden = A.proveedor === "local";
+    $("#a-clave-link").href = p.clave || "#"; $("#a-clave-link").hidden = !p.clave;
+    $("#a-modelo").value = A.modelo || ""; $("#a-modelo").hidden = $('label[for="a-modelo"]').hidden = A.proveedor === "local";
+    $("#a-propio-box").hidden = A.proveedor !== "propio"; $("#a-propio").value = A.propioUrl || "";
+    fillBackup();
   }
+  // ---------------------------------------------------------------- 3.2: IA de respaldo e IA del celular
+  const LOCALES = {
+    qwen05: { nombre: "Liviana · Qwen 2.5 0,5B (550 MB)", archivo: "Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
+      url: "https://huggingface.co/litert-community/Qwen2.5-0.5B-Instruct/resolve/main/Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task" },
+    qwen15: { nombre: "Mejor · Qwen 2.5 1,5B (1,6 GB, celulares con 6 GB de RAM o más)", archivo: "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
+      url: "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv1280.task" },
+  };
+  const IAL = () => V.native() && window.Capacitor.Plugins && window.Capacitor.Plugins.IALocal;
+  function fillBackup() {
+    const r = $("#a-respaldo"); if (!r) return;
+    r.textContent = "";
+    r.append(new Option("Ninguna", ""));
+    Object.entries(L.PROVIDERS).filter(([k]) => k !== A.proveedor).forEach(([k, p]) => r.append(new Option(k === "local" ? "IA del celular (sin internet) · recomendada" : p.nombre, k)));
+    r.value = A.respaldo && A.respaldo !== A.proveedor ? A.respaldo : "";
+    const b = r.value, p = L.PROVIDERS[b];
+    $("#a-resp-clave-box").hidden = !b || !p || p.sinClave;
+    if (p && !p.sinClave) { $("#a-resp-nombre").textContent = p.nombre; $("#a-resp-clave").value = A.claves[b] || ""; $("#a-resp-clave").placeholder = p.pista; $("#a-resp-link").href = p.clave; }
+    if (b === "propio" && A.proveedor !== "propio") { $("#a-propio-box").hidden = false; $("#a-propio").value = A.propioUrl || ""; }
+    const showLocal = b === "local" || A.proveedor === "local";
+    $("#a-local-box").hidden = !showLocal;
+    const ms = $("#a-local-modelo");
+    if (!ms.options.length) Object.entries(LOCALES).forEach(([k, x]) => ms.append(new Option(x.nombre, k)));
+    ms.value = A.localModelo || "qwen05";
+    if (showLocal) localStatus();
+  }
+  async function localStatus() {
+    const st = $("#a-local-st"), P = IAL();
+    if (!P) { st.textContent = "La IA del celular funciona en la app instalada (el APK)."; return; }
+    try {
+      const e = await P.estado();
+      st.textContent = e.listo ? `Lista en este celular (${e.nombre.split("_")[0]}, ${e.mb} MB). Funciona sin internet.` : `No está descargada. Espacio libre: ${(e.libreMb / 1024).toFixed(1).replace(".", ",")} GB.`;
+      $("#btn-local-borrar").hidden = !e.listo; $("#btn-local-probar").hidden = !e.listo;
+      $("#btn-local-bajar").textContent = e.listo ? "Cambiar modelo" : "Descargar";
+    } catch (er) { st.textContent = er.message || String(er); }
+  }
+  let bajando = false;
+  async function localDownload() {
+    const P = IAL(), st = $("#a-local-st");
+    if (!P) return toast("La IA del celular funciona en la app instalada (el APK).");
+    if (bajando) { P.cancelar(); return; }
+    if (!navigator.onLine) return toast("Para descargarla necesitas internet (mejor wifi). Después funciona sin internet.", 5000);
+    const m = LOCALES[A.localModelo || "qwen05"];
+    bajando = true; $("#btn-local-bajar").textContent = "Cancelar";
+    const h = await P.addListener("progreso", (d) => { st.textContent = `Descargando… ${d.p >= 0 ? d.p + " % · " : ""}${d.mb} MB (puedes seguir usando Jarvis)`; }).catch(() => null);
+    try { await P.descargar({ url: m.url, nombre: m.archivo }); toast("Listo: la IA del celular quedó descargada. Ya funciona sin internet.", 5000); if (!A.respaldo && A.proveedor !== "local") { A.respaldo = "local"; save(true); } }
+    catch (e) { toast("No se pudo descargar: " + (e.message || e), 7000); }
+    finally { bajando = false; if (h && h.remove) h.remove(); fillBackup(); }
+  }
+  $("#a-respaldo").addEventListener("change", (e) => { A.respaldo = e.target.value; save(); fillBackup(); });
+  $("#a-resp-clave").addEventListener("input", (e) => { if (A.respaldo) { A.claves[A.respaldo] = e.target.value.trim(); delete A.modeloAuto[A.respaldo]; save(); } });
+  $("#a-propio").addEventListener("change", (e) => { A.propioUrl = e.target.value.trim(); delete A.modeloAuto.propio; save(); });
+  $("#a-local-modelo").addEventListener("change", (e) => { A.localModelo = e.target.value; save(); });
+  $("#btn-local-bajar").addEventListener("click", localDownload);
+  $("#btn-local-borrar").addEventListener("click", async () => { if (!confirm("¿Borrar la IA del celular? Liberas el espacio; puedes volver a descargarla.")) return; try { await IAL().borrar(); } catch (e) { /* nada */ } localStatus(); });
+  $("#btn-local-probar").addEventListener("click", async () => {
+    const st = $("#a-local-st"); st.textContent = "Probando (la primera vez tarda unos segundos en cargar)…";
+    try { const r = await IA.test("local"); st.textContent = `Funciona: «${r.texto.slice(0, 40)}» (${(r.ms / 1000).toFixed(1).replace(".", ",")} s).`; }
+    catch (e) { st.textContent = e.message; }
+  });
+  // botón «Guardar ajustes»: guarda todo de una vez y cierra
+  $("#btn-guardar-aj").addEventListener("click", () => {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();      // dispara el «change» del campo que estabas escribiendo
+    A.claves[A.proveedor] = $("#a-clave").value.trim();
+    A.modelo = $("#a-modelo").value.trim();
+    A.nombre = $("#a-nombre").value.trim();
+    if ($("#a-propio").value.trim() || A.proveedor === "propio" || A.respaldo === "propio") A.propioUrl = $("#a-propio").value.trim();
+    if (A.respaldo && !$("#a-resp-clave-box").hidden) A.claves[A.respaldo] = $("#a-resp-clave").value.trim();
+    [["a-basico", "basico"], ["a-alto", "alto"], ["a-superior", "superior"]].forEach(([id, k]) => { const v = parseFloat($("#" + id).value); if (v >= 1 && v <= 5) A.escala[k] = v; });
+    window.JD.save(true);
+    $("#ajustes").hidden = true; renderChat();
+    toast("Ajustes guardados ✓");
+    if (IA.warm) IA.warm();
+  });
   function showRanges() { $("#a-velocidad-v").textContent = "× " + (+$("#a-velocidad").value).toFixed(1); $("#a-tono-v").textContent = (+$("#a-tono").value).toFixed(1); }
   $("#btn-ajustes").addEventListener("click", openSettings);
+  // 3.2: minimizar o salir de Jarvis
+  function appWindow(how) {
+    const W = V.native() && window.Capacitor.Plugins && window.Capacitor.Plugins.Ventana;
+    $("#salir-menu").hidden = true;
+    if (!W) { toast(how === "salir" ? "En el navegador, cierra la pestaña." : "En el navegador no se puede minimizar."); return; }
+    V.hush(); IA.stop(); (V.cancelListening || V.stopListening)(); setState("idle"); window.JD.save(true);
+    return (how === "salir" ? W.salir() : W.minimizar()).catch(() => {});
+  }
+  $("#btn-salir").addEventListener("click", (e) => { e.stopPropagation(); $("#salir-menu").hidden = !$("#salir-menu").hidden; });
+  document.addEventListener("click", (e) => { const m = $("#salir-menu"); if (!m.hidden && !m.contains(e.target)) m.hidden = true; });
+  $("#btn-minimizar").addEventListener("click", () => appWindow("minimizar"));
+  $("#btn-cerrar-app").addEventListener("click", () => appWindow("salir"));
   // 3.0.2: si algo falla en el celular, se ve en un aviso en vez de quedarse quieto
   let lastErr = 0;
   const showErr = (m) => { if (Date.now() - lastErr < 4000) return; lastErr = Date.now(); toast("Algo falló: " + String(m || "").slice(0, 140), 6000); };
