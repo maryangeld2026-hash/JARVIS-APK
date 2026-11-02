@@ -176,3 +176,18 @@ test("calificar la foto", () => {
   assert.equal(L.performance(4.7), "superior"); assert.equal(L.performance(2.9), "bajo"); assert.equal(L.performance(3.5), "básico");
   assert.match(L.gradePrompt({ consigna: "Resolver 2x+3=11" }), /Resolver 2x\+3=11/);
 });
+
+test("velocidad: sin «pensar» y frase de espera", () => {
+  let r = L.chatRequest("gemini", { key: "K", model: "gemini-3.5-flash-lite", messages: [{ role: "user", content: "hola" }] });
+  assert.deepEqual(r.body.generationConfig.thinkingConfig, { thinkingLevel: "minimal" }); assert.equal(r.rapido, true);
+  r = L.chatRequest("gemini", { key: "K", model: "gemini-2.5-flash", messages: [], fast: true });
+  assert.deepEqual(r.body.generationConfig.thinkingConfig, { thinkingBudget: 0 });
+  r = L.chatRequest("gemini", { key: "K", model: "gemini-3.5-flash-lite", messages: [], fast: false });
+  assert.equal(r.body.generationConfig.thinkingConfig, undefined); assert.equal(r.rapido, false);
+  r = L.chatRequest("openai", { key: "K", model: "gpt-5-mini", messages: [] });
+  assert.equal(r.body.reasoning_effort, "minimal");
+  assert.equal(L.speedOptions("claude", "claude-haiku-5-5"), null);
+  assert.equal(L.speedOptions("gemini", "gemini-3.5-pro"), null);
+  assert.equal(L.deltaText("gemini", { candidates: [{ content: { parts: [{ text: "pienso…", thought: true }, { text: "Hola" }] } }] }), "Hola");
+  assert.match(L.ackFor("¿cómo explico las fracciones?"), /…$/);
+});

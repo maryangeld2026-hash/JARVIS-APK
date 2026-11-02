@@ -26,12 +26,39 @@
   function stop() { if (ctrl) { ctrl.abort(); ctrl = null; } }
 
   /** Habla con la IA. onDelta(trozo, todo) va llegando en streaming. → texto completo. */
-  async function chat({ system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true }) {
+  /** Abre la conexión con la IA antes de preguntar (al tocar el micrófono): ahorra el saludo inicial con el servidor. */
+  let warmAt = 0;
+  async function warm() {
+    const c = cfg();
+    if (!c.key || !navigator.onLine || Date.now() - warmAt < 45000) return;
+    warmAt = Date.now();
+    try {
+      const L0 = L.PROVIDERS[c.prov];
+      const url = c.prov === "gemini" ? `${L0.base}/models?pageSize=1&key=${encodeURIComponent(c.key)}` : L.modelsRequest(c.prov, c.key).url;
+      await fetch(url, { headers: c.prov === "gemini" ? {} : L.modelsRequest(c.prov, c.key).headers, cache: "no-store" });
+    } catch (e) { /* solo era para calentar */ }
+  }
+  let last = { ms: 0 };
+  async function chat(opts) {
+    const c = cfg();
+    const m = await model();
+    const key = c.prov + ":" + m;
+    const fast = !(c.a.sinRapido || {})[key];
+    try { return await chat1(Object.assign({}, opts, { fast })); }
+    catch (e) {
+      // el modelo no acepta «sin pensar»: se quita ese ajuste (y se recuerda para la próxima)
+      if (fast && e.status === 400 && e.rapido) { c.a.sinRapido = Object.assign(c.a.sinRapido || {}, { [key]: true }); window.JD.save(); return chat1(Object.assign({}, opts, { fast: false })); }
+      throw e;
+    }
+  }
+  async function chat1({ system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true, fast = true }) {
     const c = cfg();
     if (!c.key) { const e = new Error("Falta la clave de la IA. Ponla en Ajustes (el engranaje de arriba)."); e.code = "sin_clave"; throw e; }
     if (!navigator.onLine) throw new Error("No hay internet. Las herramientas de la clase siguen funcionando; la IA necesita conexión.");
     const m = await model();
-    const req = L.chatRequest(c.prov, { key: c.key, model: m, system, messages, stream, json, maxTokens, temperature });
+    const req = L.chatRequest(c.prov, { key: c.key, model: m, system, messages, stream, json, maxTokens, temperature, fast });
+    const t0 = performance.now();
+    warmAt = Date.now();
     stop();
     ctrl = new AbortController();
     const my = ctrl;
@@ -48,6 +75,7 @@
       clearTimeout(tmo);
       let j = null; try { j = await res.json(); } catch (e) { /* sin cuerpo */ }
       const er = new Error(L.apiError(c.prov, res.status, j)); er.status = res.status;
+      er.rapido = req.rapido && /think|reason|budget|level|effort|unknown|unsupported|not supported|invalid/i.test(JSON.stringify(j || {}));
       if (res.status === 404 && !c.modelo) { delete c.a.modeloAuto[c.prov]; window.JD.save(); }
       throw er;
     }
@@ -65,7 +93,7 @@
           p.datos.forEach((ev) => {
             if (ev.error) throw new Error(L.apiError(c.prov, 500, ev));
             const d = L.deltaText(c.prov, ev);
-            if (d) { full += d; if (onDelta) onDelta(d, full); }
+            if (d) { if (!full) last = { ms: Math.round(performance.now() - t0), modelo: m }; full += d; if (onDelta) onDelta(d, full); }
           });
         }
         const tail = L.parseSSE(buf + "\n\n");
@@ -91,5 +119,5 @@
     const t = await chat({ system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: 20 });
     return { ok: true, texto: t.trim(), ms: Math.round(performance.now() - t0), modelo: await model() };
   }
-  window.JIA = { chat, json, test, stop, model };
+  window.JIA = { chat, json, test, stop, model, warm, last: () => last };
 })();

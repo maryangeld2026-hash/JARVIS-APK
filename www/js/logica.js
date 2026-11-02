@@ -259,23 +259,41 @@
     return { "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true", "content-type": "application/json" };
   }
   /** messages: [{role: "user"|"assistant", content: texto, image?: {mime, data(base64)}}] */
-  function chatRequest(provider, { key, model, system, messages, stream = true, json = false, maxTokens = 1500, temperature = 0.6 }) {
+  /** «Pensamiento» del modelo: retrasa la primera palabra varios segundos. Para conversar se apaga (o se baja al mínimo),
+      igual que en el Jarvis del computador. Si el modelo no acepta el ajuste, ia.js lo quita y repite la petición. */
+  function speedOptions(provider, model) {
+    const m = String(model || "").toLowerCase();
+    if (provider === "gemini") {
+      if (/^gemini-[12]\./.test(m)) return /flash/.test(m) ? { thinkingConfig: { thinkingBudget: 0 } } : null;
+      if (/flash/.test(m)) return { thinkingConfig: { thinkingLevel: /lite/.test(m) ? "minimal" : "low" } };
+      return null;
+    }
+    if (provider === "openai") {
+      if (/^gpt-5(?:\b|[.-])/.test(m)) return { reasoning_effort: "minimal" };
+      if (/^(?:gpt-[6-9]|o\d)/.test(m)) return { reasoning_effort: "low" };
+    }
+    return null;
+  }
+  function chatRequest(provider, { key, model, system, messages, stream = true, json = false, maxTokens = 1500, temperature = 0.6, fast = true }) {
     const p = PROVIDERS[provider];
+    const sp = fast ? speedOptions(provider, model) : null;
     if (provider === "gemini") {
       const contents = messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user",
         parts: [...(m.image ? [{ inline_data: { mime_type: m.image.mime, data: m.image.data } }] : []), { text: String(m.content || "") }] }));
       const body = { contents, generationConfig: { temperature, maxOutputTokens: maxTokens } };
       if (system) body.systemInstruction = { parts: [{ text: system }] };
       if (json) body.generationConfig.responseMimeType = "application/json";
+      if (sp) Object.assign(body.generationConfig, sp);
       const op = stream ? "streamGenerateContent?alt=sse&" : "generateContent?";
-      return { url: `${p.base}/models/${encodeURIComponent(model)}:${op}key=${encodeURIComponent(key)}`, headers: { "content-type": "application/json" }, body };
+      return { url: `${p.base}/models/${encodeURIComponent(model)}:${op}key=${encodeURIComponent(key)}`, headers: { "content-type": "application/json" }, body, rapido: !!sp };
     }
     if (provider === "openai") {
       const msgs = (system ? [{ role: "system", content: system }] : []).concat(messages.map((m) => ({ role: m.role,
         content: m.image ? [{ type: "text", text: String(m.content || "") }, { type: "image_url", image_url: { url: `data:${m.image.mime};base64,${m.image.data}` } }] : String(m.content || "") })));
       const body = { model, messages: msgs, stream, max_completion_tokens: maxTokens };
       if (json) body.response_format = { type: "json_object" };
-      return { url: `${p.base}/chat/completions`, headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" }, body };
+      if (sp) Object.assign(body, sp);
+      return { url: `${p.base}/chat/completions`, headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" }, body, rapido: !!sp };
     }
     const msgs = messages.map((m) => ({ role: m.role, content: m.image
       ? [{ type: "image", source: { type: "base64", media_type: m.image.mime, data: m.image.data } }, { type: "text", text: String(m.content || "") }]
@@ -298,7 +316,7 @@
   }
   function deltaText(provider, ev) {
     if (!ev) return "";
-    if (provider === "gemini") return (((ev.candidates || [])[0] || {}).content || { parts: [] }).parts.map((p) => p.text || "").join("");
+    if (provider === "gemini") return ((((ev.candidates || [])[0] || {}).content || {}).parts || []).filter((p) => !p.thought).map((p) => p.text || "").join("");
     if (provider === "openai") return ((((ev.choices || [])[0] || {}).delta || {}).content) || "";
     return ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta" ? ev.delta.text || "" : "";
   }
@@ -455,7 +473,17 @@
     return nota >= e.superior ? "superior" : nota >= e.alto ? "alto" : nota >= e.basico ? "básico" : "bajo";
   }
 
-  return { norm, toNum, parseNames, namesFromTable, findCourse, pickStudent, shuffle, makeGroups, parseDuration, fmtClock, spokenDuration,
+  /** Lo que dice mientras la IA arranca (como el «A ver…» del computador), según lo que preguntaste. */
+  const ACKS = { pregunta: ["A ver…", "Déjame ver…", "Buena pregunta…"], pedido: ["Voy con eso…", "Ya te lo preparo…", "Listo, un momento…"], otro: ["Mmm…", "A ver…"] };
+  function ackFor(text, rnd = Math.random) {
+    const t = norm(text);
+    const k = /^(?:que|como|cual|cuales|cuando|donde|quien|por que|cuanto|explica|explicame|dime)\b/.test(t) || /\?$/.test(String(text).trim()) ? "pregunta"
+      : /^(?:haz|hazme|crea|creame|escribe|escribeme|redacta|prepara|preparame|dame|genera|ayudame|organiza|planea)\b/.test(t) ? "pedido" : "otro";
+    const l = ACKS[k];
+    return l[Math.floor(rnd() * l.length) % l.length];
+  }
+
+  return { norm, speedOptions, ackFor, toNum, parseNames, namesFromTable, findCourse, pickStudent, shuffle, makeGroups, parseDuration, fmtClock, spokenDuration,
     parseReminder, spokenWhen, intent, PROVIDERS, pickModel, modelsRequest, modelsFrom, chatRequest, parseSSE, deltaText, fullText, apiError,
     extractJSON, takeSentences, forSpeech, mathWords, trimHistory, quizPrompt, cleanQuiz, shuffleQuiz, quizText, plainMath, gradePrompt,
     cleanGrade, performance };

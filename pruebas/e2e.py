@@ -65,6 +65,9 @@ def sse(text, size=24):
     return "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": c}]}}]}) + "\r\n\r\n" for c in chunks)
 
 
+BODIES = []
+
+
 def gemini(route):
     req = route.request
     url = req.url
@@ -72,6 +75,7 @@ def gemini(route):
         return route.fulfill(json={"models": [{"name": "models/gemini-3.5-flash-lite", "supportedGenerationMethods": ["generateContent"]},
                                               {"name": "models/gemini-3.5-pro", "supportedGenerationMethods": ["generateContent"]}]})
     body = json.loads(req.post_data or "{}")
+    BODIES.append(body)
     asked = json.dumps(body, ensure_ascii=False)
     if ":generateContent" in url:
         out = (GRADE if "inline_data" in asked else STEPS if "paso a paso" in asked.lower() else TICKET if "ticket de salida" in asked.lower()
@@ -137,6 +141,8 @@ def main():
         print(said)
         check(len(said) >= 2 and said[0].startswith("Claro, profe"), f"empieza a hablar con la primera frase ({len(said)} frases dichas)")
         check(any("menor que" in s for s in said), "la fórmula se dice en palabras")
+        check(any((b.get("generationConfig") or {}).get("thinkingConfig") == {"thinkingLevel": "minimal"} for b in BODIES), "pide la respuesta sin «pensar» (más rápida)")
+        check("⚡" in pg.inner_text(".msg.jarvis >> nth=-1"), "muestra cuánto tardó en empezar a responder")
         pg.screenshot(path=f"{OUT}/3-conversacion.png")
 
         # clase: curso, azar, grupos

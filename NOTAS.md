@@ -1,4 +1,16 @@
-# Jarvis para Android 2.0
+# Jarvis para Android 2.1: respuestas más rápidas
+
+## ⚡ La IA empieza a contestar antes
+- **Sin «pensar» para conversar.** Los modelos rápidos de Gemini y ChatGPT razonaban por dentro antes de escribir la primera palabra, y eso tomaba varios segundos. Ahora Jarvis les pide responder de una vez, igual que el Jarvis del computador. Si un modelo no acepta ese ajuste, Jarvis lo quita solo y lo recuerda.
+- **La conexión se abre mientras hablas.** Al tocar el micrófono (o el campo para escribir), Jarvis ya se conecta con la IA, así que cuando terminas de hablar la pregunta sale enseguida.
+- **Cero silencio.** Si la IA tarda en arrancar, Jarvis dice algo corto de inmediato («A ver…», «Voy con eso…») y luego la respuesta.
+- **Cuánto tardó.** Debajo de cada respuesta aparece el tiempo hasta la primera palabra (⚡ 0,9 s), para que veas la diferencia.
+
+*Se instala encima de la 2.0, sin perder tus datos.*
+
+---
+
+## Lo que trajo la 2.0
 
 El asistente de la clase en el celular, sin el computador. Esta versión suma casi todo lo que hace el Jarvis de Windows.
 

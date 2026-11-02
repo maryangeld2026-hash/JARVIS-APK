@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "2.0";
+  const VERSION = "2.1";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -113,7 +113,9 @@
     const hist = L.trimHistory(D.chat.filter((m) => !m.cls || m.cls === "").slice(-13, -1).map((m) => ({ role: m.role, content: m.content })));
     const { m, e } = add("assistant", "", "");
     e.classList.add("typing");
-    let spoken = 0, first = true, buf = "", lastDraw = 0;
+    let spoken = 0, first = true, buf = "", lastDraw = 0, gotFirst = false;
+    // si la IA tarda en arrancar, Jarvis dice algo corto de una vez (como «A ver…» en el computador): cero silencio
+    const ackT = D.ajustes.voz && lastByVoice ? setTimeout(() => { if (!gotFirst && !V.isSpeaking()) V.say(L.ackFor(text)); }, 700) : null;
     const draw = (force) => {
       const now = performance.now();
       if (!force && now - lastDraw < 90) return;
@@ -123,6 +125,7 @@
     };
     try {
       const full = await IA.chat({ system: systemPrompt(), messages: hist.concat([{ role: "user", content: text }]), onDelta: (d, all) => {
+        if (!gotFirst) { gotFirst = true; clearTimeout(ackT); }
         m.content = all;
         draw();
         if (!D.ajustes.voz) return;
@@ -138,9 +141,11 @@
       m.cls = er.code === "abort" ? "" : "err";
       if (er.code !== "abort") { e.classList.add("err"); say(er.message); }
     }
+    clearTimeout(ackT);
     e.classList.remove("typing");
     draw(true);
-    e.append(mk("span", "t", hora(m.t)));
+    const lt = IA.last ? IA.last() : null;
+    e.append(mk("span", "t", hora(m.t) + (gotFirst && lt && lt.ms ? ` · ⚡ ${(lt.ms / 1000).toFixed(1).replace(".", ",")} s` : "")));
     save();
     if (state === "thinking") setState(V.isSpeaking() ? "speaking" : "idle");
     void spoken;
@@ -153,6 +158,7 @@
     if (V.isSpeaking()) V.hush();
     if (state === "thinking") { IA.stop(); }
     setState("listening");
+    if (IA.warm) IA.warm();                                   // mientras hablas, ya se abre la conexión con la IA
     $("#live").textContent = "Te escucho…";
     let text = "";
     try { text = await V.listen((p) => ($("#live").textContent = p)); }
@@ -169,6 +175,7 @@
   const conv = $("#btn-conv");
   function convMark() { conv.setAttribute("aria-pressed", D.ajustes.seguir ? "true" : "false"); }
   conv.addEventListener("click", () => { D.ajustes.seguir = !D.ajustes.seguir; save(); convMark(); toast(D.ajustes.seguir ? "Conversación continua: después de responder, vuelvo a escuchar." : "Conversación continua apagada."); });
+  $("#in-texto").addEventListener("focus", () => IA.warm && IA.warm());
   $("#f-escribir").addEventListener("submit", (ev) => { ev.preventDefault(); const i = $("#in-texto"); const t = i.value; i.value = ""; handle(t, false); });
 
   // ======================================================================== ÓRDENES DE LA CLASE
@@ -605,7 +612,8 @@
   convMark();
   renderChat();
   if ("serviceWorker" in navigator && !V.native() && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
-  document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") V.stopListening(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") V.stopListening(); if (!document.hidden && IA.warm) IA.warm(); });
+  if (IA.warm) setTimeout(() => IA.warm(), 1500);
   window.__jarvis = { handle, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
     getState: () => state, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
   if (window.JX) window.JX.init(window.__jarvis);
