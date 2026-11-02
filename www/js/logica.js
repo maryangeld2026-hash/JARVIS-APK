@@ -188,6 +188,7 @@
     let m;
     if (/^(?:callate|silencio|deten(?:te)?|para|basta|stop|ya)$/.test(t)) return { kind: "callar" };
     if (/\b(?:que hora es|dime la hora)\b/.test(t)) return { kind: "hora" };
+    if (/^(?:(?:abre|abrir|muestrame|ve a|ir a|entra a)\s+(?:los\s+|la\s+)?)?(?:ajustes|configuracion|opciones)$/.test(t)) return { kind: "ajustes" };
     if (/\b(?:que (?:dia|fecha) es hoy|que fecha es|a como estamos)\b/.test(t)) return { kind: "fecha" };
     if (/\b(?:(?:para|deten|cancela|quita|apaga)\s+(?:el\s+)?(?:temporizador|cronometro|tiempo|alarma)|ya (?:termino|paso) el tiempo)\b/.test(t)) return { kind: "tiempo_parar" };
     if (/\b(?:cuanto (?:tiempo )?(?:falta|queda)|cuanto le queda)\b/.test(t)) return { kind: "tiempo_falta" };

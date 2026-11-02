@@ -102,3 +102,9 @@ test("cuánto necesita, tendencias, Anki y Kahoot", () => {
   const k = L3.kahootRows(quiz);
   assert.equal(k.length, 2); assert.deepEqual(k[1], ["¿1/2?", "a", "b", "c", "", 30, 2]);
 });
+
+test("abrir ajustes por voz", () => {
+  assert.equal(L.intent("abre los ajustes", []).kind, "ajustes");
+  assert.equal(L.intent("Jarvis, ajustes", []).kind, "ajustes");
+  assert.equal(L.intent("configuración", []).kind, "ajustes");
+});

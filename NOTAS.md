@@ -1,3 +1,14 @@
+# Jarvis para Android 3.0.2: Ajustes siempre a mano
+
+- **Ya puedes entrar a Ajustes.** Con «Manos libres» o el modo tutor activos, sus avisos empujaban el botón de Ajustes (el engranaje) fuera de la pantalla. Ahora esos avisos bajan a su propia fila y el engranaje siempre se ve.
+- **Letra grande del celular:** si tienes la letra del sistema muy grande, la app la limita un poco para que la barra de arriba quepa.
+- **Más formas de abrir Ajustes:** toca la palabra **JARVIS** arriba a la izquierda, o di «abre los ajustes».
+- **Ajustes abre aunque algo falle:** si una sección no carga, el resto se muestra igual y sale un aviso con el error.
+
+*Se instala encima de la 3.0.1, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 3.0.1: se ve bien y va más fluido en el celular
 
 - **Ya no queda debajo de las barras de Android.** En Android 15 y más nuevos, la app quedaba detrás de la barra de estado (arriba) y de los botones de Android (abajo). Ahora respeta esos márgenes en todos los celulares.

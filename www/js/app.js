@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.0";
+  const VERSION = "3.0.2";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -189,6 +189,7 @@
     const now = new Date();
     switch (it.kind) {
       case "callar": V.hush(); IA.stop(); return;
+      case "ajustes": openSettings(); return reply("Abrí los Ajustes.");
       case "hora": return reply(`Son las ${hora(now).replace(/\.$/, "")}.`);
       case "fecha": return reply(`Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`);
       case "tiempo": { const s = it.segundos || D.ultimoTiempo || 300; startTimer(s); return reply(`Listo: ${L.spokenDuration(s)}. Te aviso cuando termine.`); }
@@ -559,6 +560,10 @@
   // ======================================================================== AJUSTES
   const A = D.ajustes;
   function openSettings() {
+    $("#ajustes").hidden = false;                       // 3.0.2: primero se abre, pase lo que pase
+    try { fillSettings(); } catch (e) { console.error(e); toast("Una parte de Ajustes no cargó: " + (e.message || e), 6000); }
+  }
+  function fillSettings() {
     const box = $("#a-proveedor"); box.textContent = "";
     Object.entries(L.PROVIDERS).forEach(([k, p]) => {
       const l = mk("label"), r = mk("input"); r.type = "radio"; r.name = "prov"; r.value = k; r.checked = A.proveedor === k;
@@ -573,7 +578,6 @@
     $("#acerca").textContent = `Jarvis para Android ${VERSION} · ${V.native() ? "app instalada" : "en el navegador"} · tus datos viven solo en este celular.`;
     $("#probar-res").textContent = "";
     if (window.JX) window.JX.settings();
-    $("#ajustes").hidden = false;
   }
   function fillKey() {
     const p = L.PROVIDERS[A.proveedor];
@@ -582,6 +586,13 @@
   }
   function showRanges() { $("#a-velocidad-v").textContent = "× " + (+$("#a-velocidad").value).toFixed(1); $("#a-tono-v").textContent = (+$("#a-tono").value).toFixed(1); }
   $("#btn-ajustes").addEventListener("click", openSettings);
+  // 3.0.2: si algo falla en el celular, se ve en un aviso en vez de quedarse quieto
+  let lastErr = 0;
+  const showErr = (m) => { if (Date.now() - lastErr < 4000) return; lastErr = Date.now(); toast("Algo falló: " + String(m || "").slice(0, 140), 6000); };
+  window.addEventListener("error", (e) => showErr(e.message));
+  window.addEventListener("unhandledrejection", (e) => console.error("promesa:", e.reason));
+  $(".brand").addEventListener("click", openSettings);  // tocar «JARVIS» también abre Ajustes
+  window.__abrirAjustes = openSettings;
   $("#btn-ajustes-cerrar").addEventListener("click", () => { $("#ajustes").hidden = true; renderChat(); });
   $("#a-clave").addEventListener("input", (e) => { A.claves[A.proveedor] = e.target.value.trim(); delete A.modeloAuto[A.proveedor]; save(); });
   $("#a-modelo").addEventListener("change", (e) => { A.modelo = e.target.value.trim(); save(); });

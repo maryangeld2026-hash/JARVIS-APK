@@ -24,6 +24,11 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(BurbujaPlugin.class);
         registerPlugin(EscuchaPlugin.class);
         super.onCreate(savedInstanceState);
+        // 3.0.2: con la letra del celular muy grande, la barra de arriba no cabía y el botón de Ajustes quedaba por fuera
+        try {
+            android.webkit.WebSettings ws = getBridge().getWebView().getSettings();
+            ws.setTextZoom(Math.min(ws.getTextZoom(), 115));
+        } catch (Exception ignored) { }
         BurbujaPlugin.revisarToque(getIntent());
         porDespertar(getIntent());
     }

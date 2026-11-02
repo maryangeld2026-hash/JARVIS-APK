@@ -179,7 +179,7 @@
   };
   X.beforeListen = beforeListen;
   X.settings = function () {
-    baseSettings();
+    try { baseSettings(); } catch (e) { console.error(e); }
     const box = $("#aj2");
     if (!box) return;
     const sec = mk("div"); sec.id = "aj-fondo";

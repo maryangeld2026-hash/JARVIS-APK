@@ -442,7 +442,7 @@
     return out;
   };
   X.settings = function () {
-    base.settings();
+    try { base.settings(); } catch (e) { console.error(e); }
     const box = $("#aj2"); if (!box || $("#aj-h3")) return;
     const sec = mk("div"); sec.id = "aj-h3";
     sec.append(mk("h3", "sub", "Horario y colegio"));

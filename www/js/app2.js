@@ -514,7 +514,7 @@
     if (!box) {
       box = mk("div"); box.id = "aj2";
       const before = [...document.querySelectorAll("#ajustes .sub")].find((h) => /Tus datos/i.test(h.textContent));
-      before.before(box);
+      if (before) before.before(box); else $("#ajustes .scroll").append(box);
     }
     box.innerHTML = "";
     // memoria

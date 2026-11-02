@@ -1,6 +1,6 @@
 /* Jarvis para Android (versión web): guarda la app en el celular para que abra sin internet.
    La IA sí necesita internet; las herramientas de la clase y los quices guardados funcionan sin conexión. */
-const CACHE = "jarvis-3.0";
+const CACHE = "jarvis-3.0.2";
 const FILES = ["./", "index.html", "css/app.css", "js/logica.js", "js/logica2.js", "js/app2.js", "js/hud.js", "js/logica3.js", "js/habilidades.js", "js/datos.js", "js/voz.js", "js/ia.js", "js/pdf.js", "js/app.js", "js/mdmath.js",
   "vendor/katex/katex.min.js", "vendor/katex/katex.min.css", "vendor/jspdf.umd.min.js", "vendor/fuente-pdf.js", "manifest.webmanifest",
   "img/icono-192.png", "img/icono-512.png"];

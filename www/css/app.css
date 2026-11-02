@@ -336,3 +336,13 @@ canvas.plot { display: block; width: 100%; max-width: 520px; height: auto; borde
 .toast { top: calc(64px + var(--safe-t)); bottom: auto; }
 .live { color: var(--muted); }
 [data-state="listening"] .live { color: var(--ok); }
+
+/* 3.0.2: el botón de Ajustes nunca se sale de la pantalla. Los avisos (TUTOR, MANOS LIBRES) bajan a su propia fila. */
+.top { flex-wrap: wrap; row-gap: 6px; }
+.top .brand { cursor: pointer; }
+.top .pills { order: 99; flex: 1 0 100%; flex-wrap: wrap; min-width: 0; }
+.top .pills:not(:has(> :not([hidden]))) { display: none; }
+.top .leds { flex-shrink: 0; }
+.top #btn-ajustes { margin-left: 0; }
+.sheet-in { max-height: calc(100% - var(--safe-t) - 8px); min-height: 0; }
+.sheet-in .scroll { min-height: 0; overscroll-behavior: contain; }
