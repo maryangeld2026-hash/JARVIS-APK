@@ -25,7 +25,7 @@ El asistente de voz de la clase, en el celular, **sin el computador encendido**.
 - Todo vive en el celular: cursos, quices, recordatorios y conversación. *Ajustes › Guardar copia* crea un archivo (sin tu clave) para guardarlo en Drive o pasarlo a otro celular.
 
 ## Cómo instalarla
-1. Descarga **Jarvis-android-1.0.apk** en el celular, desde esta página.
+1. Descarga **Jarvis-android-1.0.0.apk** en el celular, desde esta página.
 2. Ábrelo. Android pedirá permiso para instalar apps de este origen: acéptalo solo para tu navegador o tus Archivos.
 3. Abre Jarvis, toca el engranaje, escoge la IA y pega tu clave (la de Gemini se consigue gratis en aistudio.google.com/apikey).
 4. La primera vez que toques el micrófono, Android pide permiso para usarlo.
