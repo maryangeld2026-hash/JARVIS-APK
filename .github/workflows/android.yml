@@ -48,7 +48,7 @@ jobs:
 
       - name: Prueba de punta a punta (celular simulado)
         run: |
-          python3 -m pip install --quiet playwright pillow
+          python3 -m pip install --quiet playwright pillow openpyxl
           python3 -m playwright install --with-deps chromium
           python3 pruebas/e2e.py capturas
 
