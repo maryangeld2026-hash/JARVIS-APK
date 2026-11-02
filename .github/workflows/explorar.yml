@@ -1,0 +1,14 @@
+name: explorar
+on: { push: { branches: [explorar] } }
+jobs:
+  x:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in https://dl.google.com/android/maven2/com/google/mediapipe/tasks-genai/maven-metadata.xml \
+                   https://dl.google.com/android/maven2/com/google/ai/edge/litertlm/litertlm-android/maven-metadata.xml \
+                   https://repo1.maven.org/maven2/com/google/ai/edge/litertlm/litertlm-android/maven-metadata.xml; do
+            echo "== $u"; curl -sS -m 20 "$u" | grep -o '<version>[^<]*</version>' | tail -8; done
+          for r in litert-community/Qwen2.5-1.5B-Instruct litert-community/Qwen2.5-0.5B-Instruct litert-community/Gemma3-1B-IT litert-community/gemma-3-270m-it litert-community/Qwen3-0.6B litert-community/Phi-4-mini-instruct litert-community/SmolLM-135M-Instruct; do
+            echo "== $r"; curl -sS -m 20 "https://huggingface.co/api/models/$r?blobs=true" | python3 -c "import sys,json; d=json.load(sys.stdin); print('gated:', d.get('gated'), 'license:', (d.get('cardData') or {}).get('license')); [print(' ', s['rfilename'], s.get('size')) for s in d.get('siblings',[]) if s['rfilename'].endswith(('.task','.litertlm'))]" || true; done
+          echo "== HEAD sin cuenta"; curl -sIL -m 30 "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm" | grep -iE "^HTTP|content-length" | tail -3
