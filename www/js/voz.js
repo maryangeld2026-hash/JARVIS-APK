@@ -6,6 +6,9 @@
   const native = () => !!(cap() && cap().isNativePlatform && cap().isNativePlatform());
   const plug = (n) => (cap() && cap().Plugins && cap().Plugins[n]) || null;
   const LANG = "es-CO";
+  /** 3.3.1: en el celular, addListener de los plugins no siempre devuelve una promesa (no tiene .catch). Esto sirve en ambos casos. */
+  const on = (p, ev, fn) => Promise.resolve().then(() => p.addListener(ev, fn)).catch((e) => { console.warn("addListener", ev, e); return null; });
+  window.JON = on;
 
   // ======================================================================== ESCUCHAR
   let webRec = null, nativeStop = null;
@@ -57,8 +60,8 @@
       if (!p.ok) throw new Error("Jarvis necesita permiso para usar el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos › Micrófono.");
       oidoOk = true;
     }
-    const h = await O.addListener("parcial", (d) => { if (d && d.texto && onPartial) onPartial(d.texto); }).catch(() => null);
-    const h2 = await O.addListener("estado", (d) => { if (onListenState && d) onListenState(d.s, d); }).catch(() => null);
+    const h = await on(O, "parcial", (d) => { if (d && d.texto && onPartial) onPartial(d.texto); });
+    const h2 = await on(O, "estado", (d) => { if (onListenState && d) onListenState(d.s, d); });
     nativeStop = () => { O.detener().catch(() => {}); };
     try {
       const r = (await O.escuchar({ idioma: LANG, silencio: 1100, maximo: 15000 })) || {};
@@ -94,8 +97,8 @@
     for (const m of ["google", "celular", "vosk"]) {
       if ((m === "google" && !d.google) || (m === "celular" && !d.celular) || (m === "vosk" && !d.vosk)) continue;
       onLine(`▶ ${MOTOR[m]}: di algo ahora…`);
-      const h = await O.addListener("estado", (e) => { if (e.s === "listo") onLine("   escuchando ✓"); if (e.s === "habla") onLine("   te oigo ✓"); }).catch(() => null);
-      const hp = await O.addListener("parcial", (e) => { if (e && e.texto) onLine("   «" + e.texto + "»", true); }).catch(() => null);
+      const h = await on(O, "estado", (e) => { if (e.s === "listo") onLine("   escuchando ✓"); if (e.s === "habla") onLine("   te oigo ✓"); });
+      const hp = await on(O, "parcial", (e) => { if (e && e.texto) onLine("   «" + e.texto + "»", true); });
       let r = {};
       try { r = await O.escuchar({ idioma: LANG, silencio: 1100, maximo: 8000, motor: m }); } catch (e) { r = { error: e.message }; }
       if (h && h.remove) h.remove(); if (hp && hp.remove) hp.remove();
@@ -116,8 +119,8 @@
       const handles = [];
       const finish = () => { if (done) return; done = true; handles.forEach((h) => h && h.remove && h.remove()); nativeStop = null; resolve(last.trim()); };
       nativeStop = () => { SR.stop().catch(() => {}); finish(); };
-      handles.push(await SR.addListener("partialResults", (d) => { const m = (d && d.matches) || []; if (m[0]) { last = m[0]; if (onPartial) onPartial(last); } }));
-      handles.push(await SR.addListener("listeningState", (d) => { if (d && d.status === "stopped") setTimeout(finish, 150); }));
+      handles.push(await on(SR, "partialResults", (d) => { const m = (d && d.matches) || []; if (m[0]) { last = m[0]; if (onPartial) onPartial(last); } }));
+      handles.push(await on(SR, "listeningState", (d) => { if (d && d.status === "stopped") setTimeout(finish, 150); }));
       try {
         const r = await SR.start({ language: LANG, maxResults: 1, partialResults: true, popup: false });
         if (r && r.matches && r.matches[0]) { last = r.matches[0]; finish(); }

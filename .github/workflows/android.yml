@@ -51,6 +51,7 @@ jobs:
           python3 -m pip install --quiet playwright pillow openpyxl
           python3 -m playwright install --with-deps chromium
           python3 pruebas/e2e.py capturas
+          python3 pruebas/nativo_sim.py
 
       - uses: actions/upload-artifact@v5
         if: always()

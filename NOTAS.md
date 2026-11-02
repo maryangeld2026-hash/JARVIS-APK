@@ -1,3 +1,13 @@
+# Jarvis para Android 3.3.1: ahora sí, el micrófono
+
+- **Encontrado gracias a tu captura:** el error «addListener(...).catch is not a function». En el celular, los avisos de los plugins («te estoy oyendo», «esto es lo que entendí») responden distinto que en las pruebas. La app se caía justo antes de abrir el micrófono, y por eso Jarvis nunca te escuchaba. Ya está corregido en todas partes.
+- **Ese mismo error tenía más efectos:** no dejaba arrancar bien «Jarvis en segundo plano» al abrir la app, ni la burbuja flotante. También explica que en versiones anteriores a veces no apareciera el botón de la cámara. Todo queda arreglado.
+- Ahora las pruebas automáticas imitan exactamente cómo responde el celular, para que esto no vuelva a pasar.
+
+*Se instala encima de la 3.3, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 3.3: el micrófono, arreglado de raíz
 
 - **La causa:** con «Jarvis en segundo plano» activo, ese servicio seguía usando el micrófono cuando tocabas el orbe. La app esperaba solo un cuarto de segundo a que lo soltara, pero tarda hasta un segundo y medio. Mientras tanto, Android le daba silencio al reconocedor de voz, y por eso Jarvis no te oía. Ahora la conversación espera a que el micrófono quede libre de verdad antes de escuchar.

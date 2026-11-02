@@ -213,7 +213,7 @@
     const t0 = performance.now();
     stopped = false;
     let h = null, parcial = "";
-    if (onDelta) h = await P.addListener("parcial", (d) => { if (stopped || !d || !d.texto) return; if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: "IA del celular", prov: "local" }; parcial = L.cleanLocal(d.texto); onDelta("", parcial); }).catch(() => null);
+    if (onDelta) h = await window.JON(P, "parcial", (d) => { if (stopped || !d || !d.texto) return; if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: "IA del celular", prov: "local" }; parcial = L.cleanLocal(d.texto); onDelta("", parcial); });
     try {
       const r = await P.generar({ prompt, maxTokens: Math.min(Math.max(256, maxTokens), 1024) });
       if (stopped) throw Object.assign(new Error("Detenido."), { code: "abort" });

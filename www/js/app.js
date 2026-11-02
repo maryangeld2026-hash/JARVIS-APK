@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.3";
+  const VERSION = "3.3.1";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -671,7 +671,7 @@
     if (!navigator.onLine) return toast("Para descargarla necesitas internet (mejor wifi). Después funciona sin internet.", 5000);
     const m = LOCALES[A.localModelo || "qwen05"];
     bajando = true; $("#btn-local-bajar").textContent = "Cancelar";
-    const h = await P.addListener("progreso", (d) => { st.textContent = `Descargando… ${d.p >= 0 ? d.p + " % · " : ""}${d.mb} MB (puedes seguir usando Jarvis)`; }).catch(() => null);
+    const h = await window.JON(P, "progreso", (d) => { st.textContent = `Descargando… ${d.p >= 0 ? d.p + " % · " : ""}${d.mb} MB (puedes seguir usando Jarvis)`; });
     try { await P.descargar({ url: m.url, nombre: m.archivo }); toast("Listo: la IA del celular quedó descargada. Ya funciona sin internet.", 5000); if (!A.respaldo && A.proveedor !== "local") { A.respaldo = "local"; save(true); } }
     catch (e) { toast("No se pudo descargar: " + (e.message || e), 7000); }
     finally { bajando = false; if (h && h.remove) h.remove(); fillBackup(); }

@@ -575,7 +575,7 @@
     if (D.ajustes.manosLibres) setHandsFree(true);
     const B = native() && plug("Burbuja");
     if (B) {
-      B.addListener("toque", () => { A.tab("hablar"); setTimeout(() => A.listen(false), 400); }).catch(() => {});
+      window.JON(B, "toque", () => { A.tab("hablar"); setTimeout(() => A.listen(false), 400); });
       if (D.ajustes.burbuja) bubble(true, false);
     }
     // copia automática en Drive una vez al día si ya conectaste Google

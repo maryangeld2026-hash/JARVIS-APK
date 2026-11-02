@@ -115,7 +115,7 @@
       if (!m.listo) {
         if (!navigator.onLine) { say("Para preparar la escucha sin internet necesito descargar una vez el modelo de voz (unos 40 MB). Conéctate a internet, mejor por wifi.", "err"); return false; }
         A.toast("Descargando el modelo de voz para escuchar sin internet (unos 40 MB, una sola vez)…", 8000);
-        const h = await S.addListener("progreso", (d) => { const p = d && d.p; const el = $("#fondo-st"); if (el && p >= 0) el.textContent = `Descargando el modelo de voz… ${p}%`; });
+        const h = await window.JON(S, "progreso", (d) => { const p = d && d.p; const el = $("#fondo-st"); if (el && p >= 0) el.textContent = `Descargando el modelo de voz… ${p}%`; });
         try { await S.descargar(); } finally { h && h.remove && h.remove(); }
       }
       await S.activar();
@@ -162,8 +162,8 @@
     setInterval(() => { try { hoy(); } catch (e) { /* nada */ } }, 30000);
     const S = E();
     if (S) {
-      S.addListener("despertar", onWake).catch(() => {});
-      S.addListener("error", (d) => A.toast("Escucha en segundo plano: " + ((d && d.valor) || "error"), 6000)).catch(() => {});
+      window.JON(S, "despertar", onWake);
+      window.JON(S, "error", (d) => A.toast("Escucha en segundo plano: " + ((d && d.valor) || "error"), 6000));
       if (D.ajustes.fondo) fondo(true, false);
     }
   };
