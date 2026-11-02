@@ -48,29 +48,61 @@
   }
   /** 3.1: el oído propio de la app (OidoPlugin.java). Siempre termina: con lo que oyó, o vacío si no oyó nada. */
   let oidoOk = false, oidoFallas = 0;
+  let onListenState = null, lastListen = null;
+  const MOTOR = { google: "reconocimiento de Google", celular: "reconocimiento del celular", vosk: "voz sin internet (Vosk)" };
   async function listenOido(onPartial) {
     const O = plug("Oido");
     if (!oidoOk) {
-      const p = await O.permiso().catch(() => ({ ok: false }));
-      if (!p.ok) throw new Error("Jarvis necesita permiso para usar el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos.");
+      const p = await Promise.race([O.permiso(), new Promise((r) => setTimeout(() => r({ ok: "espera" }), 20000))]).catch(() => ({ ok: false }));
+      if (!p.ok) throw new Error("Jarvis necesita permiso para usar el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos › Micrófono.");
       oidoOk = true;
     }
     const h = await O.addListener("parcial", (d) => { if (d && d.texto && onPartial) onPartial(d.texto); }).catch(() => null);
+    const h2 = await O.addListener("estado", (d) => { if (onListenState && d) onListenState(d.s, d); }).catch(() => null);
     nativeStop = () => { O.detener().catch(() => {}); };
     try {
-      const r = await O.escuchar({ idioma: LANG, silencio: 1100, maximo: 15000 });
-      if (r && r.error === "permiso") { oidoOk = false; throw new Error("Jarvis no tiene permiso para el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos."); }
-      if (r && !r.texto && r.error === "red") throw new Error("El reconocimiento de voz de Android necesita internet en este celular. Revisa la conexión o escribe la orden.");
-      if (r && !r.texto && r.error === "idioma") throw new Error("Falta el español en el reconocimiento de voz del celular: Ajustes del teléfono › Google › Voz.");
-      // 3.2: si el oído propio no arranca en este celular, se usa el reconocimiento de antes
-      if (r && !r.texto && r.error && !/^(?:cancelado|otra|sin_respuesta)$/.test(r.error) && plug("SpeechRecognition")) {
+      const r = (await O.escuchar({ idioma: LANG, silencio: 1100, maximo: 15000 })) || {};
+      lastListen = r;
+      if (r.error === "permiso") { oidoOk = false; throw new Error("Jarvis no tiene permiso para el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos › Micrófono."); }
+      if (!r.texto && r.error === "red") throw new Error("El reconocimiento de voz necesita internet en este celular. Revisa la conexión, o descarga la voz sin internet en Ajustes › «Jarvis» en segundo plano.");
+      if (!r.texto && r.error === "idioma") throw new Error("Falta el español en el reconocimiento de voz del celular: Ajustes del teléfono › Google › Voz › Idiomas.");
+      if (!r.texto && r.error === "sin_servicio") throw new Error("Este celular no tiene reconocimiento de voz. Instala o activa la app de Google, o descarga la voz sin internet en Ajustes › «Jarvis» en segundo plano.");
+      // si el oído propio no sirvió en este celular, se prueba el reconocimiento de antes
+      if (!r.texto && r.error && !/^(?:cancelado|otra|sin_respuesta)$/.test(r.error) && plug("SpeechRecognition")) {
         oidoFallas++; console.warn("Oído:", r.error);
         nativeStop = null; if (h && h.remove) h.remove();
-        return listenNative(onPartial);
+        const t = await listenNative(onPartial);
+        if (!t) throw new Error(`El micrófono no respondió (${r.motor || "voz"}: ${r.error}). Toca Ajustes › Probar el micrófono para ver qué pasa.`);
+        return t;
       }
-      if (r && r.texto) oidoFallas = 0;
-      return ((r && r.texto) || "").trim();
-    } finally { nativeStop = null; if (h && h.remove) h.remove(); }
+      if (r.texto) oidoFallas = 0;
+      return (r.texto || "").trim();
+    } finally { nativeStop = null; if (h && h.remove) h.remove(); if (h2 && h2.remove) h2.remove(); }
+  }
+  /** Prueba completa del micrófono (Ajustes): qué tiene el celular, y una escucha de prueba por cada camino. */
+  async function micTest(onLine) {
+    const O = native() && plug("Oido");
+    if (!O) { onLine("En el navegador: " + (window.SpeechRecognition || window.webkitSpeechRecognition ? "sí reconoce voz." : "este navegador no reconoce voz.")); return; }
+    const d = await O.diagnostico();
+    onLine(`Celular: ${d.equipo} · Android ${d.android}`);
+    onLine(`Permiso del micrófono: ${d.permiso ? "sí ✓" : "NO ✗ (dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos)"}`);
+    onLine(`Reconocimiento de Google: ${d.google ? "sí ✓" : "no"} · del celular: ${d.celular ? "sí ✓" : "no"} · sin internet (Vosk): ${d.vosk ? "sí ✓" : "no descargado"}`);
+    onLine(`Servicio de voz: ${d.servicio || "(ninguno escogido)"}${d.servicios && d.servicios.length ? " · instalados: " + d.servicios.join(", ") : " · NINGUNO instalado"}`);
+    if (d.fondoActivo) onLine(`«Jarvis» en segundo plano: activo${d.fondoGrabando ? " (tiene el micrófono; se suelta para la prueba)" : ""}`);
+    if (d.ultimoError) onLine(`Último error: ${d.ultimoError}`);
+    if (!d.permiso) { const p = await O.permiso(); onLine(p.ok ? "Permiso concedido ✓" : "Sin permiso: no puedo probar."); if (!p.ok) return; oidoOk = true; }
+    for (const m of ["google", "celular", "vosk"]) {
+      if ((m === "google" && !d.google) || (m === "celular" && !d.celular) || (m === "vosk" && !d.vosk)) continue;
+      onLine(`▶ ${MOTOR[m]}: di algo ahora…`);
+      const h = await O.addListener("estado", (e) => { if (e.s === "listo") onLine("   escuchando ✓"); if (e.s === "habla") onLine("   te oigo ✓"); }).catch(() => null);
+      const hp = await O.addListener("parcial", (e) => { if (e && e.texto) onLine("   «" + e.texto + "»", true); }).catch(() => null);
+      let r = {};
+      try { r = await O.escuchar({ idioma: LANG, silencio: 1100, maximo: 8000, motor: m }); } catch (e) { r = { error: e.message }; }
+      if (h && h.remove) h.remove(); if (hp && hp.remove) hp.remove();
+      onLine(r.texto ? `   ✓ Funciona: «${r.texto}»` : `   ✗ No oyó nada${r.error ? " (" + r.error + ")" : ""}${r.nivel != null && r.nivel > -100 ? " · volumen máx. " + r.nivel + " dB" : ""}`);
+      if (r.texto) { onLine("Listo: el micrófono funciona con " + MOTOR[m] + "."); return; }
+    }
+    onLine("Ningún camino oyó tu voz. Revisa: que ninguna otra app esté usando el micrófono, el permiso, y que la app de Google esté instalada. Si tienes «Jarvis en segundo plano», descarga su modelo: así la conversación también funciona sin Google.");
   }
   async function listenNative(onPartial) {
     const SR = plug("SpeechRecognition");
@@ -221,6 +253,6 @@
     } catch (e) { /* no es grave */ }
   }
 
-  window.JV = { native, canListen, listen, stopListening, cancelListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 };
+  window.JV = { micTest, onListenState: (f) => { onListenState = f; }, lastListen: () => lastListen, native, canListen, listen, stopListening, cancelListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 };
   window.JN = { notifyAt, cancelNotify, showNow, share, keepAwake };
 })();

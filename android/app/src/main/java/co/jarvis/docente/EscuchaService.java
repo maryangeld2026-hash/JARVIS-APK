@@ -31,6 +31,8 @@ public class EscuchaService extends Service {
     static final String CANAL = "jarvis_escucha";
     static final String ACCION_PAUSAR = "pausar", ACCION_REANUDAR = "reanudar";
     static volatile boolean activo = false, pausado = false;
+    /** 3.3: true mientras este servicio tiene el micrófono abierto (para que la conversación espere a que lo suelte). */
+    static volatile boolean grabando = false;
 
     private Thread hilo;
     private volatile boolean correr = false;
@@ -49,6 +51,17 @@ public class EscuchaService extends Service {
         activo = true;
         arrancar();
         return START_STICKY;
+    }
+
+    /** 3.3: pide al servicio que suelte el micrófono y espera (hasta ms) a que de verdad lo suelte. No llamar desde el hilo principal. */
+    static boolean soltarMicrofono(android.content.Context c, long ms) {
+        if (!grabando) return true;
+        Intent i = new Intent(c, EscuchaService.class).setAction(ACCION_PAUSAR);
+        try { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) c.startForegroundService(i); else c.startService(i); } catch (Exception e) { return false; }
+        long fin = System.currentTimeMillis() + ms;
+        while (grabando && System.currentTimeMillis() < fin) { try { Thread.sleep(40); } catch (InterruptedException e) { break; } }
+        try { Thread.sleep(120); } catch (InterruptedException ignored) { }      // que Android termine de liberar el audio
+        return !grabando;
     }
 
     private Intent abrir(String resto) {
@@ -105,6 +118,7 @@ public class EscuchaService extends Service {
             rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 8192));
             if (rec.getState() != AudioRecord.STATE_INITIALIZED) throw new IllegalStateException("El micrófono está ocupado.");
             rec.startRecording();
+            grabando = true;
             EscuchaPlugin.emitir("estado", "escuchando");
             byte[] buf = new byte[4096];
             boolean oyo = false;
@@ -133,6 +147,7 @@ public class EscuchaService extends Service {
             EscuchaPlugin.emitir("error", String.valueOf(e.getMessage()));
         } finally {
             if (rec != null) { try { rec.stop(); } catch (Exception ignored) { } rec.release(); }
+            grabando = false;
             if (r != null) r.close();
             correr = false;
         }

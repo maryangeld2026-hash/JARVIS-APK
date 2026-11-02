@@ -128,7 +128,7 @@
   }
   async function beforeListen() {
     const S = E();
-    if (S && fondoOn && !fondoPausa) { fondoPausa = true; paintLeds(); try { await Promise.race([S.pausar(), new Promise((r) => setTimeout(r, 900))]); } catch (e) { /* nada */ } await new Promise((r) => setTimeout(r, 250)); }
+    if (S && (fondoOn || D.ajustes.fondo)) { fondoPausa = true; paintLeds(); try { await Promise.race([S.pausar(), new Promise((r) => setTimeout(r, 2800))]); } catch (e) { /* nada */ } }   // 3.3: pausar responde cuando el micrófono quedó libre
   }
   function resumeLater() {
     const S = E();

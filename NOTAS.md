@@ -1,3 +1,14 @@
+# Jarvis para Android 3.3: el micrófono, arreglado de raíz
+
+- **La causa:** con «Jarvis en segundo plano» activo, ese servicio seguía usando el micrófono cuando tocabas el orbe. La app esperaba solo un cuarto de segundo a que lo soltara, pero tarda hasta un segundo y medio. Mientras tanto, Android le daba silencio al reconocedor de voz, y por eso Jarvis no te oía. Ahora la conversación espera a que el micrófono quede libre de verdad antes de escuchar.
+- **Tres caminos para oírte:** si el reconocimiento de Google falla en tu celular, Jarvis prueba solo el reconocimiento integrado del celular (Android 12 o más nuevo). Si ese tampoco sirve, usa la voz sin internet (Vosk, la misma de «Jarvis en segundo plano», si ya la descargaste). Recuerda el que funcionó.
+- **Ves lo que pasa:** al tocar el orbe, se pone verde de una vez y dice «Abriendo el micrófono…» y luego **«🎙️ Habla ahora…»**. Si no te oyó, te dice por qué en vez de quedarse callado.
+- **Nuevo: Ajustes › Voz › 🎙️ Probar el micrófono.** Revisa el permiso, qué reconocedores tiene tu celular y si «Jarvis en segundo plano» tiene el micrófono, y hace una escucha de prueba con cada camino. Si algo falla, una captura de esa pantalla dice exactamente qué es.
+
+*Se instala encima de la 3.2, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 3.2: IA sin internet, documentos, cámara y más
 
 ## 🎙️ El orbe del micrófono

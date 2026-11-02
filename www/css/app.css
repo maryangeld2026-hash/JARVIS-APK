@@ -384,3 +384,4 @@ select.inp { appearance: auto; }
 .salir-menu small { color: var(--muted); font-size: 12.5px; }
 #btn-salir svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 @media (max-width: 380px) { .top .icon-btn { width: 36px; height: 36px; } .top { gap: 4px; } .top .brand { letter-spacing: .08em; font-size: 13px; } }
+.mic-test { white-space: pre-wrap; font: 12.5px/1.5 var(--mono); background: #050b14; border: 1px solid var(--line); border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto; margin: 8px 0 0; }

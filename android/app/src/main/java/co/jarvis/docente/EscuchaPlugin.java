@@ -162,11 +162,18 @@ public class EscuchaPlugin extends Plugin {
 
     @PluginMethod
     public void pausar(PluginCall call) {
-        if (EscuchaService.activo) {
-            Intent i = new Intent(getContext(), EscuchaService.class).setAction(EscuchaService.ACCION_PAUSAR);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getContext().startForegroundService(i); else getContext().startService(i);
-        }
-        call.resolve();
+        // 3.3: responde solo cuando el micrófono quedó libre de verdad (antes respondía de una vez y el reconocedor oía silencio)
+        new Thread(() -> {
+            if (EscuchaService.activo) {
+                if (EscuchaService.grabando) EscuchaService.soltarMicrofono(getContext(), 2500);
+                else {
+                    Intent i = new Intent(getContext(), EscuchaService.class).setAction(EscuchaService.ACCION_PAUSAR);
+                    try { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getContext().startForegroundService(i); else getContext().startService(i); } catch (Exception ignored) { }
+                }
+            }
+            JSObject r = new JSObject(); r.put("libre", !EscuchaService.grabando);
+            call.resolve(r);
+        }, "jarvis-pausar").start();
     }
 
     @PluginMethod

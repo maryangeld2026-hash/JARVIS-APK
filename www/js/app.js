@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.2";
+  const VERSION = "3.3";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -165,23 +165,38 @@
     }
     if (V.isSpeaking()) V.hush();
     if (state === "thinking") { IA.stop(); }
-    if (window.JX && window.JX.beforeListen) { try { await Promise.race([window.JX.beforeListen(), new Promise((r) => setTimeout(r, 1200))]); } catch (e) { /* sigue */ } }   // 2.2: suelta el micrófono de «Jarvis» en segundo plano
-    setState("listening");
-    if (IA.warm) IA.warm();                                   // mientras hablas, ya se abre la conexión con la IA
-    $("#live").textContent = auto ? "Te escucho…" : "Te escucho… (habla ahora)";
-    let text = "";
     const my = ++listenGen; heardPart = false;
+    setState("listening");                                    // 3.3: el orbe se pone verde de una vez, aunque el micrófono tarde en abrir
+    $("#live").textContent = "Abriendo el micrófono…";
+    if (window.JX && window.JX.beforeListen) { try { await Promise.race([window.JX.beforeListen(), new Promise((r) => setTimeout(r, 3000))]); } catch (e) { /* sigue */ } }   // 2.2: suelta el micrófono de «Jarvis» en segundo plano
+    if (my !== listenGen) return;
+    if (IA.warm) IA.warm();                                   // mientras hablas, ya se abre la conexión con la IA
+    if (!V.native()) $("#live").textContent = auto ? "Te escucho…" : "Te escucho… habla ahora";
+    let text = "";
     try { text = await V.listen((p) => { heardPart = true; $("#live").textContent = p; }); }
     catch (e) { if (my !== listenGen) return; setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
     if (my !== listenGen) return;                              // otra escucha ya empezó (tocaste el orbe de nuevo)
     $("#live").textContent = "";
     setState("idle");
+    if (!text && !auto) {                                       // tocaste el orbe y no se oyó nada: se dice por qué
+      const r = V.lastListen ? V.lastListen() : null;
+      $("#live").textContent = r && r.nivel != null && r.nivel > -100 && r.nivel < 1 ? "No te oí: el micrófono llega muy bajo. Acércate y toca de nuevo." : "No te oí. Toca el orbe y habla cuando diga «Habla ahora».";
+      setTimeout(() => { if (state === "idle") $("#live").textContent = ""; }, 5000);
+      return;
+    }
     if (!text) { if (auto && !D.ajustes.manosLibres) { $("#live").textContent = "En espera · toca el micrófono para hablar"; setTimeout(() => { if (state === "idle") $("#live").textContent = ""; }, 4000); } return; }
     misses = 0;
     if (window.JX && window.JX.heard && window.JX.heard(text, auto)) return;   // 2.0: manos libres decide si iba para Jarvis
     handle(text, true);
   }
   $("#btn-mic").addEventListener("click", () => listen(false));
+  // 3.3: lo que va pasando con el micrófono, a la vista
+  if (V.onListenState) V.onListenState((s, d) => {
+    if (state !== "listening" || heardPart) return;
+    if (s === "listo") $("#live").textContent = "🎙️ Habla ahora…";
+    else if (s === "habla") $("#live").textContent = "Te oigo…";
+    else if (s === "cambio") $("#live").textContent = "Ese micrófono no respondió; pruebo otro… habla ahora";
+  });
   $("#btn-callar").addEventListener("click", () => { V.hush(); IA.stop(); (V.cancelListening || V.stopListening)(); setState("idle"); $("#live").textContent = ""; });
   const conv = $("#btn-conv");
   function convMark() { conv.setAttribute("aria-pressed", D.ajustes.seguir ? "true" : "false"); }
@@ -671,6 +686,16 @@
     const st = $("#a-local-st"); st.textContent = "Probando (la primera vez tarda unos segundos en cargar)…";
     try { const r = await IA.test("local"); st.textContent = `Funciona: «${r.texto.slice(0, 40)}» (${(r.ms / 1000).toFixed(1).replace(".", ",")} s).`; }
     catch (e) { st.textContent = e.message; }
+  });
+  // 3.3: prueba del micrófono, paso a paso (si algo falla, la captura de esta pantalla dice qué es)
+  $("#btn-mic-test").addEventListener("click", async () => {
+    const out = $("#mic-test"), b = $("#btn-mic-test");
+    out.hidden = false; out.textContent = ""; b.disabled = true;
+    V.hush(); (V.cancelListening || V.stopListening)();
+    if (window.JX && window.JX.beforeListen) { try { await window.JX.beforeListen(); } catch (e) { /* sigue */ } }
+    const line = (t, repl) => { const ls = out.textContent.split("\n").filter(Boolean); if (repl && ls.length && /^\s+«/.test(ls[ls.length - 1])) ls.pop(); ls.push(t); out.textContent = ls.join("\n"); out.scrollTop = out.scrollHeight; };
+    try { await V.micTest(line); } catch (e) { line("Error: " + (e.message || e)); }
+    b.disabled = false;
   });
   // botón «Guardar ajustes»: guarda todo de una vez y cierra
   $("#btn-guardar-aj").addEventListener("click", () => {
