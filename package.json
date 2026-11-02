@@ -1,6 +1,6 @@
 {
   "name": "jarvis-android",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "description": "Jarvis para Android: el asistente de voz de la clase, sin el computador.",
   "scripts": {

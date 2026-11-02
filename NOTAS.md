@@ -1,4 +1,4 @@
-# Jarvis para Android 2.2: conversación continua, «Jarvis» en segundo plano y el HUD
+# Jarvis para Android 2.2.1: conversación continua, «Jarvis» en segundo plano y el HUD
 
 ## 💬 La conversación sigue sola
 - Después de responder, Jarvis vuelve a escucharte sin que toques el micrófono, como en el computador. Si no dices nada, se queda en espera.
@@ -18,7 +18,7 @@
 - **El panel «Hoy»:** la hora, el temporizador que corre, el próximo recordatorio, cuántos van en riesgo en el curso y botones de sugerencia según el momento del día.
 - **La burbuja flotante** cambia de color con el estado y muestra la última respuesta en un globo. Así sigues a Jarvis desde otra app, como con la vista previa del HUD.
 
-*Se instala encima de la 2.1, sin perder tus datos.*
+*Se instala encima de la 2.1, sin perder tus datos. (2.2.1: el APK pesa menos.)*
 
 ---
 
