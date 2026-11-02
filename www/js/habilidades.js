@@ -457,10 +457,15 @@
     box.prepend(sec);
   };
   X.init = function (api) {
-    A = api; D = api.D; ensure();
-    base.init(api);
-    save();
-    renderDocs();
+    A = api; D = api.D;
+    // 3.1: primero lo que se ve (el botón de la cámara); si algo de los otros módulos falla, no se lleva esto por delante
+    camButton();
+    try { ensure(); } catch (e) { console.error(e); }
+    try { base.init(api); } catch (e) { console.error("init", e); A.toast("Una parte de Jarvis no arrancó: " + (e.message || e), 6000); }
+    try { save(); renderDocs(); } catch (e) { console.error(e); }
+    const q = document.querySelector('.tabs button[data-tab="quices"]'); if (q) q.addEventListener("click", () => setTimeout(renderDocs, 50));
+  };
+  function camButton() {
     // foto en la conversación: el botón de la cámara junto al campo de escribir
     const f = $("#f-escribir");
     if (f && !$("#btn-foto-chat")) {
@@ -470,7 +475,6 @@
       inp.addEventListener("change", () => { const file = inp.files[0]; inp.value = ""; if (file) photoQuestion(file); });
       f.prepend(b); f.append(inp);
     }
-    const q = document.querySelector('.tabs button[data-tab="quices"]'); if (q) q.addEventListener("click", () => setTimeout(renderDocs, 50));
-  };
+  }
   X._h = { makeDoc, plot, research, data, familyReport, recoveryPlan, kahoot, renderDocs, openCards };
 })();

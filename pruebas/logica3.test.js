@@ -108,3 +108,11 @@ test("abrir ajustes por voz", () => {
   assert.equal(L.intent("Jarvis, ajustes", []).kind, "ajustes");
   assert.equal(L.intent("configuración", []).kind, "ajustes");
 });
+
+test("modelos de respaldo y reintentos", () => {
+  assert.deepEqual(L.pickModels("gemini", ["gemini-3.5-pro", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash-preview"]), ["gemini-3.5-flash-lite", "gemini-3.5-flash"]);
+  assert.equal(L.retryable({ status: 503 }), true);
+  assert.equal(L.retryable({ code: "lento" }), true);
+  assert.equal(L.retryable({ status: 401 }), false);
+  assert.equal(L.retryable({ code: "abort" }), false);
+});

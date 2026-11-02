@@ -246,6 +246,23 @@
     }
     return p.modelo || list[0] || "";
   }
+  /** 3.1: los modelos rápidos de la cuenta, en orden de preferencia (si el primero está saturado, se usa el siguiente). */
+  function pickModels(provider, ids, n = 4) {
+    const p = PROVIDERS[provider];
+    if (!p) return [];
+    const list = (ids || []).map(String).filter((x) => !/(?:preview|exp|audio|realtime|tts|image|embed|vision|search|transcribe|instruct|whisper|dall|davinci|babbage|moderation|codex|computer)/i.test(x));
+    const ver = (x) => (x.match(/\d+(?:\.\d+)?/g) || []).map(parseFloat).reduce((a, v, i) => a + v / Math.pow(100, i), 0);
+    const out = [];
+    for (const re of p.prefer) list.filter((x) => re.test(x)).sort((a, b) => ver(b) - ver(a)).forEach((x) => { if (!out.includes(x)) out.push(x); });
+    return out.slice(0, n);
+  }
+  /** ¿Vale la pena reintentar? (servidor saturado o caído, límite por minuto, red) */
+  function retryable(err) {
+    if (!err) return false;
+    if (err.code === "lento" || err.code === "red") return true;
+    const st = err.status || 0;
+    return st === 408 || st === 429 || st === 500 || st === 502 || st === 503 || st === 504 || st === 529;
+  }
   function modelsRequest(provider, key) {
     const p = PROVIDERS[provider];
     if (provider === "gemini") return { url: `${p.base}/models?pageSize=200&key=${encodeURIComponent(key)}`, headers: {} };
@@ -331,6 +348,7 @@
     if (status === 400 && /api key|API_KEY|invalid/i.test(msg) || status === 401 || status === 403) return "La clave no sirve o no tiene permiso. Revísala en Ajustes.";
     if (status === 429) return "Se acabó la cuota de la IA por ahora (demasiadas peticiones). Espera un minuto o revisa tu plan.";
     if (status === 404) return "Ese modelo no existe en tu cuenta. En Ajustes, pon el modelo en «Automático».";
+    if (status === 503 || status === 529) return "El modelo de IA está saturado ahora mismo. Intenta de nuevo en un momento.";
     if (status >= 500) return "El servicio de IA está fallando ahora mismo. Intenta de nuevo en un momento.";
     return msg ? `La IA respondió con un error: ${msg.slice(0, 160)}` : `La IA respondió con un error (${status}).`;
   }
@@ -484,7 +502,7 @@
     return l[Math.floor(rnd() * l.length) % l.length];
   }
 
-  return { norm, speedOptions, ackFor, toNum, parseNames, namesFromTable, findCourse, pickStudent, shuffle, makeGroups, parseDuration, fmtClock, spokenDuration,
+  return { pickModels, retryable, norm, speedOptions, ackFor, toNum, parseNames, namesFromTable, findCourse, pickStudent, shuffle, makeGroups, parseDuration, fmtClock, spokenDuration,
     parseReminder, spokenWhen, intent, PROVIDERS, pickModel, modelsRequest, modelsFrom, chatRequest, parseSSE, deltaText, fullText, apiError,
     extractJSON, takeSentences, forSpeech, mathWords, trimHistory, quizPrompt, cleanQuiz, shuffleQuiz, quizText, plainMath, gradePrompt,
     cleanGrade, performance };

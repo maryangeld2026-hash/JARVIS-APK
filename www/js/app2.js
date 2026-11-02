@@ -557,7 +557,10 @@
 
   // ======================================================================== ARRANQUE
   function init(api) {
-    A = api; D = api.D; ensureData(); save();
+    A = api; D = api.D;
+    try { ensureData(); save(); initUI(); } catch (e) { console.error("init 2.0", e); }
+  }
+  function initUI() {
     const top = $(".top"), gear = $("#btn-ajustes");
     const pb = mk("button", "icon-btn"); pb.type = "button"; pb.id = "btn-proy"; pb.setAttribute("aria-label", "Modo proyector");
     pb.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';

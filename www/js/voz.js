@@ -10,6 +10,7 @@
   // ======================================================================== ESCUCHAR
   let webRec = null, nativeStop = null;
   async function canListen() {
+    if (native() && plug("Oido")) { try { return (await plug("Oido").disponible()).disponible; } catch (e) { /* abajo */ } }
     if (native() && plug("SpeechRecognition")) {
       try { return (await plug("SpeechRecognition").available()).available; } catch (e) { return false; }
     }
@@ -18,6 +19,7 @@
   /** Escucha una frase. onPartial(texto) mientras hablas. → texto final ("" si no se oyó nada). */
   async function listen(onPartial) {
     stopListening();
+    if (native() && plug("Oido")) return listenOido(onPartial);
     if (native() && plug("SpeechRecognition")) return listenNative(onPartial);
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!R) throw new Error("Este navegador no reconoce la voz. Escribe la orden, o instala la app de Jarvis.");
@@ -44,6 +46,25 @@
       try { r.start(); } catch (e) { reject(e); }
     });
   }
+  /** 3.1: el oído propio de la app (OidoPlugin.java). Siempre termina: con lo que oyó, o vacío si no oyó nada. */
+  let oidoOk = false;
+  async function listenOido(onPartial) {
+    const O = plug("Oido");
+    if (!oidoOk) {
+      const p = await O.permiso().catch(() => ({ ok: false }));
+      if (!p.ok) throw new Error("Jarvis necesita permiso para usar el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos.");
+      oidoOk = true;
+    }
+    const h = await O.addListener("parcial", (d) => { if (d && d.texto && onPartial) onPartial(d.texto); }).catch(() => null);
+    nativeStop = () => { O.detener().catch(() => {}); };
+    try {
+      const r = await O.escuchar({ idioma: LANG, silencio: 1100, maximo: 15000 });
+      if (r && r.error === "permiso") { oidoOk = false; throw new Error("Jarvis no tiene permiso para el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos."); }
+      if (r && !r.texto && r.error === "red") throw new Error("El reconocimiento de voz de Android necesita internet en este celular. Revisa la conexión o escribe la orden.");
+      if (r && !r.texto && r.error === "idioma") throw new Error("Falta el español en el reconocimiento de voz del celular: Ajustes del teléfono › Google › Voz.");
+      return ((r && r.texto) || "").trim();
+    } finally { nativeStop = null; if (h && h.remove) h.remove(); }
+  }
   async function listenNative(onPartial) {
     const SR = plug("SpeechRecognition");
     const perm = await SR.checkPermissions().catch(() => ({}));
@@ -68,6 +89,11 @@
   function stopListening() {
     if (webRec) { try { webRec.stop(); } catch (e) { /* ya paró */ } }
     if (nativeStop) nativeStop();
+  }
+  /** Corta en seco (sin esperar lo que alcanzó a oír): al salir de la app o al tocar Callar. */
+  function cancelListening() {
+    if (native() && plug("Oido")) plug("Oido").cancelar().catch(() => {});
+    stopListening();
   }
 
   // ======================================================================== HABLAR (cola de frases)
@@ -188,6 +214,6 @@
     } catch (e) { /* no es grave */ }
   }
 
-  window.JV = { native, canListen, listen, stopListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 };
+  window.JV = { native, canListen, listen, stopListening, cancelListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 };
   window.JN = { notifyAt, cancelNotify, showNow, share, keepAwake };
 })();

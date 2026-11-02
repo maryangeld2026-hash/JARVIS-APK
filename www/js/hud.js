@@ -39,7 +39,7 @@
   }
   let iaOk = null, fondoOn = false;
   function paintLeds() {
-    const set = (k, s) => { const e = $("#led-" + k); if (e) e.dataset.s = s; };
+    const set = (k, s) => { const e = $("#led-" + k); if (e && e.dataset.s !== s) e.dataset.s = s; };
     const st = A ? A.getState() : "idle";
     set("mic", st === "listening" ? "on" : "idle");
     set("ia", !(D.ajustes.claves[D.ajustes.proveedor] || "").trim() ? "off" : iaOk === false ? "err" : st === "thinking" ? "warn" : "on");
@@ -84,7 +84,7 @@
 
   let hadTimer = false;
   function tickHoy() {
-    const hb = $("#hoy-h"); if (hb) hb.textContent = new Date().toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
+    const hb = $("#hoy-h"), hh = new Date().toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" }); if (hb && hb.textContent !== hh) hb.textContent = hh;
     const t = A.timer, on = !!(t && t.end), tm = $("#hoy-t");
     if (on !== hadTimer) { hadTimer = on; hoy(); return; }
     if (on && tm) tm.textContent = "⏱ " + L.fmtClock(Math.max(0, Math.ceil((t.end - Date.now()) / 1000)));
@@ -155,11 +155,11 @@
   // ======================================================================== ENGANCHES
   const baseInit = X.init, baseSettings = X.settings;
   X.init = function (api) {
-    baseInit(api);
     A = api; D = api.D;
-    reactor(); leds(); hoy(); paintLeds();
-    setInterval(() => { tickHoy(); resumeLater(); paintLeds(); }, 1000);
-    setInterval(hoy, 30000);
+    try { baseInit(api); } catch (e) { console.error("init 2.0", e); }
+    try { reactor(); leds(); hoy(); paintLeds(); } catch (e) { console.error("hud", e); }
+    setInterval(() => { try { tickHoy(); resumeLater(); paintLeds(); } catch (e) { /* el siguiente segundo */ } }, 1000);
+    setInterval(() => { try { hoy(); } catch (e) { /* nada */ } }, 30000);
     const S = E();
     if (S) {
       S.addListener("despertar", onWake).catch(() => {});

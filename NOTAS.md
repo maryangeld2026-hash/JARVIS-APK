@@ -1,3 +1,25 @@
+# Jarvis para Android 3.1: la conversación ya no se traba
+
+## 👂 Escucha de verdad
+- **Oído nuevo, hecho para Jarvis.** La pieza de voz que usaba la app perdía los avisos de Android: si no te oía, Jarvis se quedaba hasta 20 segundos esperando sin hacer nada, y a veces cortaba antes de que llegara tu frase completa. Ahora la app usa su propio reconocimiento: siempre termina, con lo que dijiste o en «En espera» si no oyó nada.
+- Si Android tiene el micrófono ocupado justo después de que Jarvis habla, lo reintenta solo.
+- Corta más rápido cuando dejas de hablar (poco más de un segundo de silencio).
+- Si falta algo del celular (permiso del micrófono, internet para la voz, el español), te dice qué es.
+
+## ⚡ La IA ya no se queda «pensando»
+- **Vigilante de tiempo:** si la IA no empieza a contestar en 15 segundos, o se queda quieta a mitad de la respuesta, Jarvis corta y **reintenta solo**.
+- **Modelo saturado:** cuando Gemini responde «saturado» (pasa seguido en horas pico), Jarvis prueba con otro modelo rápido de tu cuenta, sin que hagas nada. Mientras tanto verás «reintento…».
+- La búsqueda del modelo de tu cuenta ya no puede colgar la primera pregunta.
+
+## 📱 Se ve y se redibuja mejor
+- **El botón de la cámara** (junto al campo de escribir) ahora aparece siempre: antes, si otra parte de la app fallaba al arrancar, ese botón no alcanzaba a ponerse.
+- Si una parte de Jarvis falla al abrir, el resto sigue funcionando y sale un aviso con el error.
+- En reposo el reactor queda quieto (gira cuando escucha, piensa o habla), la conversación se dibuja aparte y las luces solo se redibujan cuando cambian: menos trabajo para el celular y sin rastros en la pantalla.
+
+*Se instala encima de la 3.0.2, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 3.0.2: Ajustes siempre a mano
 
 - **Ya puedes entrar a Ajustes.** Con «Manos libres» o el modo tutor activos, sus avisos empujaban el botón de Ajustes (el engranaje) fuera de la pantalla. Ahora esos avisos bajan a su propia fila y el engranaje siempre se ve.

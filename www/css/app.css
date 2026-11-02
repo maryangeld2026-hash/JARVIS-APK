@@ -346,3 +346,15 @@ canvas.plot { display: block; width: 100%; max-width: 520px; height: auto; borde
 .top #btn-ajustes { margin-left: 0; }
 .sheet-in { max-height: calc(100% - var(--safe-t) - 8px); min-height: 0; }
 .sheet-in .scroll { min-height: 0; overscroll-behavior: contain; }
+
+/* 3.1: menos trabajo para el celular. En reposo el reactor queda quieto (gira solo cuando escucha, piensa o habla),
+   y la conversación se dibuja aparte del resto, así el WebView no deja rastros al redibujar. */
+.rx-a, .rx-b, .rx-ticks { will-change: auto; }
+body:not([data-state="listening"]):not([data-state="thinking"]):not([data-state="speaking"]) .rx-a,
+body:not([data-state="listening"]):not([data-state="thinking"]):not([data-state="speaking"]) .rx-b,
+body:not([data-state="listening"]):not([data-state="thinking"]):not([data-state="speaking"]) .rx-ticks { animation-play-state: paused; }
+.rx-ticks { animation: none; }
+.chat { contain: content; overscroll-behavior: contain; transform: translateZ(0); }
+
+.msg .hint { color: var(--muted); }
+#f-escribir #btn-foto-chat { display: grid !important; visibility: visible; }

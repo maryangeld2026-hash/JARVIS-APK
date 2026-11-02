@@ -74,6 +74,7 @@ def gemini(route):
     url = req.url
     if "/models?" in url:
         return route.fulfill(json={"models": [{"name": "models/gemini-3.5-flash-lite", "supportedGenerationMethods": ["generateContent"]},
+                                              {"name": "models/gemini-3.5-flash", "supportedGenerationMethods": ["generateContent"]},
                                               {"name": "models/gemini-3.5-pro", "supportedGenerationMethods": ["generateContent"]}]})
     body = json.loads(req.post_data or "{}")
     BODIES.append(body)
@@ -91,6 +92,11 @@ def gemini(route):
         ev = "data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": "Según el ICFES, los resultados de 2026 mejoraron en matemáticas."}]},
                                                     "groundingMetadata": {"groundingChunks": [{"web": {"uri": "https://www.icfes.gov.co/resultados", "title": "icfes.gov.co"}}]}}]}) + "\r\n\r\n"
         return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=ev)
+    lastmsg = json.dumps((body.get("contents") or [{}])[-1], ensure_ascii=False)
+    if "PRUEBA503" in lastmsg and "flash-lite" in url:              # 3.1: el modelo saturado → reintenta con otro
+        return route.fulfill(status=503, json={"error": {"code": 503, "message": "The model is overloaded.", "status": "UNAVAILABLE"}})
+    if "PRUEBA503" in lastmsg:
+        return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=sse("Respondí con el otro modelo."))
     tutor = "MODO TUTOR" in asked
     return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=sse("¿Qué crees que pasa si multiplicas arriba y abajo por 2?" if tutor else ANSWER))
 
@@ -161,6 +167,11 @@ def main():
         check(any((b.get("generationConfig") or {}).get("thinkingConfig") == {"thinkingLevel": "minimal"} for b in BODIES), "pide la respuesta sin «pensar» (más rápida)")
         check("⚡" in pg.inner_text(".msg.jarvis >> nth=-1"), "muestra cuánto tardó en empezar a responder")
         pg.screenshot(path=f"{OUT}/3-conversacion.png")
+        # 3.1: si el modelo está saturado, Jarvis reintenta solo con otro modelo rápido
+        pg.fill("#in-texto", "PRUEBA503 ¿cómo explico la división?")
+        pg.press("#in-texto", "Enter")
+        pg.wait_for_function("LASTJ().includes('otro modelo')", timeout=15000)
+        check("otro modelo" in LASTJ_PY(pg), "modelo saturado (503): reintenta solo con otro modelo")
 
         # clase: curso, azar, grupos
         pg.click(".tabs button[data-tab=clase]")
@@ -210,6 +221,7 @@ def main():
 
         # quiz por voz
         pg.click(".tabs button[data-tab=hablar]")
+        pg.wait_for_timeout(1000)                                   # que termine la escucha continua de la orden anterior
         pg.evaluate("window.__heard.push('hazme un quiz de fracciones equivalentes de 3 preguntas para grado 6')")
         pg.click("#btn-mic")
         pg.wait_for_function("document.querySelector('.msg.jarvis:last-of-type') && LASTJ().includes('Fracciones equivalentes')", timeout=15000)
