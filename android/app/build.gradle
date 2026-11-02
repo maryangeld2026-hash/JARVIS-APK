@@ -7,8 +7,8 @@ android {
         applicationId "co.jarvis.docente"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +16,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Jarvis: una firma fija (la misma en cada compilación), para que el APK se actualice encima del anterior y para
+    // registrar su huella SHA-1 en Google Cloud (inicio de sesión con Google). Es una llave de prueba, no de Play Store.
+    signingConfigs {
+        jarvis {
+            storeFile file('jarvis.keystore')
+            storePassword 'jarvis-docente'
+            keyAlias 'jarvis'
+            keyPassword 'jarvis-docente'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.jarvis
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

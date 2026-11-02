@@ -23,6 +23,9 @@ y quices en PDF o por WhatsApp. Lo que hace está en [NOTAS.md](NOTAS.md).
 | Archivo | Qué hace |
 |---|---|
 | `www/js/logica.js` | Lógica pura (órdenes por voz, azar, grupos, tiempos, recordatorios, quices, notas, peticiones a la IA). Se prueba con node. |
+| `www/js/logica2.js` | Lógica pura 2.0: seguimiento de notas (Excel), memoria, tutor, paso a paso, ticket, Google, el Jarvis del computador, la palabra «Jarvis». |
+| `www/js/app2.js` | Pantallas 2.0: seguimiento, proyector, Word, Google, manos libres y burbuja. |
+| `android/.../BurbujaPlugin.java`, `BurbujaService.java` | La burbuja flotante (plugin nativo propio). |
 | `www/js/ia.js` | Habla con la IA en streaming y escoge el modelo rápido de la cuenta. |
 | `www/js/voz.js` | Escuchar y hablar (nativo o web), avisos, compartir y pantalla encendida. |
 | `www/js/datos.js` | Datos en el celular, copia y restauración. |
@@ -32,7 +35,7 @@ y quices en PDF o por WhatsApp. Lo que hace está en [NOTAS.md](NOTAS.md).
 ## Pruebas
 ```
 npm ci
-node --test pruebas/logica.test.js        # lógica
+node --test pruebas/logica.test.js pruebas/logica2.test.js   # lógica
 python3 pruebas/e2e.py capturas           # de punta a punta en un celular simulado (Playwright), con la IA simulada
 ```
 
@@ -48,6 +51,21 @@ cd android && ./gradlew assembleDebug      # → app/build/outputs/apk/debug/app
 También puedes abrir la carpeta `android` en Android Studio y pulsar ▶ con el celular conectado por USB.
 
 El APK de depuración sirve para instalarlo directo en el celular. Para la Play Store hace falta firmar una versión `release` con una llave propia, que se guarda como secreto del repositorio, y una cuenta de desarrollador de Google (pago único de 25 USD).
+
+## Conectar Google (Calendario, Classroom, Forms y Drive): una sola vez
+La app inicia sesión con Google, pero Google exige que el dueño de la app la registre. Son unos 10 minutos en https://console.cloud.google.com:
+
+1. **Crea un proyecto** (por ejemplo «Jarvis docente»).
+2. **Activa las API** (*APIs y servicios › Biblioteca*): Google Calendar API, Google Classroom API, Google Forms API y Google Drive API.
+3. **Pantalla de consentimiento** (*Google Auth Platform › Branding / Audience*): tipo «Externo», nombre «Jarvis». En **Audience › Test users** agrega tu correo (y el de quien vaya a usar la app).
+4. **Credenciales › Crear cliente OAuth**, dos veces:
+   - Tipo **Android**: paquete `co.jarvis.docente` y huella SHA-1 `4E:1E:1D:4D:5F:09:9E:FF:DA:42:68:2D:9D:EF:8D:52:B2:40:AC:B0`. Es la firma fija del APK (`android/app/jarvis.keystore`).
+   - Tipo **Aplicación web**: no necesita direcciones. Copia su **ID de cliente** (termina en `.apps.googleusercontent.com`).
+5. En la app: *Ajustes › Google*, pega el **ID de cliente web** y toca **Conectar con Google**.
+
+Mientras el proyecto esté en modo «Prueba», solo entran los correos de *Test users*. Google muestra una advertencia de «app no verificada»: toca *Continuar*. Para que la use cualquier docente hay que pedir la verificación de Google.
+
+**La firma del APK:** `android/app/jarvis.keystore` (contraseña `jarvis-docente`) firma todas las versiones con la misma llave. Así se actualizan una encima de otra y la huella SHA-1 de Google no cambia. Es una llave de prueba: para la Play Store hay que crear una propia y guardarla como secreto.
 
 ## Versión web (opcional)
 La carpeta `www/` funciona como página instalable desde Chrome. Para publicarla en GitHub Pages:

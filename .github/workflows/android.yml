@@ -44,7 +44,7 @@ jobs:
         run: npm ci
 
       - name: Pruebas de la lógica
-        run: node --test pruebas/logica.test.js
+        run: node --test pruebas/logica.test.js pruebas/logica2.test.js
 
       - name: Prueba de punta a punta (celular simulado)
         run: |

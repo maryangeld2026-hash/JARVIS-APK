@@ -25,11 +25,15 @@ QUIZ = {"titulo": "Fracciones equivalentes", "instrucciones": "Marca la respuest
     {"enunciado": "¿Cuál NO es equivalente a $\\frac{2}{3}$?", "opciones": ["$\\frac{4}{6}$", "$\\frac{6}{9}$", "$\\frac{3}{4}$", "$\\frac{8}{12}$"], "correcta": 2, "explicacion": "3/4 es mayor."}]}
 GRADE = {"legible": True, "nota": 3.8, "resumen": "Planteó bien la ecuación $2x+3=11$, pero al despejar restó mal.",
          "aciertos": ["Escribió los datos", "Ordenó el procedimiento"], "errores": ["Restó 3 en un solo lado"], "sugerencia": "Practicar la transposición de términos."}
+STEPS = {"titulo": "Resolver $2x+3=11$", "pasos": [{"titulo": "Restar 3", "explicacion": "$2x=8$"}, {"titulo": "Dividir entre 2", "explicacion": "$x=4$"},
+                                                   {"titulo": "Comprobación", "explicacion": "$2(4)+3=11$"}]}
+TICKET = {"titulo": "Ticket: fracciones", "preguntas": ["¿Qué es una fracción equivalente?", "Simplifica $\\frac{4}{8}$", "Explica con tus palabras cómo comparar fracciones."]}
 ANSWER = ("Claro, profe. Para explicar los números negativos, empieza con algo cotidiano, como la temperatura o un ascensor que baja al sótano. "
           "Luego usa la recta numérica: $-3 < 0 < 3$. Así ven que el signo indica la dirección.")
 
 FAKE_VOICE = """
 (() => {
+  window.LASTJ = () => { const a = document.querySelectorAll('.msg.jarvis'); return a.length ? a[a.length - 1].textContent : ''; };
   window.__said = [];
   window.__heard = [];
   class FakeRec {
@@ -70,12 +74,16 @@ def gemini(route):
     body = json.loads(req.post_data or "{}")
     asked = json.dumps(body, ensure_ascii=False)
     if ":generateContent" in url:
-        out = GRADE if "inline_data" in asked else QUIZ if "quiz" in asked.lower() else {"ok": True}
+        out = (GRADE if "inline_data" in asked else STEPS if "paso a paso" in asked.lower() else TICKET if "ticket de salida" in asked.lower()
+               else QUIZ if "quiz" in asked.lower() else {"ok": True})
+        if "MODO TUTOR" in asked:
+            out = "¿Qué crees que pasa si multiplicas arriba y abajo por 2?"
         if "Di: listo" in asked:
             out = "listo"
         text = out if isinstance(out, str) else json.dumps(out, ensure_ascii=False)
         return route.fulfill(json={"candidates": [{"content": {"parts": [{"text": text}]}}]})
-    return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=sse(ANSWER))
+    tutor = "MODO TUTOR" in asked
+    return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=sse("¿Qué crees que pasa si multiplicas arriba y abajo por 2?" if tutor else ANSWER))
 
 
 def main():
@@ -155,7 +163,7 @@ def main():
         pg.click(".tabs button[data-tab=hablar]")
         pg.evaluate("window.__heard.push('Jarvis haz grupos de 3 en 7A')")
         pg.click("#btn-mic")
-        pg.wait_for_function("document.querySelector('.msg.jarvis:last-of-type') && document.querySelector('.msg.jarvis:last-of-type').textContent.includes('grupos de 7A')")
+        pg.wait_for_function("document.querySelector('.msg.jarvis:last-of-type') && LASTJ().includes('grupos de 7A')")
         check(True, "grupos por voz")
 
         # calificar una foto
@@ -181,7 +189,7 @@ def main():
         pg.click(".tabs button[data-tab=hablar]")
         pg.evaluate("window.__heard.push('hazme un quiz de fracciones equivalentes de 3 preguntas para grado 6')")
         pg.click("#btn-mic")
-        pg.wait_for_function("document.querySelector('.msg.jarvis:last-of-type') && document.querySelector('.msg.jarvis:last-of-type').textContent.includes('Fracciones equivalentes')", timeout=15000)
+        pg.wait_for_function("document.querySelector('.msg.jarvis:last-of-type') && LASTJ().includes('Fracciones equivalentes')", timeout=15000)
         pg.click(".tabs button[data-tab=quices]")
         check(pg.locator(".quiz ol.q > li").count() == 3, "el quiz aparece con 3 preguntas")
         check(pg.locator(".quiz .katex").count() >= 6, "fórmulas del quiz dibujadas")
@@ -193,6 +201,90 @@ def main():
         data = open(path, "rb").read()
         check(data[:4] == b"%PDF" and len(data) > 3000, f"PDF del quiz ({len(data)} bytes)")
         dl.value.save_as(os.path.join(OUT, "quiz.pdf"))
+
+        # ================= 2.0: memoria, seguimiento con Excel, riesgo, notas, tutor, pasos, ticket, proyector, Word
+        pg.click(".tabs button[data-tab=hablar]")
+        pg.fill("#in-texto", "Recuerda que los lunes tengo reunión de área"); pg.press("#in-texto", "Enter")
+        pg.wait_for_function("LASTJ().includes('lo recordaré')")
+        check(pg.evaluate("window.__jarvis.D.memoria.length") == 1, "memoria: guarda lo que le cuentas")
+        pg.fill("#in-texto", "De ahora en adelante los quices con 5 preguntas"); pg.press("#in-texto", "Enter")
+        pg.wait_for_timeout(300)
+        check(pg.evaluate("window.__jarvis.D.lecciones.length") == 1, "lección guardada")
+
+        import openpyxl
+        wb = openpyxl.Workbook(); ws = wb.active; ws.title = "8B"
+        ws.append(["Planilla de notas 8B"]); ws.append(["N°", "Apellidos", "Nombres", "Taller 1", "Quiz 1", "Definitiva"])
+        for i, (ap, no, t, q) in enumerate([("Pérez", "Laura", 4.5, 4.8), ("Mora", "Pablo", 2.5, 2.2), ("Ríos", "Sara", 3.6, 3.9), ("Vega", "Tomás", 2.0, 2.9)], 1):
+            ws.append([i, ap, no, t, q, None])
+        xlsx = os.path.join(OUT, "_planilla.xlsx"); wb.save(xlsx)
+        pg.click(".tabs button[data-tab=clase]")
+        pg.set_input_files("#seg-in", xlsx)
+        pg.wait_for_function("window.__jarvis.D.cursos.some(c => c.nombre === '8B')")
+        check(pg.locator("#seg-res .lista li").count() == 2, "importa el Excel y marca 2 en riesgo")
+        pg.locator("#k-seg").scroll_into_view_if_needed()
+        pg.screenshot(path=f"{OUT}/8-seguimiento.png")
+        pg.click("#btn-seg-ver")
+        pg.wait_for_selector("table.grid")
+        check(pg.locator("table.grid tr").count() == 5, "planilla de notas editable (4 estudiantes)")
+        pg.wait_for_timeout(400)
+        pg.screenshot(path=f"{OUT}/9-planilla.png")
+        pg.click("#ne-x")
+        pg.click(".tabs button[data-tab=hablar]")
+        pg.fill("#in-texto", "¿quiénes están en riesgo en 8B?"); pg.press("#in-texto", "Enter")
+        pg.wait_for_function("LASTJ().includes('En riesgo')")
+        txt = pg.inner_text(".msg.jarvis >> nth=-1")
+        check("Mora Pablo" in txt and "Vega Tomás" in txt, "responde quién está en riesgo (sin la IA)")
+        pg.fill("#in-texto", "ponle 4,5 a Pablo Mora en el quiz 1"); pg.press("#in-texto", "Enter")
+        pg.wait_for_timeout(300)
+        check("Anotado" in pg.inner_text(".msg.jarvis >> nth=-1"), "pone una nota por voz")
+        pg.fill("#in-texto", "cómo va Pablo Mora"); pg.press("#in-texto", "Enter")
+        pg.wait_for_timeout(300)
+        check("3,5" in pg.inner_text(".msg.jarvis >> nth=-1"), "promedio del estudiante actualizado (3,5)")
+
+        pg.fill("#in-texto", "modo tutor de fracciones"); pg.press("#in-texto", "Enter")
+        pg.wait_for_timeout(300)
+        pg.fill("#in-texto", "no entiendo las fracciones equivalentes"); pg.press("#in-texto", "Enter")
+        pg.wait_for_function("LASTJ().includes('multiplicas')")
+        check(pg.is_visible("#tutor-pill"), "modo tutor activo (responde con una pregunta)")
+        pg.fill("#in-texto", "sal del modo tutor"); pg.press("#in-texto", "Enter")
+        pg.wait_for_timeout(300)
+
+        pg.fill("#in-texto", "explícame paso a paso cómo resolver 2x + 3 = 11"); pg.press("#in-texto", "Enter")
+        pg.wait_for_function("LASTJ().includes('Dividir entre 2')", timeout=15000)
+        pg.click("text=Mostrar paso a paso en el proyector")
+        pg.click("#proy-nav >> text=Siguiente paso")
+        check(pg.locator(".p-step").count() == 2, "paso a paso en el proyector")
+        pg.screenshot(path=f"{OUT}/10-proyector-pasos.png")
+        pg.click("#proy-x")
+
+        pg.fill("#in-texto", "ticket de salida de fracciones"); pg.press("#in-texto", "Enter")
+        pg.wait_for_selector(".p-sem", timeout=15000)
+        pg.click(".sem.verde"); pg.click(".sem.verde"); pg.click(".sem.rojo")
+        check(pg.inner_text(".sem.verde b") == "2", "ticket de salida con semáforo")
+        pg.set_viewport_size({"width": 915, "height": 412})
+        pg.screenshot(path=f"{OUT}/11-proyector-ticket.png")
+        pg.click(".proy-tabs >> text=Quiz")
+        pg.click("#proy-nav >> text=Mostrar respuesta")
+        check(pg.locator(".p-ops li.ok").count() == 1, "quiz en el proyector, revela la respuesta")
+        pg.screenshot(path=f"{OUT}/12-proyector-quiz.png")
+        pg.set_viewport_size({"width": 412, "height": 915})
+        pg.click("#proy-x")
+
+        pg.click(".tabs button[data-tab=quices]")
+        pg.click("#quices li >> nth=0")
+        with pg.expect_download() as dl:
+            pg.click(".quiz-acts >> text=Word")
+        data = open(dl.value.path(), "rb").read()
+        check(data[:2] == b"PK" and len(data) > 4000, f"quiz en Word ({len(data)} bytes)")
+        dl.value.save_as(os.path.join(OUT, "quiz.docx"))
+        with pg.expect_download() as dl:
+            pg.evaluate("document.querySelector('#btn-seg-exp') || null")
+            pg.click(".tabs button[data-tab=clase]"); pg.click("#btn-seg-exp")
+        data = open(dl.value.path(), "rb").read()
+        check(data[:2] == b"PK", "exporta el seguimiento a Excel")
+        pg.click("#btn-ajustes")
+        check(pg.locator("#aj2 .lista li").count() == 2, "ajustes: memoria y lecciones para borrar")
+        pg.click("#btn-ajustes-cerrar")
 
         # respaldo sin claves
         back = pg.evaluate("JSON.stringify(window.JD.backup())")

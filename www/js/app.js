@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "1.0";
+  const VERSION = "2.0";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -82,6 +82,8 @@
       const p = pendingReminder; pendingReminder = null;
       if (!/^(?:no|cancela|olvidalo|nada)$/.test(L.norm(text))) { addReminder(`recuérdame ${p} ${text}`, true); return afterTurn(); }
     }
+    const it2 = window.JX ? window.JX.intent(text) : null;           // 2.0: seguimiento, memoria, tutor, proyector, Google…
+    if (it2) { try { await window.JX.run(it2, text); } catch (e) { reply(e.message || String(e), "err"); } return afterTurn(); }
     const it = L.intent(text, D.cursos);
     if (it) { try { await doIntent(it, text); } catch (e) { reply(e.message || String(e), "err"); } return afterTurn(); }
     await askAI(text);
@@ -101,9 +103,12 @@
       `Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, son las ${hora(now)}. ` +
       `Cursos de la profe: ${D.cursos.map((c) => c.nombre).join(", ") || "ninguno todavía"}. ` +
       "Esta app también hace, sin la IA: escoger un estudiante al azar, hacer grupos, temporizador, recordatorios, quices y calificar la foto de un trabajo. " +
-      "Si te piden algo de eso, dile cómo pedirlo (por ejemplo «escoge un estudiante de 7A» o «pon 5 minutos»).";
+      "Si te piden algo de eso, dile cómo pedirlo (por ejemplo «escoge un estudiante de 7A» o «pon 5 minutos»)." +
+      (window.JX ? window.JX.promptExtra(lastQuestion) : "");
   }
+  let lastQuestion = "";
   async function askAI(text) {
+    lastQuestion = text;
     setState("thinking");
     const hist = L.trimHistory(D.chat.filter((m) => !m.cls || m.cls === "").slice(-13, -1).map((m) => ({ role: m.role, content: m.content })));
     const { m, e } = add("assistant", "", "");
@@ -154,8 +159,9 @@
     catch (e) { setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
     $("#live").textContent = "";
     setState("idle");
-    if (!text) { if (auto && ++misses >= 1) { misses = 0; toast("No te oí. Toca el micrófono cuando quieras."); } return; }
+    if (!text) { if (auto && !D.ajustes.manosLibres && ++misses >= 1) { misses = 0; toast("No te oí. Toca el micrófono cuando quieras."); } return; }
     misses = 0;
+    if (window.JX && window.JX.heard && window.JX.heard(text, auto)) return;   // 2.0: manos libres decide si iba para Jarvis
     handle(text, true);
   }
   $("#btn-mic").addEventListener("click", () => listen(false));
@@ -228,6 +234,7 @@
     sel.innerHTML = '<option value="">Estudiante (opcional, para tu registro)</option>';
     (c ? c.estudiantes : []).forEach((n) => sel.append(new Option(n, n)));
     renderReminders(); renderPhotoLog();
+    if (window.JX) window.JX.renderClase(c);
   }
   let editing = null;
   function editCourse(c) {
@@ -271,7 +278,7 @@
     let k = 0;
     el.classList.remove("win"); el.classList.add("spin");
     const spin = setInterval(() => { el.textContent = c.estudiantes[Math.floor(Math.random() * c.estudiantes.length)]; if (++k > 12) end(); }, 70);
-    function end() { clearInterval(spin); el.classList.remove("spin"); el.textContent = r.name; void el.offsetWidth; el.classList.add("win"); if (navigator.vibrate) navigator.vibrate(60); renderClase(); }
+    function end() { clearInterval(spin); el.classList.remove("spin"); el.textContent = r.name; if (window.JX) window.JX.onPick(r.name); void el.offsetWidth; el.classList.add("win"); if (navigator.vibrate) navigator.vibrate(60); renderClase(); }
   }
   $("#btn-azar").addEventListener("click", () => {
     const c = courseFor(null);
@@ -291,6 +298,7 @@
     const box = $("#grupos"); box.textContent = "";
     g.forEach((x, i) => { const d = mk("div", "grupo"); d.style.animationDelay = i * 60 + "ms"; d.append(mk("b", "", `GRUPO ${i + 1}`)); x.forEach((n) => d.append(mk("div", "", n))); box.append(d); });
     $("#btn-grupos-compartir").hidden = false;
+    if (window.JX) window.JX.onGroups(g, c);
   }
   $("#btn-grupos").addEventListener("click", () => {
     const c = courseFor(null);
@@ -392,6 +400,7 @@
       if (r.revision.nota != null) {
         D.fotos.unshift({ id: window.JD.uid(), fecha: Date.now(), curso: c ? c.nombre : "", estudiante: who, actividad: $("#foto-consigna").value.trim(), nota: r.revision.nota, resumen: r.revision.resumen });
         D.fotos = D.fotos.slice(0, 300); save(); renderPhotoLog();
+        if (window.JX) window.JX.afterGrade(box, r.revision, who, c);          // 2.0: guardarla en el seguimiento
       }
       say((r.revision.nota != null ? `Le pondría ${String(r.revision.nota).replace(".", ",")}. ` : "") + r.revision.resumen);
     } catch (e) { wait.textContent = e.message; wait.className = "hint"; }
@@ -523,6 +532,7 @@
     btn("PDF", "i-pdf", () => sharePDF(current, false), "primary");
     btn("PDF versión B", "i-pdf", () => sharePDF(current, true));
     btn("WhatsApp", "i-share", () => N.share({ title: q.titulo, text: L.quizText(q, false) }).then((h) => h === "copiado" && toast("Copiado: pégalo en WhatsApp.")).catch(() => {}));
+    if (window.JX) window.JX.quizButtons(btn, current);                       // 2.0: Word, Forms y proyectar
     btn("Borrar", "", () => { if (!confirm("¿Borrar este quiz?")) return; D.quices = D.quices.filter((x) => x !== current); current = null; save(); renderQuices(); }, "danger");
     box.append(card, acts);
   }
@@ -553,6 +563,7 @@
     $("#a-basico").value = A.escala.basico; $("#a-alto").value = A.escala.alto; $("#a-superior").value = A.escala.superior;
     $("#acerca").textContent = `Jarvis para Android ${VERSION} · ${V.native() ? "app instalada" : "en el navegador"} · tus datos viven solo en este celular.`;
     $("#probar-res").textContent = "";
+    if (window.JX) window.JX.settings();
     $("#ajustes").hidden = false;
   }
   function fillKey() {
@@ -595,5 +606,7 @@
   renderChat();
   if ("serviceWorker" in navigator && !V.native() && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
   document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") V.stopListening(); });
-  window.__jarvis = { handle, tab, D, startTimer, makeQuiz, renderClase, showGrade };   // para las pruebas
+  window.__jarvis = { handle, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
+    getState: () => state, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
+  if (window.JX) window.JX.init(window.__jarvis);
 })();

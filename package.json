@@ -1,10 +1,10 @@
 {
   "name": "jarvis-android",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Jarvis para Android: el asistente de voz de la clase, sin el computador.",
   "scripts": {
-    "pruebas": "node --test pruebas/logica.test.js",
+    "pruebas": "node --test pruebas/logica.test.js pruebas/logica2.test.js",
     "sync": "cap sync android"
   },
   "dependencies": {
@@ -15,10 +15,13 @@
     "@capacitor/core": "8.6.0",
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/local-notifications": "8.3.1",
-    "@capacitor/share": "8.0.3"
+    "@capacitor/share": "8.0.3",
+    "@capgo/capacitor-social-login": "8.7.6"
   },
   "devDependencies": {
     "@capacitor/cli": "8.6.0",
-    "jspdf": "4.2.1"
+    "docx": "9.15.1",
+    "jspdf": "4.2.1",
+    "xlsx": "0.18.5"
   }
 }

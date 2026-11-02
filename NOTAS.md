@@ -1,33 +1,43 @@
-# Jarvis para Android 1.0
+# Jarvis para Android 2.0
 
-El asistente de voz de la clase, en el celular, **sin el computador encendido**.
+El asistente de la clase en el celular, sin el computador. Esta versión suma casi todo lo que hace el Jarvis de Windows.
 
-## 🗣️ Conversa por voz con la IA
-- Toca el micrófono y háblale. Responde hablando mientras escribe: empieza a decir la primera frase antes de terminar la respuesta.
-- Usa la IA que escojas, con tu clave: Gemini (tiene nivel gratuito), ChatGPT o Claude. Escoge sola el modelo rápido de tu cuenta.
-- Las fórmulas se ven bien dibujadas y se dicen en palabras («3 sobre 4 más x al cuadrado»).
-- Con **Seguir**, después de responder vuelve a escucharte, como una conversación.
+> ⚠️ **Si tienes instalada la 1.0, desinstálala antes de instalar la 2.0.** La 2.0 viene con una firma nueva y fija: desde ahora las versiones se instalan una encima de la otra. Si tenías datos en la 1.0, primero toca *Ajustes › Guardar copia* y después restáuralos en la 2.0.
 
-## 👩‍🏫 Herramientas de la clase (funcionan sin internet)
-- **Cursos:** pega la lista de estudiantes o cárgala de un CSV de la planilla.
-- **Estudiante al azar:** sin repetir hasta que pasen todos. «Escoge un estudiante de 7A».
-- **Grupos** por número de grupos o de estudiantes por grupo, para compartir por WhatsApp. «Haz grupos de 3».
-- **Temporizador** con alarma, vibración y aviso aunque el celular esté bloqueado. «Pon 5 minutos», «¿cuánto falta?».
-- **Recordatorios** con aviso del teléfono. «Recuérdame llamar a la coordinadora a las 3 de la tarde».
-- **Calificar la foto de un trabajo:** revisa el procedimiento, señala el primer error y propone una nota con la escala de tu colegio. A la IA solo se manda la foto, nunca el nombre del estudiante. Queda un registro que puedes compartir como tabla.
+## 📊 Seguimiento de notas
+- **Importa tu planilla de Excel.** Cada hoja se vuelve un curso, con sus estudiantes y actividades. Jarvis reconoce las columnas de nombres y de notas e ignora la definitiva, el número de lista y las observaciones.
+- Promedio del curso, distribución por desempeño (bajo, básico, alto, superior) con la escala de tu colegio, y **quién está en riesgo**.
+- Planilla para ver y editar: tocas una casilla y cambias la nota. Puedes agregar actividades con su peso.
+- Por voz: «¿quién está en riesgo en 8B?», «¿cómo va Pablo Mora?», «ponle 4,5 a Pablo en el quiz 1».
+- La nota de una foto calificada se guarda en el seguimiento con un toque.
+- **Exportar a Excel** para pasarla a la plataforma.
+- Las notas y los nombres **nunca** se mandan a la IA: todo esto se calcula en el celular.
 
-## 📝 Quices y talleres
-- «Hazme un quiz de 8 preguntas de ecuaciones para grado 7», o desde la pestaña Quices.
-- **PDF** listo para imprimir, con la hoja de respuestas al final, y una **versión B** con las opciones en otro orden.
-- Por **WhatsApp**, como texto.
+## 🧠 Memoria y lecciones
+- «Recuerda que los lunes tengo reunión de área», «de ahora en adelante los quices con 5 preguntas», «¿qué sabes de mí?», «olvida que…».
+- Jarvis lo tiene en cuenta en cada respuesta. Lo ves y lo borras en Ajustes.
 
-## Tus datos
-- Todo vive en el celular: cursos, quices, recordatorios y conversación. *Ajustes › Guardar copia* crea un archivo (sin tu clave) para guardarlo en Drive o pasarlo a otro celular.
+## 👩‍🏫 Para la clase
+- **Modo proyector.** Una pantalla grande, de lado, para transmitir al televisor o al videobeam (Transmitir o Smart View): temporizador, estudiante escogido, grupos, el quiz pregunta por pregunta con «Mostrar respuesta», el paso a paso y el ticket de salida.
+- **Modo tutor socrático.** «Modo tutor de fracciones»: guía a los estudiantes con preguntas y pistas, sin darles la respuesta.
+- **Paso a paso.** «Explícame paso a paso cómo resolver 2x + 3 = 11», con los pasos uno a uno en el proyector.
+- **Ticket de salida.** «Ticket de salida de fracciones»: tres preguntas en el proyector y un semáforo para contar quién entendió.
 
-## Cómo instalarla
-1. Descarga **Jarvis-android-1.0.0.apk** en el celular, desde esta página.
-2. Ábrelo. Android pedirá permiso para instalar apps de este origen: acéptalo solo para tu navegador o tus Archivos.
-3. Abre Jarvis, toca el engranaje, escoge la IA y pega tu clave (la de Gemini se consigue gratis en aistudio.google.com/apikey).
-4. La primera vez que toques el micrófono, Android pide permiso para usarlo.
+## 📝 Quices
+- Además del PDF y WhatsApp: **Word (.docx)** y **Google Forms**, como cuestionario que se califica solo, con la clave y las explicaciones.
 
-*Esta versión no está en la Play Store: se instala directo y se actualiza descargando el APK nuevo encima.*
+## 🔗 Google
+- **Calendario:** «¿qué tengo hoy?», «agenda reunión de padres mañana a las 3 de la tarde».
+- **Classroom:** «trae los estudiantes de Classroom» crea tus cursos con sus listas.
+- **Drive:** copia de tus datos (automática una vez al día) y restauración en otro celular.
+- *Requiere un trámite de una sola vez en Google Cloud: los pasos están en el README del repositorio.*
+
+## 🙌 Manos libres
+- **«Jarvis, …»:** con *Manos libres* activo y la app abierta, Jarvis escucha y solo atiende lo que empieza por «Jarvis».
+- **Burbuja flotante:** un botón de Jarvis encima de las otras apps. Lo tocas y te escucha; lo arrastras a donde quieras. Pide el permiso «Mostrar sobre otras apps».
+
+## 🖥️ El Jarvis del computador
+- Pega en Ajustes la dirección del «panel del celular» de tu Jarvis de Windows. Después, «en el computador abre Word» manda la orden al computador, en el mismo wifi.
+
+---
+*Se instala directo (no está en la Play Store). Desde esta versión, las nuevas se instalan encima sin perder tus datos.*

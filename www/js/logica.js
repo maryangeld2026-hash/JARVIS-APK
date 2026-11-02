@@ -145,12 +145,12 @@
     if (!when && (m = body.match(new RegExp(`\\b(manana|pasado manana|hoy)?\\s*(?:a las|a la|para las)\\s+(\\d{1,2}|${NUMW})(?::(\\d{2})|\\s+y\\s+(media|cuarto|${N}))?\\s*(de la manana|de la tarde|de la noche|am|pm|a m|p m)?\\s*(manana|pasado manana)?`)))) {
       let h = toNum(m[2]), min = m[3] ? +m[3] : m[4] === "media" ? 30 : m[4] === "cuarto" ? 15 : m[4] ? toNum(m[4]) : 0;
       if (h == null || h > 23) return null;
-      const per = m[5] || "";
+      const per = m[6] || "";                                   // m[5] es el número de dentro de m[4]
       if (/tarde|noche|pm|p m/.test(per) && h < 12) h += 12;
       if (/manana|am|a m/.test(per) && h === 12) h = 0;
       const d = new Date(now.getTime());
       d.setHours(h, min || 0, 0, 0);
-      const day = m[1] || m[6] || "";
+      const day = m[1] || m[7] || "";
       if (day === "manana") d.setDate(d.getDate() + 1);
       else if (day === "pasado manana") d.setDate(d.getDate() + 2);
       else if (!per && h < 12 && h >= 1 && h <= 6 && d <= now) d.setHours(h + 12);   // «a las 3» después de la mañana: de la tarde
