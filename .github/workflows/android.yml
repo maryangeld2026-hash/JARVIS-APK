@@ -1,0 +1,105 @@
+# Jarvis para Android: en cada cambio pasa las pruebas (lógica y de punta a punta en un celular simulado), compila el APK
+# y lo deja para descargar en la pestaña Actions. Si se subió la versión en package.json, publica la Release vX.Y con el APK.
+name: Jarvis para Android
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'LICENSE']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar
+        run: npm ci
+
+      - name: Pruebas de la lógica
+        run: node --test pruebas/logica.test.js
+
+      - name: Prueba de punta a punta (celular simulado)
+        run: |
+          python3 -m pip install --quiet playwright pillow
+          python3 -m playwright install --with-deps chromium
+          python3 pruebas/e2e.py capturas
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas-android
+          path: capturas
+          if-no-files-found: ignore
+
+      - name: Versión
+        id: ver
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar el APK
+        run: |
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          mkdir -p ../salida
+          cp app/build/outputs/apk/debug/app-debug.apk "../salida/Jarvis-android-${{ steps.ver.outputs.version }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jarvis-android-${{ steps.ver.outputs.version }}
+          path: salida/*.apk
+
+      - name: Publicar la Release (solo si la versión es nueva)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          tag="v$v"
+          if gh release view "$tag" >/dev/null 2>&1; then echo "La Release $tag ya existe: no la toco."; exit 0; fi
+          gh release create "$tag" "salida/Jarvis-android-$v.apk" --target "${{ github.sha }}" --title "Jarvis para Android $v" --notes-file NOTAS.md --latest
+
+  # Opcional: la misma app como página web instalable (Chrome › «Agregar a la pantalla principal»), en GitHub Pages.
+  # Se activa creando la variable del repositorio JARVIS_PAGINA = 1 (Settings › Secrets and variables › Actions › Variables)
+  # y escogiendo «GitHub Actions» como fuente en Settings › Pages.
+  pagina:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.JARVIS_PAGINA == '1'
+    needs: apk
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: www
+      - id: deploy
+        uses: actions/deploy-pages@v4

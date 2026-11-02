@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#03060c">
+<meta name="description" content="Jarvis: el asistente de voz de la clase, en tu celular.">
+<title>Jarvis</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icono-192.png">
+<link rel="apple-touch-icon" href="img/icono-192.png">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body data-tab="hablar" data-state="idle">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12 20 4l-6 16-3-7z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-class" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c.8-3.3 3.1-5 6-5s5.2 1.7 6 5M14.5 14.6c2.6-.3 4.9 1.1 5.5 4.4"/></symbol>
+  <symbol id="i-quiz" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/></symbol>
+  <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="brand"><span class="dot"></span>JARVIS</div>
+  <div class="status" id="status" aria-live="polite">Listo</div>
+  <button class="icon-btn" id="btn-ajustes" type="button" aria-label="Ajustes"><svg><use href="#i-gear"/></svg></button>
+</header>
+
+<main>
+  <!-- ============================================================== HABLAR -->
+  <section class="view" id="v-hablar" data-view="hablar">
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="dock">
+      <div class="live" id="live"></div>
+      <div class="dock-row">
+        <button class="pill" id="btn-conv" type="button" aria-pressed="false" title="Conversación continua: vuelve a escuchar después de responder"><svg><use href="#i-loop"/></svg><span>Seguir</span></button>
+        <button class="mic" id="btn-mic" type="button" aria-label="Hablar con Jarvis"><span class="ring"></span><svg><use href="#i-mic"/></svg></button>
+        <button class="pill" id="btn-callar" type="button" title="Que deje de hablar"><svg><use href="#i-stop"/></svg><span>Callar</span></button>
+      </div>
+      <form class="write" id="f-escribir" autocomplete="off">
+        <input id="in-texto" type="text" enterkeyhint="send" placeholder="Escribe o toca el micrófono…" aria-label="Escribir a Jarvis">
+        <button class="icon-btn send" type="submit" aria-label="Enviar"><svg><use href="#i-send"/></svg></button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============================================================== CLASE -->
+  <section class="view" id="v-clase" data-view="clase" hidden>
+    <div class="scroll">
+      <div class="cursos" id="cursos"></div>
+
+      <article class="card" id="k-azar">
+        <h2>Estudiante al azar</h2>
+        <div class="big-name" id="azar-nombre">—</div>
+        <p class="hint" id="azar-info">Sin repetir hasta que pasen todos.</p>
+        <div class="row"><button class="btn primary" id="btn-azar" type="button">Escoger</button><button class="btn" id="btn-azar-reset" type="button">Empezar de nuevo</button></div>
+      </article>
+
+      <article class="card" id="k-grupos">
+        <h2>Grupos</h2>
+        <div class="row wrap">
+          <label class="seg"><input type="radio" name="gmodo" value="grupos" checked><span>Número de grupos</span></label>
+          <label class="seg"><input type="radio" name="gmodo" value="tamano"><span>Estudiantes por grupo</span></label>
+          <div class="stepper"><button type="button" data-step="-1" aria-label="Menos">−</button><output id="g-n">4</output><button type="button" data-step="1" aria-label="Más">+</button></div>
+        </div>
+        <div class="row"><button class="btn primary" id="btn-grupos" type="button">Hacer grupos</button><button class="btn" id="btn-grupos-compartir" type="button" hidden><svg><use href="#i-share"/></svg>Compartir</button></div>
+        <div class="grupos" id="grupos"></div>
+      </article>
+
+      <article class="card" id="k-tiempo">
+        <h2>Temporizador</h2>
+        <div class="clock" id="reloj">5:00</div>
+        <div class="bar"><i id="reloj-barra"></i></div>
+        <div class="row wrap presets">
+          <button class="chip" data-min="1" type="button">1 min</button><button class="chip" data-min="3" type="button">3</button>
+          <button class="chip" data-min="5" type="button">5</button><button class="chip" data-min="10" type="button">10</button>
+          <button class="chip" data-min="15" type="button">15</button><button class="chip" data-min="30" type="button">30</button>
+        </div>
+        <div class="row"><button class="btn primary" id="btn-tiempo" type="button">Empezar</button><button class="btn" id="btn-tiempo-parar" type="button">Parar</button></div>
+      </article>
+
+      <article class="card" id="k-foto">
+        <h2>Calificar la foto de un trabajo</h2>
+        <p class="hint">Jarvis revisa el procedimiento, señala el primer error y propone una nota. A la IA solo se manda la foto: nunca el nombre del estudiante.</p>
+        <input class="inp" id="foto-consigna" type="text" placeholder="¿Qué actividad era? (opcional) Ej.: resolver 2x + 3 = 11">
+        <select class="inp" id="foto-estudiante"><option value="">Estudiante (opcional, para tu registro)</option></select>
+        <input id="foto-in" type="file" accept="image/*" capture="environment" hidden>
+        <div class="row"><button class="btn primary" id="btn-foto" type="button"><svg><use href="#i-cam"/></svg>Tomar foto</button><button class="btn" id="btn-foto-galeria" type="button">De la galería</button></div>
+        <div class="foto-res" id="foto-res"></div>
+        <details class="registro"><summary>Registro de notas de fotos</summary><div id="foto-registro"></div><button class="btn small" id="btn-foto-csv" type="button">Compartir como tabla (CSV)</button></details>
+      </article>
+
+      <article class="card" id="k-recordar">
+        <h2>Recordatorios</h2>
+        <p class="hint">Di «recuérdame llamar a la coordinadora a las 3 de la tarde» o escríbelo aquí.</p>
+        <form class="row" id="f-recordar" autocomplete="off"><input class="inp" id="in-recordar" type="text" placeholder="Recuérdame… a las… / en 20 minutos"><button class="btn primary" type="submit">Guardar</button></form>
+        <ul class="lista" id="recordatorios"></ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================== QUICES -->
+  <section class="view" id="v-quices" data-view="quices" hidden>
+    <div class="scroll">
+      <article class="card">
+        <h2>Nuevo quiz o taller</h2>
+        <form id="f-quiz" autocomplete="off">
+          <input class="inp" id="q-tema" type="text" required placeholder="Tema. Ej.: fracciones equivalentes">
+          <div class="row wrap">
+            <select class="inp half" id="q-tipo"><option value="quiz">Quiz</option><option value="taller">Taller</option></select>
+            <select class="inp half" id="q-n"><option>3</option><option selected>5</option><option>8</option><option>10</option><option>15</option><option>20</option></select>
+            <select class="inp half" id="q-grado"><option value="">Grado…</option></select>
+          </div>
+          <button class="btn primary wide" type="submit" id="btn-quiz">Crear con IA</button>
+        </form>
+        <p class="hint">También por voz: «hazme un quiz de 8 preguntas de ecuaciones para grado 7».</p>
+      </article>
+      <div id="quiz-ver"></div>
+      <h3 class="sub">Guardados</h3>
+      <ul class="lista" id="quices"></ul>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist">
+  <button type="button" data-tab="hablar" class="on" role="tab"><svg><use href="#i-chat"/></svg><span>Hablar</span></button>
+  <button type="button" data-tab="clase" role="tab"><svg><use href="#i-class"/></svg><span>Clase</span></button>
+  <button type="button" data-tab="quices" role="tab"><svg><use href="#i-quiz"/></svg><span>Quices</span></button>
+</nav>
+
+<!-- ============================================================== AJUSTES -->
+<div class="sheet" id="ajustes" hidden role="dialog" aria-label="Ajustes">
+  <div class="sheet-in">
+    <div class="sheet-h"><h2>Ajustes</h2><button class="icon-btn" id="btn-ajustes-cerrar" type="button" aria-label="Cerrar"><svg><use href="#i-x"/></svg></button></div>
+    <div class="scroll">
+      <h3 class="sub">Inteligencia artificial</h3>
+      <div class="radios" id="a-proveedor"></div>
+      <label class="lbl" for="a-clave">Clave de la IA <a href="#" id="a-clave-link" target="_blank" rel="noopener">conseguir una</a></label>
+      <input class="inp" id="a-clave" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+      <label class="lbl" for="a-modelo">Modelo</label>
+      <input class="inp" id="a-modelo" type="text" spellcheck="false" placeholder="Automático (el rápido de tu cuenta)">
+      <div class="row"><button class="btn" id="btn-probar" type="button">Probar la IA</button><span class="hint" id="probar-res"></span></div>
+      <p class="hint">La clave se guarda solo en este celular y se usa para hablar directo con el proveedor que escojas.</p>
+
+      <h3 class="sub">Voz</h3>
+      <label class="lbl" for="a-velocidad">Velocidad <output id="a-velocidad-v"></output></label>
+      <input id="a-velocidad" type="range" min="0.6" max="1.6" step="0.1">
+      <label class="lbl" for="a-tono">Tono <output id="a-tono-v"></output></label>
+      <input id="a-tono" type="range" min="0.6" max="1.5" step="0.1">
+      <label class="lbl check"><input type="checkbox" id="a-voz"> Responder en voz alta</label>
+      <label class="lbl check"><input type="checkbox" id="a-seguir"> Conversación continua (vuelve a escuchar después de responder)</label>
+
+      <h3 class="sub">Tú y tu colegio</h3>
+      <label class="lbl" for="a-nombre">¿Cómo te llamo?</label>
+      <input class="inp" id="a-nombre" type="text" placeholder="Profe">
+      <label class="lbl">Escala de desempeño (de 1 a 5)</label>
+      <div class="row wrap esc">
+        <label>Básico desde <input class="inp tiny" id="a-basico" type="number" min="1" max="5" step="0.1"></label>
+        <label>Alto desde <input class="inp tiny" id="a-alto" type="number" min="1" max="5" step="0.1"></label>
+        <label>Superior desde <input class="inp tiny" id="a-superior" type="number" min="1" max="5" step="0.1"></label>
+      </div>
+
+      <h3 class="sub">Tus datos</h3>
+      <p class="hint">Todo (cursos, quices, recordatorios y conversación) vive en este celular. Guarda una copia de vez en cuando.</p>
+      <div class="row wrap"><button class="btn" id="btn-respaldo" type="button">Guardar copia</button><button class="btn" id="btn-restaurar" type="button">Restaurar copia</button><button class="btn danger" id="btn-borrar-chat" type="button">Borrar conversación</button></div>
+      <input id="restaurar-in" type="file" accept="application/json,.json" hidden>
+      <p class="hint about" id="acerca"></p>
+    </div>
+  </div>
+</div>
+
+<!-- cursos: crear o editar -->
+<div class="sheet" id="curso-ed" hidden role="dialog" aria-label="Curso">
+  <div class="sheet-in">
+    <div class="sheet-h"><h2 id="curso-ed-t">Nuevo curso</h2><button class="icon-btn" id="btn-curso-cerrar" type="button" aria-label="Cerrar"><svg><use href="#i-x"/></svg></button></div>
+    <div class="scroll">
+      <label class="lbl" for="c-nombre">Nombre del curso</label>
+      <input class="inp" id="c-nombre" type="text" placeholder="7A">
+      <label class="lbl" for="c-lista">Estudiantes (uno por línea, o pega la lista de la planilla)</label>
+      <textarea class="inp" id="c-lista" rows="10" placeholder="Ana Rojas&#10;Beto Díaz&#10;…"></textarea>
+      <div class="row wrap"><button class="btn" id="btn-c-archivo" type="button">Cargar de un archivo (CSV o TXT)</button><span class="hint" id="c-cuenta"></span></div>
+      <input id="c-archivo" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden>
+      <div class="row"><button class="btn primary" id="btn-c-guardar" type="button">Guardar</button><button class="btn danger" id="btn-c-borrar" type="button" hidden>Borrar curso</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<div class="alarm" id="alarma" hidden><div><b id="alarma-t">¡Se acabó el tiempo!</b><button class="btn primary" id="btn-alarma" type="button">Listo</button></div></div>
+
+<script src="vendor/katex/katex.min.js"></script>
+<script src="js/mdmath.js"></script>
+<script src="js/logica.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/voz.js"></script>
+<script src="js/ia.js"></script>
+<script src="js/pdf.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

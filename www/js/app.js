@@ -1,0 +1,599 @@
+/* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
+(function () {
+  "use strict";
+  const VERSION = "1.0";
+  const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const save = () => window.JD.save();
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const md = (t) => (window.JMD ? window.JMD.md(t) : `<p>${esc(t)}</p>`);
+  const mdInline = (t) => md(t).replace(/^<p>([\s\S]*)<\/p>$/, "$1");
+
+  // ======================================================================== ESTADO Y AVISOS
+  let state = "idle";
+  const LABEL = { idle: "Listo", listening: "Escuchando…", thinking: "Pensando…", speaking: "Hablando" };
+  function setState(s) { state = s; document.body.dataset.state = s; $("#status").textContent = LABEL[s] || ""; }
+  V.onSpeaking((on) => { if (on) setState("speaking"); else if (state === "speaking") setState("idle"); });
+  let toastT = null;
+  function toast(text, ms = 3200) { const t = $("#toast"); t.textContent = text; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms); }
+  function applyVoice() { V.setOptions({ rate: +D.ajustes.velocidad || 1, pitch: +D.ajustes.tono || 1 }); }
+  applyVoice();
+  const say = (t) => { if (D.ajustes.voz) V.say(L.forSpeech(t)); };
+
+  // ======================================================================== PESTAÑAS
+  function tab(name) {
+    document.body.dataset.tab = name;
+    $$(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
+    $$(".view").forEach((v) => (v.hidden = v.dataset.view !== name));
+    if (name === "clase") renderClase();
+    if (name === "quices") renderQuices();
+  }
+  $$(".tabs button").forEach((b) => b.addEventListener("click", () => tab(b.dataset.tab)));
+
+  // ======================================================================== CONVERSACIÓN
+  const chat = $("#chat");
+  function hora(ts) { return new Date(ts).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" }); }
+  function msgEl(m) {
+    const e = mk("div", `msg ${m.role === "user" ? "user" : "jarvis"}${m.cls ? " " + m.cls : ""}`);
+    if (m.role === "user") e.textContent = m.content; else e.innerHTML = md(m.content);
+    const t = mk("span", "t", hora(m.t || Date.now())); e.append(t);
+    return e;
+  }
+  function renderChat() {
+    chat.textContent = "";
+    const list = D.chat.slice(-60);
+    if (!list.length) chat.append(emptyChat());
+    list.forEach((m) => chat.append(msgEl(m)));
+    chat.scrollTop = chat.scrollHeight;
+  }
+  function emptyChat() {
+    const e = mk("div", "empty");
+    e.append(mk("b", "", `Hola${D.ajustes.nombre ? ", " + D.ajustes.nombre : ""}. Soy Jarvis.`),
+      mk("span", "", D.ajustes.claves[D.ajustes.proveedor] ? "Toca el micrófono y háblame, o escribe." : "Toca el micrófono y pídeme algo de la clase. Para conversar con la IA, pon tu clave en Ajustes (el engranaje)."));
+    const s = mk("div", "sug");
+    ["Escoge un estudiante", "Pon 5 minutos", "Haz 4 grupos", "Hazme un quiz de fracciones de 5 preguntas", "¿Cómo explico los números negativos?"].forEach((x) => {
+      const c = mk("button", "chip", x); c.type = "button"; c.addEventListener("click", () => handle(x, false)); s.append(c);
+    });
+    e.append(s);
+    return e;
+  }
+  function add(role, content, cls) {
+    const m = { role, content: String(content), t: Date.now(), cls: cls || "" };
+    D.chat.push(m);
+    if (D.chat.length > 200) D.chat.splice(0, D.chat.length - 200);
+    save();
+    $(".empty", chat)?.remove();
+    const e = msgEl(m);
+    chat.append(e);
+    chat.scrollTop = chat.scrollHeight;
+    return { m, e };
+  }
+  /** Jarvis contesta algo propio (herramientas): lo muestra y lo dice. */
+  function reply(text, cls = "tool", spoken) { add("assistant", text, cls); say(spoken || text); }
+
+  let pendingReminder = null, lastByVoice = false;
+  async function handle(text, byVoice) {
+    text = String(text || "").trim();
+    if (!text) return;
+    lastByVoice = byVoice;
+    add("user", text);
+    if (pendingReminder) {                                    // «¿a qué hora te lo recuerdo?»
+      const p = pendingReminder; pendingReminder = null;
+      if (!/^(?:no|cancela|olvidalo|nada)$/.test(L.norm(text))) { addReminder(`recuérdame ${p} ${text}`, true); return afterTurn(); }
+    }
+    const it = L.intent(text, D.cursos);
+    if (it) { try { await doIntent(it, text); } catch (e) { reply(e.message || String(e), "err"); } return afterTurn(); }
+    await askAI(text);
+    afterTurn();
+  }
+  async function afterTurn() {
+    if (!(lastByVoice && D.ajustes.seguir)) return;
+    await V.idle();
+    if (state === "idle" && D.ajustes.seguir) listen(true);
+  }
+
+  function systemPrompt() {
+    const a = D.ajustes, now = new Date();
+    return `Eres Jarvis, el asistente de voz de ${a.nombre ? "«" + a.nombre + "», " : ""}una docente de matemáticas de un colegio en Colombia. ` +
+      "Hablas en español de Colombia, con calidez y de forma directa. Tu respuesta se lee en voz alta: responde breve (2 a 4 frases), " +
+      "salvo que te pidan un texto, una explicación detallada o una lista. Las fórmulas, en LaTeX entre $…$. No inventes datos de estudiantes. " +
+      `Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, son las ${hora(now)}. ` +
+      `Cursos de la profe: ${D.cursos.map((c) => c.nombre).join(", ") || "ninguno todavía"}. ` +
+      "Esta app también hace, sin la IA: escoger un estudiante al azar, hacer grupos, temporizador, recordatorios, quices y calificar la foto de un trabajo. " +
+      "Si te piden algo de eso, dile cómo pedirlo (por ejemplo «escoge un estudiante de 7A» o «pon 5 minutos»).";
+  }
+  async function askAI(text) {
+    setState("thinking");
+    const hist = L.trimHistory(D.chat.filter((m) => !m.cls || m.cls === "").slice(-13, -1).map((m) => ({ role: m.role, content: m.content })));
+    const { m, e } = add("assistant", "", "");
+    e.classList.add("typing");
+    let spoken = 0, first = true, buf = "", lastDraw = 0;
+    const draw = (force) => {
+      const now = performance.now();
+      if (!force && now - lastDraw < 90) return;
+      lastDraw = now;
+      e.innerHTML = md(m.content || "…");
+      chat.scrollTop = chat.scrollHeight;
+    };
+    try {
+      const full = await IA.chat({ system: systemPrompt(), messages: hist.concat([{ role: "user", content: text }]), onDelta: (d, all) => {
+        m.content = all;
+        draw();
+        if (!D.ajustes.voz) return;
+        buf += d;
+        const r = L.takeSentences(buf, first);
+        buf = r.resto;
+        r.frases.forEach((s) => { V.say(L.forSpeech(s)); spoken++; first = false; });
+      } });
+      m.content = full || "(sin respuesta)";
+      if (D.ajustes.voz && buf.trim()) V.say(L.forSpeech(buf));
+    } catch (er) {
+      m.content = (m.content ? m.content + "\n\n" : "") + (er.code === "abort" ? "*(detenido)*" : er.message);
+      m.cls = er.code === "abort" ? "" : "err";
+      if (er.code !== "abort") { e.classList.add("err"); say(er.message); }
+    }
+    e.classList.remove("typing");
+    draw(true);
+    e.append(mk("span", "t", hora(m.t)));
+    save();
+    if (state === "thinking") setState(V.isSpeaking() ? "speaking" : "idle");
+    void spoken;
+  }
+
+  // ---------------------------------------------------------------- micrófono
+  let misses = 0;
+  async function listen(auto) {
+    if (state === "listening") { V.stopListening(); return; }
+    if (V.isSpeaking()) V.hush();
+    if (state === "thinking") { IA.stop(); }
+    setState("listening");
+    $("#live").textContent = "Te escucho…";
+    let text = "";
+    try { text = await V.listen((p) => ($("#live").textContent = p)); }
+    catch (e) { setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
+    $("#live").textContent = "";
+    setState("idle");
+    if (!text) { if (auto && ++misses >= 1) { misses = 0; toast("No te oí. Toca el micrófono cuando quieras."); } return; }
+    misses = 0;
+    handle(text, true);
+  }
+  $("#btn-mic").addEventListener("click", () => listen(false));
+  $("#btn-callar").addEventListener("click", () => { V.hush(); IA.stop(); V.stopListening(); setState("idle"); });
+  const conv = $("#btn-conv");
+  function convMark() { conv.setAttribute("aria-pressed", D.ajustes.seguir ? "true" : "false"); }
+  conv.addEventListener("click", () => { D.ajustes.seguir = !D.ajustes.seguir; save(); convMark(); toast(D.ajustes.seguir ? "Conversación continua: después de responder, vuelvo a escuchar." : "Conversación continua apagada."); });
+  $("#f-escribir").addEventListener("submit", (ev) => { ev.preventDefault(); const i = $("#in-texto"); const t = i.value; i.value = ""; handle(t, false); });
+
+  // ======================================================================== ÓRDENES DE LA CLASE
+  function courseFor(id) {
+    return D.cursos.find((c) => c.id === id) || D.cursos.find((c) => c.id === D.cursoActual) || (D.cursos.length === 1 ? D.cursos[0] : null);
+  }
+  const noCourse = "Primero crea un curso con la lista de estudiantes: en la pestaña Clase, toca «+ Curso».";
+  async function doIntent(it, text) {
+    const now = new Date();
+    switch (it.kind) {
+      case "callar": V.hush(); IA.stop(); return;
+      case "hora": return reply(`Son las ${hora(now)}.`);
+      case "fecha": return reply(`Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`);
+      case "tiempo": { const s = it.segundos || D.ultimoTiempo || 300; startTimer(s); return reply(`Listo: ${L.spokenDuration(s)}. Te aviso cuando termine.`); }
+      case "tiempo_parar": stopTimer(); return reply("Temporizador detenido.");
+      case "tiempo_falta": return reply(timer.end ? `Quedan ${L.spokenDuration(Math.max(0, Math.round((timer.end - Date.now()) / 1000)))}.` : "No hay ningún temporizador andando.");
+      case "recordar": return addReminder(text, true);
+      case "recordatorios": {
+        const up = D.recordatorios.filter((r) => !r.avisado);
+        return reply(up.length ? "Tus recordatorios:\n" + up.map((r) => `- ${r.texto} (${L.spokenWhen(new Date(r.cuando))})`).join("\n") : "No tienes recordatorios pendientes.");
+      }
+      case "azar": {
+        const c = courseFor(it.curso);
+        if (!c) return reply(noCourse);
+        const r = pickFor(c);
+        if (!r) return reply(`El curso ${c.nombre} no tiene estudiantes todavía.`);
+        showPick(r, c);
+        return reply(`**${r.name}**` + (r.reinicio ? " (ya habían pasado todos: empecé de nuevo)" : ""), "tool", r.name);
+      }
+      case "grupos": {
+        const c = courseFor(it.curso);
+        if (!c) return reply(noCourse);
+        const g = L.makeGroups(c.estudiantes, it.tamano ? { tamano: it.tamano } : { grupos: it.grupos || 4 });
+        showGroups(g, c);
+        return reply(`Listos ${g.length} grupos de ${c.nombre}:\n` + g.map((x, i) => `${i + 1}. ${x.join(", ")}`).join("\n"), "tool", `Listos ${g.length} grupos. Están en la pantalla.`);
+      }
+      case "foto": tab("clase"); $("#k-foto").scrollIntoView({ behavior: "smooth" }); return reply("Toca «Tomar foto» y le tomas la foto al trabajo. Yo reviso el procedimiento y te propongo la nota.");
+      case "quiz": {
+        if (!it.tema) return reply("¿Sobre qué tema? Dime, por ejemplo: «hazme un quiz de fracciones equivalentes de 5 preguntas».");
+        const c = it.curso ? courseFor(it.curso) : null;
+        const q = await makeQuiz({ tema: it.tema, n: it.n || 5, grado: it.grado, tipo: it.tipo, curso: c && c.nombre });
+        if (q) reply(`Listo ${it.tipo === "taller" ? "el taller" : "el quiz"} «${q.quiz.titulo}» con ${q.quiz.preguntas.length} preguntas. Está en la pestaña Quices: desde ahí lo compartes en PDF o por WhatsApp.`);
+        return;
+      }
+    }
+  }
+
+  // ======================================================================== CLASE: CURSOS
+  function renderClase() {
+    const box = $("#cursos");
+    box.textContent = "";
+    D.cursos.forEach((c) => {
+      const b = mk("button", "chip" + (c.id === D.cursoActual ? " on" : ""), c.nombre);
+      b.type = "button"; b.append(mk("small", "", String(c.estudiantes.length)));
+      b.addEventListener("click", () => { if (D.cursoActual === c.id) editCourse(c); else { D.cursoActual = c.id; save(); renderClase(); } });
+      box.append(b);
+    });
+    const add = mk("button", "chip", "+ Curso"); add.type = "button"; add.addEventListener("click", () => editCourse(null)); box.append(add);
+    if (!D.cursoActual && D.cursos[0]) { D.cursoActual = D.cursos[0].id; save(); }
+    const c = courseFor(null);
+    $("#azar-info").textContent = c ? `${c.nombre}: quedan ${c.estudiantes.filter((n) => !(c.usados || []).includes(n)).length} de ${c.estudiantes.length} por pasar. Toca el curso otra vez para editarlo.` : noCourse;
+    const sel = $("#foto-estudiante");
+    sel.innerHTML = '<option value="">Estudiante (opcional, para tu registro)</option>';
+    (c ? c.estudiantes : []).forEach((n) => sel.append(new Option(n, n)));
+    renderReminders(); renderPhotoLog();
+  }
+  let editing = null;
+  function editCourse(c) {
+    editing = c;
+    $("#curso-ed-t").textContent = c ? "Editar curso" : "Nuevo curso";
+    $("#c-nombre").value = c ? c.nombre : "";
+    $("#c-lista").value = c ? c.estudiantes.join("\n") : "";
+    $("#btn-c-borrar").hidden = !c;
+    countNames();
+    $("#curso-ed").hidden = false;
+  }
+  function countNames() { const n = L.parseNames($("#c-lista").value).length; $("#c-cuenta").textContent = n ? `${n} estudiante${n === 1 ? "" : "s"}` : ""; }
+  $("#c-lista").addEventListener("input", countNames);
+  $("#btn-curso-cerrar").addEventListener("click", () => ($("#curso-ed").hidden = true));
+  $("#btn-c-archivo").addEventListener("click", () => $("#c-archivo").click());
+  $("#c-archivo").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    const txt = await f.text();
+    const names = /[;,\t]/.test(txt.split("\n")[0] || "") ? L.namesFromTable(txt) : L.parseNames(txt);
+    $("#c-lista").value = names.join("\n"); countNames();
+    if (!$("#c-nombre").value) $("#c-nombre").value = f.name.replace(/\.[^.]+$/, "").slice(0, 20);
+  });
+  $("#btn-c-guardar").addEventListener("click", () => {
+    const nombre = $("#c-nombre").value.trim(), est = L.parseNames($("#c-lista").value);
+    if (!nombre) return toast("Ponle nombre al curso (por ejemplo 7A).");
+    if (editing) Object.assign(editing, { nombre, estudiantes: est, usados: (editing.usados || []).filter((n) => est.includes(n)) });
+    else { const c = { id: window.JD.uid(), nombre, estudiantes: est, usados: [] }; D.cursos.push(c); D.cursoActual = c.id; }
+    save(); $("#curso-ed").hidden = true; renderClase(); toast(`Curso ${nombre} guardado (${est.length} estudiantes).`);
+  });
+  $("#btn-c-borrar").addEventListener("click", () => {
+    if (!editing || !confirm(`¿Borrar el curso ${editing.nombre}?`)) return;
+    D.cursos = D.cursos.filter((c) => c !== editing); if (D.cursoActual === editing.id) D.cursoActual = (D.cursos[0] || {}).id || "";
+    save(); $("#curso-ed").hidden = true; renderClase();
+  });
+
+  // ---------------------------------------------------------------- estudiante al azar
+  function pickFor(c) { const r = L.pickStudent(c.estudiantes, c.usados || []); if (r) { c.usados = r.usados; save(); } return r; }
+  function showPick(r, c) {
+    const el = $("#azar-nombre");
+    let k = 0;
+    el.classList.remove("win"); el.classList.add("spin");
+    const spin = setInterval(() => { el.textContent = c.estudiantes[Math.floor(Math.random() * c.estudiantes.length)]; if (++k > 12) end(); }, 70);
+    function end() { clearInterval(spin); el.classList.remove("spin"); el.textContent = r.name; void el.offsetWidth; el.classList.add("win"); if (navigator.vibrate) navigator.vibrate(60); renderClase(); }
+  }
+  $("#btn-azar").addEventListener("click", () => {
+    const c = courseFor(null);
+    if (!c) return toast(noCourse, 5000);
+    const r = pickFor(c);
+    if (!r) return toast("Ese curso no tiene estudiantes.");
+    showPick(r, c);
+    setTimeout(() => say(r.name), 900);
+  });
+  $("#btn-azar-reset").addEventListener("click", () => { const c = courseFor(null); if (c) { c.usados = []; save(); renderClase(); toast("Listo: empiezan todos de nuevo."); } });
+
+  // ---------------------------------------------------------------- grupos
+  let gN = 4, lastGroups = null;
+  $$("#k-grupos .stepper button").forEach((b) => b.addEventListener("click", () => { gN = Math.max(1, Math.min(20, gN + +b.dataset.step)); $("#g-n").textContent = gN; }));
+  function showGroups(g, c) {
+    lastGroups = { g, c: c.nombre };
+    const box = $("#grupos"); box.textContent = "";
+    g.forEach((x, i) => { const d = mk("div", "grupo"); d.style.animationDelay = i * 60 + "ms"; d.append(mk("b", "", `GRUPO ${i + 1}`)); x.forEach((n) => d.append(mk("div", "", n))); box.append(d); });
+    $("#btn-grupos-compartir").hidden = false;
+  }
+  $("#btn-grupos").addEventListener("click", () => {
+    const c = courseFor(null);
+    if (!c) return toast(noCourse, 5000);
+    const modo = $('input[name="gmodo"]:checked').value;
+    showGroups(L.makeGroups(c.estudiantes, modo === "tamano" ? { tamano: gN } : { grupos: gN }), c);
+  });
+  $("#btn-grupos-compartir").addEventListener("click", () => {
+    if (!lastGroups) return;
+    const text = `*Grupos de ${lastGroups.c}*\n` + lastGroups.g.map((x, i) => `\n*Grupo ${i + 1}:* ${x.join(", ")}`).join("");
+    N.share({ title: "Grupos", text }).then((how) => how === "copiado" && toast("Copiado: pégalo en WhatsApp.")).catch(() => {});
+  });
+
+  // ---------------------------------------------------------------- temporizador
+  const timer = { end: 0, total: 0, iv: null, nid: "tiempo" };
+  function startTimer(secs) {
+    stopTimer(true);
+    D.ultimoTiempo = secs; save();
+    timer.total = secs; timer.end = Date.now() + secs * 1000;
+    timer.iv = setInterval(tick, 250); tick();
+    N.keepAwake(true);
+    N.notifyAt(timer.nid, "⏰ Se acabó el tiempo", `Pasaron ${L.spokenDuration(secs)}.`, timer.end);
+    $("#btn-tiempo").textContent = "Reiniciar";
+  }
+  function stopTimer(quiet) {
+    clearInterval(timer.iv); timer.iv = null; timer.end = 0;
+    N.cancelNotify(timer.nid); N.keepAwake(false);
+    $("#reloj").className = "clock"; $("#reloj").textContent = L.fmtClock(D.ultimoTiempo || 300); $("#reloj-barra").style.width = "100%";
+    $("#btn-tiempo").textContent = "Empezar";
+    if (!quiet) $("#alarma").hidden = true;
+  }
+  function tick() {
+    const left = Math.max(0, (timer.end - Date.now()) / 1000);
+    const r = $("#reloj");
+    r.textContent = L.fmtClock(Math.ceil(left));
+    r.className = "clock run" + (left <= 10 ? " low" : "");
+    $("#reloj-barra").style.width = (100 * left / timer.total) + "%";
+    if (left <= 0) {
+      clearInterval(timer.iv); timer.iv = null; timer.end = 0; N.keepAwake(false);
+      r.className = "clock end"; r.textContent = "0:00";
+      alarm("¡Se acabó el tiempo!");
+    }
+  }
+  let beepT = null;
+  function beep() {
+    try {
+      const ac = beep.ac || (beep.ac = new (window.AudioContext || window.webkitAudioContext)());
+      [0, 0.25, 0.5].forEach((d) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ac.destination);
+        g.gain.setValueAtTime(0.0001, ac.currentTime + d); g.gain.exponentialRampToValueAtTime(0.4, ac.currentTime + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + d + 0.2);
+        o.start(ac.currentTime + d); o.stop(ac.currentTime + d + 0.22); });
+    } catch (e) { /* sin audio */ }
+  }
+  function alarm(text) {
+    $("#alarma-t").textContent = text; $("#alarma").hidden = false;
+    N.showNow("Jarvis", text); beep(); clearInterval(beepT); let n = 0; beepT = setInterval(() => { if (++n > 6 || $("#alarma").hidden) clearInterval(beepT); else beep(); }, 1500);
+    say(text);
+  }
+  $("#btn-alarma").addEventListener("click", () => { $("#alarma").hidden = true; clearInterval(beepT); V.hush(); stopTimer(true); });
+  $$(".presets .chip").forEach((b) => b.addEventListener("click", () => startTimer(+b.dataset.min * 60)));
+  $("#btn-tiempo").addEventListener("click", () => startTimer(D.ultimoTiempo || 300));
+  $("#btn-tiempo-parar").addEventListener("click", () => stopTimer());
+
+  // ---------------------------------------------------------------- calificar la foto de un trabajo
+  $("#btn-foto").addEventListener("click", () => { const i = $("#foto-in"); i.setAttribute("capture", "environment"); i.click(); });
+  $("#btn-foto-galeria").addEventListener("click", () => { const i = $("#foto-in"); i.removeAttribute("capture"); i.click(); });
+  function shrink(file, max = 1600) {
+    return new Promise((ok, no) => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        ok(c.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => no(new Error("No pude abrir esa imagen."));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  $("#foto-in").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    const box = $("#foto-res");
+    box.textContent = "";
+    let url;
+    try { url = await shrink(f); } catch (e) { return toast(e.message); }
+    const img = mk("img"); img.src = url; img.alt = "Foto del trabajo"; box.append(img);
+    const wait = mk("p", "hint", "Revisando el procedimiento…"); box.append(wait);
+    setState("thinking");
+    try {
+      const esc5 = { min: 1, max: 5 };
+      const obj = await IA.json({ system: "Eres un docente de matemáticas cuidadoso y justo.", messages: [{ role: "user", content: L.gradePrompt({ consigna: $("#foto-consigna").value.trim(), escala: esc5 }),
+        image: { mime: "image/jpeg", data: url.split(",")[1] } }], maxTokens: 1500 });
+      const r = L.cleanGrade(obj, esc5);
+      wait.remove();
+      if (r.error) throw new Error(r.error);
+      showGrade(box, r.revision);
+      const who = $("#foto-estudiante").value, c = courseFor(null);
+      if (r.revision.nota != null) {
+        D.fotos.unshift({ id: window.JD.uid(), fecha: Date.now(), curso: c ? c.nombre : "", estudiante: who, actividad: $("#foto-consigna").value.trim(), nota: r.revision.nota, resumen: r.revision.resumen });
+        D.fotos = D.fotos.slice(0, 300); save(); renderPhotoLog();
+      }
+      say((r.revision.nota != null ? `Le pondría ${String(r.revision.nota).replace(".", ",")}. ` : "") + r.revision.resumen);
+    } catch (e) { wait.textContent = e.message; wait.className = "hint"; }
+    if (state === "thinking") setState("idle");
+  });
+  function showGrade(box, r) {
+    const perf = L.performance(r.nota, D.ajustes.escala);
+    if (r.nota != null) { const n = mk("div", "nota " + perf.normalize("NFD").replace(/[̀-ͯ]/g, "")); n.append(mk("b", "", String(r.nota).replace(".", ",")), mk("span", "", perf)); box.append(n); }
+    const p = mk("p"); p.innerHTML = mdInline(r.resumen); box.append(p);
+    const list = (title, items) => { if (!items.length) return; box.append(mk("h4", "", title)); const ul = mk("ul"); items.forEach((x) => { const li = mk("li"); li.innerHTML = mdInline(x); ul.append(li); }); box.append(ul); };
+    list("Lo que hizo bien", r.aciertos); list("Errores", r.errores);
+    if (r.sugerencia) { box.append(mk("h4", "", "Para practicar")); const s = mk("p"); s.innerHTML = mdInline(r.sugerencia); box.append(s); }
+    box.append(mk("p", "hint", "Es una propuesta: la nota la decides tú."));
+  }
+  function renderPhotoLog() {
+    const box = $("#foto-registro"); box.textContent = "";
+    if (!D.fotos.length) { box.append(mk("p", "hint", "Aún no has calificado fotos.")); return; }
+    const t = mk("table");
+    D.fotos.slice(0, 30).forEach((f) => { const tr = mk("tr"); [new Date(f.fecha).toLocaleDateString("es-CO"), f.curso, f.estudiante || "—", String(f.nota).replace(".", ",")].forEach((x) => tr.append(mk("td", "", x))); t.append(tr); });
+    box.append(t);
+  }
+  $("#btn-foto-csv").addEventListener("click", () => {
+    const rows = [["Fecha", "Curso", "Estudiante", "Actividad", "Nota", "Resumen"]].concat(D.fotos.map((f) => [new Date(f.fecha).toLocaleDateString("es-CO"), f.curso, f.estudiante, f.actividad, String(f.nota).replace(".", ","), f.resumen]));
+    const csv = "﻿" + rows.map((r) => r.map((c) => `"${String(c || "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
+    N.share({ title: "Notas de fotos", fileName: "notas-fotos.csv", mime: "text/csv", base64: btoa(unescape(encodeURIComponent(csv))) }).catch(() => {});
+  });
+
+  // ---------------------------------------------------------------- recordatorios
+  function addReminder(text, spoken) {
+    const r = L.parseReminder(text);
+    if (!r || !r.texto) { const m = "Dime qué te recuerdo y cuándo: «recuérdame llamar a la coordinadora a las 3 de la tarde»."; return spoken ? reply(m) : toast(m, 5000); }
+    if (!r.cuando) { pendingReminder = r.texto; return spoken ? reply(`¿A qué hora te recuerdo «${r.texto}»?`) : toast("¿A qué hora? Agrega «a las…» o «en 20 minutos».", 5000); }
+    const it = { id: window.JD.uid(), texto: r.texto, cuando: r.cuando.getTime(), avisado: false };
+    D.recordatorios.push(it); D.recordatorios.sort((a, b) => a.cuando - b.cuando); save();
+    N.notifyAt(it.id, "Jarvis te recuerda", it.texto, it.cuando);
+    renderReminders();
+    const m = `Listo: te recuerdo «${it.texto}» ${L.spokenWhen(r.cuando)}.`;
+    if (spoken) reply(m); else toast(m, 4000);
+  }
+  function renderReminders() {
+    const ul = $("#recordatorios"); ul.textContent = "";
+    const list = D.recordatorios.filter((r) => !r.avisado || Date.now() - r.cuando < 864e5);
+    if (!list.length) { ul.append(mk("li", "hint", "No hay recordatorios.")); return; }
+    list.forEach((r) => {
+      const li = mk("li", r.avisado ? "pasado" : ""), g = mk("div", "grow", r.texto);
+      g.append(mk("small", "", L.spokenWhen(new Date(r.cuando))));
+      const x = mk("button", "x"); x.type = "button"; x.setAttribute("aria-label", "Borrar"); x.innerHTML = '<svg><use href="#i-x"/></svg>';
+      x.addEventListener("click", () => { D.recordatorios = D.recordatorios.filter((y) => y !== r); N.cancelNotify(r.id); save(); renderReminders(); });
+      li.append(g, x); ul.append(li);
+    });
+  }
+  $("#f-recordar").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    let t = $("#in-recordar").value.trim();
+    if (!t) return;
+    if (!/^(?:recu[eé]rdame|av[ií]same|recordatorio)/i.test(t)) t = "recuérdame " + t;
+    $("#in-recordar").value = "";
+    addReminder(t, false);
+  });
+  setInterval(() => {                                         // con la app abierta, Jarvis también avisa de viva voz
+    const now = Date.now();
+    D.recordatorios.forEach((r) => {
+      if (!r.avisado && r.cuando <= now) { r.avisado = true; save(); if (now - r.cuando < 10 * 60000) { alarm("Recordatorio: " + r.texto); add("assistant", "⏰ **Recordatorio:** " + r.texto, "tool"); } renderReminders(); }
+    });
+  }, 15000);
+
+  // ======================================================================== QUICES
+  let current = null;
+  async function makeQuiz({ tema, n, grado, tipo, curso }) {
+    setState("thinking");
+    $("#btn-quiz").disabled = true; $("#btn-quiz").textContent = "Creando…";
+    try {
+      const obj = await IA.json({ system: "Eres un docente experto en evaluación de matemáticas en Colombia.", messages: [{ role: "user", content: L.quizPrompt({ tema, n, grado, tipo }) }] });
+      const r = L.cleanQuiz(obj, { tema });
+      if (r.error) throw new Error(r.error);
+      const it = { id: window.JD.uid(), fecha: Date.now(), tema, grado, tipo, curso: curso || "", quiz: r.quiz };
+      D.quices.unshift(it); D.quices = D.quices.slice(0, 100); save();
+      current = it;
+      if (document.body.dataset.tab === "quices") renderQuices();
+      return it;
+    } catch (e) {
+      if (document.body.dataset.tab === "quices") toast(e.message, 6000); else reply(e.message, "err");
+      return null;
+    } finally {
+      $("#btn-quiz").disabled = false; $("#btn-quiz").textContent = "Crear con IA";
+      if (state === "thinking") setState("idle");
+    }
+  }
+  const grados = $("#q-grado");
+  for (let g = 1; g <= 11; g++) grados.append(new Option(`Grado ${g}`, String(g)));
+  $("#f-quiz").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const tema = $("#q-tema").value.trim();
+    if (!tema) return;
+    const it = await makeQuiz({ tema, n: +$("#q-n").value, grado: +$("#q-grado").value || null, tipo: $("#q-tipo").value });
+    if (it) { toast(`Listo: ${it.quiz.preguntas.length} preguntas.`); $("#quiz-ver").scrollIntoView({ behavior: "smooth" }); }
+  });
+  function renderQuices() {
+    const ul = $("#quices"); ul.textContent = "";
+    if (!D.quices.length) ul.append(mk("li", "hint", "Aún no hay quices. Crea uno arriba o pídelo por voz."));
+    D.quices.forEach((q) => {
+      const li = mk("li", "click"), g = mk("div", "grow", q.quiz.titulo);
+      g.append(mk("small", "", `${q.quiz.preguntas.length} preguntas · ${new Date(q.fecha).toLocaleDateString("es-CO")}${q.grado ? " · grado " + q.grado : ""}${q.curso ? " · " + q.curso : ""}`));
+      li.append(g); li.addEventListener("click", () => { current = q; renderQuiz(); $("#quiz-ver").scrollIntoView({ behavior: "smooth" }); });
+      ul.append(li);
+    });
+    renderQuiz();
+  }
+  function renderQuiz() {
+    const box = $("#quiz-ver"); box.textContent = "";
+    if (!current) return;
+    const q = current.quiz;
+    const card = mk("div", "quiz hide-key");
+    card.append(mk("h3", "", q.titulo));
+    if (q.instrucciones) card.append(mk("p", "ins", q.instrucciones));
+    const ol = mk("ol", "q");
+    q.preguntas.forEach((p) => {
+      const li = mk("li"), en = mk("div"); en.innerHTML = mdInline(p.enunciado.replace(/\\frac/g, "\\dfrac")); li.append(en);
+      const ops = mk("ol", "op");
+      p.opciones.forEach((o, k) => { const x = mk("li", k === p.correcta ? "ok" : ""); x.innerHTML = mdInline(o.replace(/\\frac/g, "\\dfrac")); ops.append(x); });
+      li.append(ops);
+      if (p.explicacion) { const e = mk("div", "exp"); e.innerHTML = "✓ " + mdInline(p.explicacion); li.append(e); }
+      ol.append(li);
+    });
+    card.append(ol);
+    const acts = mk("div", "quiz-acts");
+    const btn = (label, icon, fn, cls = "") => { const b = mk("button", "btn " + cls); b.type = "button"; if (icon) b.innerHTML = `<svg><use href="#${icon}"/></svg>`; b.append(label); b.addEventListener("click", fn); acts.append(b); return b; };
+    const keyBtn = btn("Ver respuestas", "", () => { const h = card.classList.toggle("hide-key"); keyBtn.lastChild.textContent = h ? "Ver respuestas" : "Ocultar respuestas"; });
+    btn("PDF", "i-pdf", () => sharePDF(current, false), "primary");
+    btn("PDF versión B", "i-pdf", () => sharePDF(current, true));
+    btn("WhatsApp", "i-share", () => N.share({ title: q.titulo, text: L.quizText(q, false) }).then((h) => h === "copiado" && toast("Copiado: pégalo en WhatsApp.")).catch(() => {}));
+    btn("Borrar", "", () => { if (!confirm("¿Borrar este quiz?")) return; D.quices = D.quices.filter((x) => x !== current); current = null; save(); renderQuices(); }, "danger");
+    box.append(card, acts);
+  }
+  async function sharePDF(it, versionB) {
+    toast("Preparando el PDF…", 2000);
+    try {
+      const quiz = versionB ? L.shuffleQuiz(it.quiz) : it.quiz;
+      const b64 = await window.JPDF.quizPDF(quiz, { curso: it.curso, clave: true, version: versionB ? "B" : "" });
+      const name = (it.quiz.titulo.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "quiz") + (versionB ? "-B" : "") + ".pdf";
+      const how = await N.share({ title: it.quiz.titulo, fileName: name, mime: "application/pdf", base64: b64 });
+      if (how === "descargado") toast("PDF descargado (con la hoja de respuestas al final).");
+    } catch (e) { if (e && e.name !== "AbortError") toast("No pude hacer el PDF: " + (e.message || e), 6000); }
+  }
+
+  // ======================================================================== AJUSTES
+  const A = D.ajustes;
+  function openSettings() {
+    const box = $("#a-proveedor"); box.textContent = "";
+    Object.entries(L.PROVIDERS).forEach(([k, p]) => {
+      const l = mk("label"), r = mk("input"); r.type = "radio"; r.name = "prov"; r.value = k; r.checked = A.proveedor === k;
+      r.addEventListener("change", () => { A.proveedor = k; save(); fillKey(); });
+      l.append(r, mk("span", "", p.nombre + (k === "gemini" ? " · tiene nivel gratuito" : " · pago por uso"))); box.append(l);
+    });
+    fillKey();
+    $("#a-velocidad").value = A.velocidad; $("#a-tono").value = A.tono; showRanges();
+    $("#a-voz").checked = !!A.voz; $("#a-seguir").checked = !!A.seguir;
+    $("#a-nombre").value = A.nombre || "";
+    $("#a-basico").value = A.escala.basico; $("#a-alto").value = A.escala.alto; $("#a-superior").value = A.escala.superior;
+    $("#acerca").textContent = `Jarvis para Android ${VERSION} · ${V.native() ? "app instalada" : "en el navegador"} · tus datos viven solo en este celular.`;
+    $("#probar-res").textContent = "";
+    $("#ajustes").hidden = false;
+  }
+  function fillKey() {
+    const p = L.PROVIDERS[A.proveedor];
+    $("#a-clave").value = A.claves[A.proveedor] || ""; $("#a-clave").placeholder = p.pista;
+    $("#a-clave-link").href = p.clave; $("#a-modelo").value = A.modelo || "";
+  }
+  function showRanges() { $("#a-velocidad-v").textContent = "× " + (+$("#a-velocidad").value).toFixed(1); $("#a-tono-v").textContent = (+$("#a-tono").value).toFixed(1); }
+  $("#btn-ajustes").addEventListener("click", openSettings);
+  $("#btn-ajustes-cerrar").addEventListener("click", () => { $("#ajustes").hidden = true; renderChat(); });
+  $("#a-clave").addEventListener("input", (e) => { A.claves[A.proveedor] = e.target.value.trim(); delete A.modeloAuto[A.proveedor]; save(); });
+  $("#a-modelo").addEventListener("change", (e) => { A.modelo = e.target.value.trim(); save(); });
+  ["a-velocidad", "a-tono"].forEach((id) => $("#" + id).addEventListener("input", (e) => { A[id === "a-velocidad" ? "velocidad" : "tono"] = +e.target.value; save(); showRanges(); applyVoice(); }));
+  $("#a-velocidad").addEventListener("change", () => { V.hush(); V.say("Así sueno ahora."); });
+  $("#a-voz").addEventListener("change", (e) => { A.voz = e.target.checked; save(); });
+  $("#a-seguir").addEventListener("change", (e) => { A.seguir = e.target.checked; save(); convMark(); });
+  $("#a-nombre").addEventListener("change", (e) => { A.nombre = e.target.value.trim(); save(); });
+  [["a-basico", "basico"], ["a-alto", "alto"], ["a-superior", "superior"]].forEach(([id, k]) => $("#" + id).addEventListener("change", (e) => { const v = parseFloat(e.target.value); if (v >= 1 && v <= 5) { A.escala[k] = v; save(); } }));
+  $("#btn-probar").addEventListener("click", async () => {
+    const out = $("#probar-res"); out.textContent = "Probando…";
+    try { const r = await IA.test(); out.textContent = `Funciona (${r.modelo}, ${(r.ms / 1000).toFixed(1)} s).`; }
+    catch (e) { out.textContent = e.message; }
+  });
+  $("#btn-respaldo").addEventListener("click", () => {
+    const json = JSON.stringify(window.JD.backup(), null, 1);
+    N.share({ title: "Copia de Jarvis", fileName: `jarvis-copia-${new Date().toISOString().slice(0, 10)}.json`, mime: "application/json", base64: btoa(unescape(encodeURIComponent(json))) })
+      .then(() => toast("Copia lista. Guárdala en Drive o mándatela por correo (no lleva tu clave).", 5000)).catch(() => {});
+  });
+  $("#btn-restaurar").addEventListener("click", () => $("#restaurar-in").click());
+  $("#restaurar-in").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    try { window.JD.restore(JSON.parse(await f.text())); toast("Copia restaurada. Recargando…"); setTimeout(() => location.reload(), 900); }
+    catch (e) { toast(e.message || "Ese archivo no sirve.", 5000); }
+  });
+  $("#btn-borrar-chat").addEventListener("click", () => { if (confirm("¿Borrar toda la conversación?")) { D.chat = []; save(); renderChat(); } });
+
+  // ======================================================================== ARRANQUE
+  convMark();
+  renderChat();
+  if ("serviceWorker" in navigator && !V.native() && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") V.stopListening(); });
+  window.__jarvis = { handle, tab, D, startTimer, makeQuiz, renderClase, showGrade };   // para las pruebas
+})();
