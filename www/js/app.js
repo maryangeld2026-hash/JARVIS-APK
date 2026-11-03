@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.3.1";
+  const VERSION = "3.4";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -17,7 +17,7 @@
   V.onSpeaking((on) => { if (on) setState("speaking"); else if (state === "speaking") setState("idle"); });
   let toastT = null;
   function toast(text, ms = 3200) { const t = $("#toast"); t.textContent = text; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms); }
-  function applyVoice() { V.setOptions({ rate: +D.ajustes.velocidad || 1, pitch: +D.ajustes.tono || 1 }); }
+  function applyVoice() { V.setOptions({ rate: +D.ajustes.velocidad || 1, pitch: +D.ajustes.tono || 1, voice: D.ajustes.vozIdx == null ? -1 : +D.ajustes.vozIdx, webVoice: D.ajustes.vozWeb || "" }); }
   applyVoice();
   const say = (t) => { if (D.ajustes.voz) V.say(L.forSpeech(t)); };
 
@@ -151,6 +151,7 @@
     save();
     if (state === "thinking") setState(V.isSpeaking() ? "speaking" : "idle");
     if (window.JX && m.cls !== "err") window.JX.onReply(m.content);
+    if (window.JX && window.JX.afterAnswer && m.cls !== "err" && m.content) { try { window.JX.afterAnswer(e, m); } catch (er) { console.error(er); } }
     void spoken;
   }
 
@@ -357,11 +358,13 @@
     timer.iv = setInterval(tick, 250); tick();
     N.keepAwake(true);
     N.notifyAt(timer.nid, "⏰ Se acabó el tiempo", `Pasaron ${L.spokenDuration(secs)}.`, timer.end);
+    if (window.JX && window.JX.onTimer) window.JX.onTimer(timer.end, secs);
     $("#btn-tiempo").textContent = "Reiniciar";
   }
   function stopTimer(quiet) {
     clearInterval(timer.iv); timer.iv = null; timer.end = 0;
     N.cancelNotify(timer.nid); N.keepAwake(false);
+    if (window.JX && window.JX.onTimer) window.JX.onTimer(0);
     $("#reloj").className = "clock"; $("#reloj").textContent = L.fmtClock(D.ultimoTiempo || 300); $("#reloj-barra").style.width = "100%";
     $("#btn-tiempo").textContent = "Empezar";
     if (!quiet) $("#alarma").hidden = true;
@@ -471,7 +474,7 @@
     if (!r.cuando) { pendingReminder = r.texto; return spoken ? reply(`¿A qué hora te recuerdo «${r.texto}»?`) : toast("¿A qué hora? Agrega «a las…» o «en 20 minutos».", 5000); }
     const it = { id: window.JD.uid(), texto: r.texto, cuando: r.cuando.getTime(), avisado: false };
     D.recordatorios.push(it); D.recordatorios.sort((a, b) => a.cuando - b.cuando); save();
-    N.notifyAt(it.id, "Jarvis te recuerda", it.texto, it.cuando);
+    N.notifyAt(it.id, "Jarvis te recuerda", it.texto, it.cuando, { acciones: true });
     renderReminders();
     const m = `Listo: te recuerdo «${it.texto}» ${L.spokenWhen(r.cuando)}.`;
     if (spoken) reply(m); else toast(m, 4000);

@@ -538,5 +538,5 @@
     save();
     if (A.getState() === "thinking") A.setState(V.isSpeaking() ? "speaking" : "idle");
   }
-  X._h = { docText, docQuestion, makeDoc, plot, research, data, familyReport, recoveryPlan, kahoot, renderDocs, openCards };
+  X._h = { photoQuestion, docWord, docPDF, docActions, docText, docQuestion, makeDoc, plot, research, data, familyReport, recoveryPlan, kahoot, renderDocs, openCards };
 })();

@@ -22,6 +22,29 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 3.4: Jarvis como asistente (mantener presionado Inicio) y desde el botón de voz -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- 3.4: «Compartir › Jarvis» desde WhatsApp, la galería o Archivos -->
+            <intent-filter android:label="Jarvis">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/*" />
+            </intent-filter>
+            <intent-filter android:label="Jarvis">
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
 
         </activity>
 
@@ -42,6 +65,28 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Burbuja flotante que abre el asistente de voz de la docente con un toque" />
+        </service>
+        <!-- 3.4: el widget de la pantalla de inicio -->
+        <receiver android:name=".JarvisWidget" android:exported="true" android:label="Jarvis">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_jarvis_info" />
+        </receiver>
+        <!-- 3.4: «No molestar» en horario de clase -->
+        <receiver android:name=".SilencioReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <!-- 3.4: Jarvis como app de asistente del celular -->
+        <service android:name=".AsistenteServicio" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION">
+            <meta-data android:name="android.voice_interaction" android:resource="@xml/asistente" />
+            <intent-filter><action android:name="android.service.voice.VoiceInteractionService" /></intent-filter>
+        </service>
+        <service android:name=".AsistenteSesiones" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION" />
+        <service android:name=".AsistenteReconocimiento" android:exported="true">
+            <intent-filter><action android:name="android.speech.RecognitionService" /></intent-filter>
+            <meta-data android:name="android.speech" android:resource="@xml/reconocimiento" />
         </service>
         <!-- Jarvis: «Jarvis» en segundo plano (escucha sin internet) -->
         <service
@@ -67,6 +112,11 @@
     <!-- 2.2: «Jarvis» en segundo plano -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 3.4: calendario del celular, «No molestar» en clase y huella o PIN -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Android 11+: para encontrar el reconocimiento de voz y la voz del teléfono -->
     <queries>

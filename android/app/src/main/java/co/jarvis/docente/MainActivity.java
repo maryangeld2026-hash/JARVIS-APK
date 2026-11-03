@@ -26,6 +26,8 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(OidoPlugin.class);
         registerPlugin(IALocalPlugin.class);
         registerPlugin(VentanaPlugin.class);
+        registerPlugin(CalendarioPlugin.class);
+        registerPlugin(EscanerPlugin.class);
         super.onCreate(savedInstanceState);
         // 3.0.2: con la letra del celular muy grande, la barra de arriba no cabía y el botón de Ajustes quedaba por fuera
         try {
@@ -34,6 +36,19 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         } catch (Exception ignored) { }
         BurbujaPlugin.revisarToque(getIntent());
         porDespertar(getIntent());
+        entrada(getIntent());
+        SilencioReceiver.programar(this);
+    }
+
+    /** 3.4: atajos, widget, botón de asistente y «Compartir › Jarvis» (lo compartido se lee en otro hilo). */
+    private void entrada(Intent intent) {
+        if (intent == null) return;
+        final Intent copia = new Intent(intent);
+        intent.removeExtra("atajo");
+        if (Intent.ACTION_SEND.equals(intent.getAction()) || Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
+            intent.setAction(Intent.ACTION_MAIN);
+            new Thread(() -> VentanaPlugin.recibir(getApplicationContext(), copia), "jarvis-compartir").start();
+        } else VentanaPlugin.recibir(getApplicationContext(), copia);
     }
 
     @Override
@@ -41,6 +56,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         super.onNewIntent(intent);
         BurbujaPlugin.revisarToque(intent);
         porDespertar(intent);
+        entrada(intent);
     }
 
     /** Si se abrió porque dijiste «Jarvis»: se muestra aunque el celular esté bloqueado y enciende la pantalla. */
@@ -58,6 +74,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == EscanerPlugin.REQ) { EscanerPlugin.resultado(resultCode, data); return; }
         if (requestCode >= GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MIN && requestCode < GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MAX) {
             PluginHandle handle = getBridge().getPlugin("SocialLogin");
             if (handle == null) return;

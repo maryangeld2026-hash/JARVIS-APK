@@ -61,6 +61,7 @@
     const hb = mk("b", "", now.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" })); hb.id = "hoy-h";
     top.append(hb, mk("span", "", now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })));
     box.append(top);
+    if (window.JX.ahora) { try { const a = window.JX.ahora(); if (a) box.append(a); } catch (e) { console.error(e); } }   // 3.4: la tarjeta «Ahora»
     const items = mk("div", "hoy-items");
     const t = A.timer;
     if (t && t.end) { const tm = mk("span", "hi run", "⏱ " + L.fmtClock(Math.max(0, Math.ceil((t.end - Date.now()) / 1000)))); tm.id = "hoy-t"; tm.dataset.cmd = "¿cuánto falta?"; items.append(tm); }

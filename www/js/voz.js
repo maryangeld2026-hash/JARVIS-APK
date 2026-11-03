@@ -150,13 +150,16 @@
   if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = () => { webVoice = pickWebVoice(); }; webVoice = pickWebVoice(); }
   function speakOne(text) {
     if (native() && plug("TextToSpeech")) {
-      return plug("TextToSpeech").speak({ text, lang: LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0, category: "playback" }).catch(() => {});
+      const o = { text, lang: LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0, category: "playback" };
+      if (opts.voice != null && opts.voice >= 0) o.voice = opts.voice;                   // 3.4: la voz que escogiste en Ajustes
+      return plug("TextToSpeech").speak(o).catch(() => plug("TextToSpeech").speak({ text, lang: LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0 }).catch(() => {}));
     }
     if (!window.speechSynthesis) return Promise.resolve();
     return new Promise((resolve) => {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = LANG; u.rate = opts.rate; u.pitch = opts.pitch;
-      if (webVoice) u.voice = webVoice;
+      if (opts.webVoice && window.speechSynthesis) { const v = speechSynthesis.getVoices().find((x) => x.name === opts.webVoice); if (v) u.voice = v; else if (webVoice) u.voice = webVoice; }
+      else if (webVoice) u.voice = webVoice;
       let ok = false;
       const end = () => { if (!ok) { ok = true; resolve(); } };
       u.onend = end; u.onerror = end;
@@ -197,13 +200,20 @@
   function setOptions(o) { opts = Object.assign(opts, o || {}); }
 
   // ======================================================================== AVISOS, COMPARTIR, PANTALLA
-  async function notifyAt(id, title, body, when) {
+  let tiposListos = false;
+  async function notifyAt(id, title, body, when, extra) {
     const LN = native() && plug("LocalNotifications");
     if (LN) {
       try {
         const p = await LN.checkPermissions();
         if (p.display !== "granted") await LN.requestPermissions();
-        await LN.schedule({ notifications: [{ id: numId(id), title, body, schedule: { at: new Date(when), allowWhileIdle: true } }] });
+        const n = { id: numId(id), title, body, schedule: { at: new Date(when), allowWhileIdle: true }, extra: { rid: String(id) } };
+        // 3.4: los recordatorios llegan con «Posponer 10 min» y «Listo»
+        if (extra && extra.acciones) {
+          if (!tiposListos) { try { await LN.registerActionTypes({ types: [{ id: "recordatorio", actions: [{ id: "posponer", title: "Posponer 10 min" }, { id: "listo", title: "Listo" }] }] }); tiposListos = true; } catch (e) { /* sin botones */ } }
+          if (tiposListos) n.actionTypeId = "recordatorio";
+        }
+        await LN.schedule({ notifications: [n] });
         return true;
       } catch (e) { return false; }
     }

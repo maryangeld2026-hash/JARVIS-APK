@@ -4,4 +4,13 @@
     <string name="title_activity_main">Jarvis</string>
     <string name="package_name">co.jarvis.docente</string>
     <string name="custom_url_scheme">co.jarvis.docente</string>
+    <string name="widget_desc">Tu próxima clase y un botón para hablar con Jarvis</string>
+    <string name="atajo_hablar">Hablar</string>
+    <string name="atajo_hablar_l">Hablar con Jarvis</string>
+    <string name="atajo_tiempo">5 minutos</string>
+    <string name="atajo_tiempo_l">Temporizador de 5 minutos</string>
+    <string name="atajo_foto">Calificar</string>
+    <string name="atajo_foto_l">Calificar con una foto</string>
+    <string name="atajo_lista">Pasar lista</string>
+    <string name="atajo_lista_l">Pasar lista del curso</string>
 </resources>

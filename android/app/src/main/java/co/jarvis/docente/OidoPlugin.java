@@ -81,7 +81,7 @@ public class OidoPlugin extends Plugin {
     public void diagnostico(PluginCall call) {
         JSObject r = new JSObject();
         r.put("permiso", getPermissionState("microfono") == PermissionState.GRANTED);
-        r.put("google", SpeechRecognizer.isRecognitionAvailable(getContext()));
+        r.put("google", hayGoogle());
         r.put("celular", enCelularDisponible());
         r.put("vosk", EscuchaPlugin.rutaModelo(getContext()) != null);
         r.put("fondoActivo", EscuchaService.activo);
@@ -135,8 +135,29 @@ public class OidoPlugin extends Plugin {
         });
     }
 
+    /** 3.4: el servicio de reconocimiento a usar, por su nombre: el del sistema si no es Jarvis; si no, el de Google. */
+    private android.content.ComponentName servicioGoogle() {
+        String pk = getContext().getPackageName();
+        try {
+            String srv = Settings.Secure.getString(getContext().getContentResolver(), "voice_recognition_service");
+            if (srv != null && !srv.isEmpty() && !srv.startsWith(pk + "/")) return null;            // el del sistema sirve tal cual
+        } catch (Exception ignored) { }
+        android.content.ComponentName mejor = null;
+        try {
+            List<ResolveInfo> l = getContext().getPackageManager().queryIntentServices(new Intent(RecognitionService.SERVICE_INTERFACE), 0);
+            for (ResolveInfo ri : l) {
+                String p = ri.serviceInfo.packageName;
+                if (p.equals(pk)) continue;
+                android.content.ComponentName c = new android.content.ComponentName(p, ri.serviceInfo.name);
+                if (p.equals("com.google.android.tts") || p.equals("com.google.android.googlequicksearchbox")) return c;
+                if (mejor == null) mejor = c;
+            }
+        } catch (Exception ignored) { }
+        return mejor;
+    }
+
     private String primerMotor() {
-        boolean g = SpeechRecognizer.isRecognitionAvailable(getContext()), c = enCelularDisponible(), v = EscuchaPlugin.rutaModelo(getContext()) != null;
+        boolean g = hayGoogle(), c = enCelularDisponible(), v = EscuchaPlugin.rutaModelo(getContext()) != null;
         if (preferido.equals("celular") && c) return "celular";
         if (preferido.equals("vosk") && v) return "vosk";
         if (g) return "google";
@@ -145,10 +166,19 @@ public class OidoPlugin extends Plugin {
         return "";
     }
 
+    private boolean hayGoogle() {
+        try {
+            String pk = getContext().getPackageName();
+            for (ResolveInfo ri : getContext().getPackageManager().queryIntentServices(new Intent(RecognitionService.SERVICE_INTERFACE), 0))
+                if (!ri.serviceInfo.packageName.equals(pk)) return true;
+        } catch (Exception ignored) { }
+        return false;
+    }
+
     private String siguiente(String m) {
         if (m.equals("google") && enCelularDisponible()) return "celular";
         if ((m.equals("google") || m.equals("celular")) && EscuchaPlugin.rutaModelo(getContext()) != null) return "vosk";
-        if (m.equals("vosk") && SpeechRecognizer.isRecognitionAvailable(getContext())) return "google";
+        if (m.equals("vosk") && hayGoogle()) return "google";
         return "";
     }
 
@@ -158,9 +188,10 @@ public class OidoPlugin extends Plugin {
         motor = m;
         if (m.equals("vosk")) { vosk(mio); return; }
         try {
+            android.content.ComponentName cn = m.equals("google") ? servicioGoogle() : null;
             sr = m.equals("celular") && Build.VERSION.SDK_INT >= 31
                 ? SpeechRecognizer.createOnDeviceSpeechRecognizer(getContext())
-                : SpeechRecognizer.createSpeechRecognizer(getContext());
+                : cn != null ? SpeechRecognizer.createSpeechRecognizer(getContext(), cn) : SpeechRecognizer.createSpeechRecognizer(getContext());
         } catch (Throwable e) { fallo(m, "sin_servicio", mio); return; }
         sr.setRecognitionListener(new RecognitionListener() {
             @Override public void onReadyForSpeech(Bundle b) { if (mio == turno) estado("listo", null); }

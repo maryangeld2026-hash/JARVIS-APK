@@ -1,3 +1,35 @@
+# Jarvis para Android 3.4: Jarvis aprovecha el celular
+
+## 📱 Jarvis en todo el celular
+1. **Jarvis como asistente del celular.** *Ajustes › Jarvis en el celular › Poner a Jarvis como asistente*. Después, mantener presionado el botón de inicio (o el de encendido, según el celular) abre Jarvis escuchando.
+2. **Compartir › Jarvis.** Desde WhatsApp, la galería o Archivos, comparte una foto, un PDF, un Word o un texto con Jarvis. Te pregunta qué hacer: resumir, hacer un quiz, explicar, calificar, leer el texto, responder o guardarlo en Material.
+3. **El calendario del celular, sin configurar Google Cloud.** «¿Qué tengo mañana?» y «agenda reunión de padres el jueves a las 3» usan el calendario que ya tienes sincronizado con tu cuenta. El evento queda con un aviso 15 minutos antes.
+4. **Avisos con botones.** Los recordatorios llegan con «Posponer 10 min» y «Listo». El temporizador se ve corriendo en la notificación y en la pantalla bloqueada, con botón «Parar».
+5. **Widget y atajos.** Un widget para la pantalla de inicio con tu clase de ahora o la próxima y un botón para hablar. Al mantener presionado el ícono de Jarvis salen atajos: Hablar, 5 minutos, Calificar y Pasar lista.
+
+## 👩‍🏫 Para la clase
+6. **Calificar hojas de burbujas con la cámara, sin internet y sin IA.** En cada quiz toca «🫧 Hojas de burbujas» (o di «prepara las hojas de respuesta del quiz para 7A»). Sale un PDF con una hoja por estudiante, con su nombre, y 3 en blanco. Después, «📷 Calificar hojas»: le tomas foto a cada hoja y Jarvis la endereza, lee las burbujas y te dice la nota al instante. Detecta las preguntas en blanco y la doble marca. Lee la hoja aunque la foto esté torcida, al revés o con sombra. Al final tienes:
+   - el **análisis**: el promedio, quiénes van bajo 3,0, las preguntas más difíciles y la opción errada más marcada;
+   - las **notas al seguimiento** con un toque;
+   - una **guía de refuerzo por estudiante**, con solo las preguntas que falló.
+
+   Si la clave tenía un error, la corriges y Jarvis vuelve a calificar todas las hojas. Los nombres no salen del celular.
+7. **Escanear documentos y leer texto sin internet.** En el botón del clip: «Escanear documento» recorta y endereza la hoja sola, y la vuelve un PDF que puedes resumir o convertir en quiz. «Leer texto de una hoja» saca el texto sin internet.
+8. **Pasar lista.** «Pasa lista de 7A» abre la lista: tocas un nombre una vez si faltó y otra vez si llegó tarde. También por voz: «faltaron Pablo y Ana en 7A», «llegó tarde Tomás», «¿cuántas fallas tiene Pablo?», «fallas de 7A».
+9. **«No molestar» en clase.** Con tu horario, el celular se silencia solo mientras das clase y vuelve a sonar al terminar. Las alarmas sí suenan. Si tú ya habías puesto «No molestar», Jarvis no lo toca.
+10. **WhatsApp a los padres.** Cada respuesta trae el botón 💬 WhatsApp, que abre WhatsApp con el texto listo para escoger el contacto. También: «mándalo por WhatsApp».
+
+## ✨ Comodidad
+11. **Botones bajo cada respuesta:** Proyectar (en letra grande, con las fórmulas dibujadas), Word, Más corto, Oír, Graficar (si la respuesta trae una función, por ejemplo y = 2x + 1), WhatsApp y Copiar.
+12. **Tarjeta «Ahora»:** según tu horario, muestra la clase que estás dando con una barra del tiempo que falta y botones útiles («Escoge un estudiante», «Pasar lista», «5 minutos», «Ticket de salida»). Antes de clase muestra la próxima y «Prepárame la clase». En la noche muestra las clases de mañana. La cabecera dice «EN CLASE · 7A · 12 MIN».
+13. **Escoge la voz de Jarvis** entre las voces en español del celular, incluidas las que funcionan sin internet.
+14. **Huella, rostro o PIN** para abrir Jarvis (*Ajustes › Seguridad*). Lo vuelve a pedir si la app estuvo cerrada más de minuto y medio.
+15. **Tamaño de letra:** normal, grande o muy grande (para proyectar). También por voz: «letra más grande».
+
+*Se instala encima de la 3.3.1, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 3.3.1: ahora sí, el micrófono
 
 - **Encontrado gracias a tu captura:** el error «addListener(...).catch is not a function». En el celular, los avisos de los plugins («te estoy oyendo», «esto es lo que entendí») responden distinto que en las pruebas. La app se caía justo antes de abrir el micrófono, y por eso Jarvis nunca te escuchaba. Ya está corregido en todas partes.

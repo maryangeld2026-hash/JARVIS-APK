@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:background="@drawable/widget_fondo" android:padding="12dp">
+    <LinearLayout android:id="@+id/w_texto" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="JARVIS" android:textColor="#2EE6FF" android:textSize="11sp" android:letterSpacing="0.25" android:textStyle="bold" />
+        <TextView android:id="@+id/w_titulo" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Jarvis" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/w_sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Toca el micrófono para hablarme" android:textColor="#A9BED3" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+    </LinearLayout>
+    <ImageView android:id="@+id/w_mic" android:layout_width="52dp" android:layout_height="52dp" android:layout_marginStart="10dp"
+        android:background="@drawable/widget_mic_fondo" android:padding="12dp" android:src="@drawable/w_mic" android:contentDescription="Hablar con Jarvis" />
+</LinearLayout>

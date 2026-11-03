@@ -388,3 +388,53 @@ select.inp { appearance: auto; }
 /* 3.4: respuesta proyectada */
 .p-texto { font-size: clamp(20px, 3.4vw, 40px); line-height: 1.45; max-width: 1200px; text-align: left; overflow: auto; max-height: 100%; padding: 0 2vw; }
 .p-texto h1, .p-texto h2, .p-texto h3 { font-size: 1.15em; margin: .4em 0; }
+
+/* ================================================================= 3.4 */
+/* botones bajo cada respuesta */
+.resp-acts { display: flex; gap: 4px; margin-top: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.resp-acts::-webkit-scrollbar { display: none; }
+.ra { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 52px; padding: 5px 6px; border-radius: 10px; border: 1px solid var(--line); background: rgba(5, 11, 20, .6); color: var(--text); }
+.ra span { font-size: 16px; line-height: 1; }
+.ra small { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.ra:active { background: rgba(var(--a-rgb), .15); }
+/* tarjeta «Ahora» */
+.ahora { margin-top: 7px; padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(var(--a-rgb), .35); background: linear-gradient(90deg, rgba(var(--a-rgb), .10), rgba(var(--a-rgb), .02)); }
+.ahora-clase { border-color: rgba(61, 255, 154, .55); background: linear-gradient(90deg, rgba(61, 255, 154, .12), rgba(61, 255, 154, .02)); }
+.ahora-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ahora-k { font: 700 10.5px/1 var(--mono); letter-spacing: .14em; color: var(--a); }
+.ahora-clase .ahora-k { color: var(--ok); }
+.ahora-h b { font-size: 14.5px; }
+.ahora-bar { height: 5px; border-radius: 3px; background: #10233a; margin: 7px 0 2px; overflow: hidden; }
+.ahora-bar i { display: block; height: 100%; background: var(--ok); border-radius: 3px; }
+.ahora-bar.fin i { background: var(--err); }
+.ahora-per { font-size: 12px; color: var(--muted); margin-top: 5px; }
+.ahora-b { display: flex; gap: 6px; overflow-x: auto; margin-top: 7px; scrollbar-width: none; }
+.ahora-b .chip { flex-shrink: 0; height: 32px; font-size: 13px; }
+/* pasar lista */
+.lista-row { margin-bottom: 10px; }
+.asis-li { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 6px; cursor: pointer; user-select: none; }
+.asis-st { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(61, 255, 154, .15); color: var(--ok); font-size: 16px; }
+.asis-li[data-s="f"] { border-color: rgba(255, 90, 106, .55); background: rgba(255, 90, 106, .08); }
+.asis-li[data-s="f"] .asis-st { background: rgba(255, 90, 106, .2); color: var(--err); }
+.asis-li[data-s="t"] { border-color: rgba(255, 181, 71, .5); }
+.asis-li[data-s="t"] .asis-st { background: rgba(255, 181, 71, .2); color: var(--a2); }
+.asis-li small { color: var(--muted); }
+#lista-sh .sheet-f { align-items: center; gap: 10px; }
+#lista-sh .sheet-f .hint { flex: 1; margin: 0; }
+#lista-sh .sheet-f .btn { flex: 0 0 auto; }
+/* calificar hojas */
+.btn.big { min-height: 56px; font-size: 16.5px; }
+.omr-out { margin: 12px 0; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: #050b14; text-align: center; min-height: 40px; }
+.omr-out.ok { border-color: rgba(61, 255, 154, .5); }
+.omr-out.err { border-color: rgba(255, 90, 106, .55); color: #ffb3bb; }
+.omr-name { font-size: 18px; font-weight: 700; }
+.omr-nota { font: 800 46px/1.1 var(--mono); color: var(--ok); margin: 4px 0; }
+.omr-nota.bajo, .omr-list b.bajo { color: var(--err); }
+.omr-out select { margin: 8px 0; }
+.omr-list li { display: flex; gap: 10px; }
+/* candado (huella o PIN) */
+.candado { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--bg); text-align: center; padding: 24px; }
+.candado > div { display: grid; gap: 10px; justify-items: center; }
+.cand-ic { font-size: 54px; }
+/* letra muy grande: el chat aprovecha el ancho */
+body[data-letra="enorme"] .msg { max-width: 96%; }

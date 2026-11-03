@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="hablar" android:enabled="true" android:icon="@drawable/w_mic_atajo"
+        android:shortcutShortLabel="@string/atajo_hablar" android:shortcutLongLabel="@string/atajo_hablar_l">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="co.jarvis.docente" android:targetClass="co.jarvis.docente.MainActivity">
+            <extra android:name="atajo" android:value="hablar" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="tiempo5" android:enabled="true" android:icon="@drawable/w_reloj_atajo"
+        android:shortcutShortLabel="@string/atajo_tiempo" android:shortcutLongLabel="@string/atajo_tiempo_l">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="co.jarvis.docente" android:targetClass="co.jarvis.docente.MainActivity">
+            <extra android:name="atajo" android:value="tiempo5" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="foto" android:enabled="true" android:icon="@drawable/w_cam_atajo"
+        android:shortcutShortLabel="@string/atajo_foto" android:shortcutLongLabel="@string/atajo_foto_l">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="co.jarvis.docente" android:targetClass="co.jarvis.docente.MainActivity">
+            <extra android:name="atajo" android:value="foto" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="lista" android:enabled="true" android:icon="@drawable/w_lista_atajo"
+        android:shortcutShortLabel="@string/atajo_lista" android:shortcutLongLabel="@string/atajo_lista_l">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="co.jarvis.docente" android:targetClass="co.jarvis.docente.MainActivity">
+            <extra android:name="atajo" android:value="lista" />
+        </intent>
+    </shortcut>
+</shortcuts>

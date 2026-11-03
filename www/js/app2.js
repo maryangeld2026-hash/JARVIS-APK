@@ -391,13 +391,35 @@
     if (!res.ok) throw new Error((j.error && j.error.message) || "Google respondió con un error (" + res.status + ").");
     return j;
   }
+  /** 3.4: el calendario del celular (ya sincronizado con tu cuenta), si no conectaste Google en Ajustes. */
+  const CAL = () => native() && !D.ajustes.google.cuenta && plug("Calendario");
+  async function calPermiso(C) { const p = await C.permiso(); if (!p.ok) throw new Error("Para ver y agendar en tu calendario, dale a Jarvis el permiso del Calendario."); }
   async function agenda(dia) {
+    const C = CAL();
+    if (C) {
+      try {
+        await calPermiso(C);
+        const ini = new Date(); ini.setHours(0, 0, 0, 0); if (dia === 1) ini.setDate(ini.getDate() + 1);
+        const fin = new Date(ini); fin.setDate(fin.getDate() + (dia === 7 ? 7 : 1));
+        const r = await C.eventos({ desde: (dia === 0 ? Date.now() - 3600e3 : ini.getTime()), hasta: fin.getTime() });
+        const items = (r.lista || []).map((e) => ({ summary: e.titulo, start: e.todoElDia ? { date: new Date(e.inicio).toISOString().slice(0, 10) } : { dateTime: new Date(e.inicio).toISOString() } }));
+        return A.reply(L2.eventsSpoken({ items }, new Date()));
+      } catch (e) { return A.reply(e.message || String(e), "err"); }
+    }
     try { A.reply(L2.eventsSpoken(await gfetch(L2.calendarListURL(new Date(), dia)), new Date())); }
     catch (e) { A.reply(e.message, "err"); }
   }
   async function schedule(text) {
     const ev = L2.eventFromText(text);
     if (!ev) return A.reply("Dime qué y cuándo: «agenda reunión de padres mañana a las 3 de la tarde».");
+    const C = CAL();
+    if (C) {
+      try {
+        await calPermiso(C);
+        const r = await C.crear({ titulo: ev.summary, inicio: new Date(ev.start.dateTime).getTime(), fin: new Date(ev.end.dateTime).getTime(), descripcion: "Agendado por Jarvis" });
+        return A.reply(`Listo, agendé «${ev.summary}» ${L.spokenWhen(new Date(ev.start.dateTime))} en tu calendario${r.calendario ? " (" + r.calendario + ")" : ""}. Te aviso 15 minutos antes.`);
+      } catch (e) { return A.reply(e.message || String(e), "err"); }
+    }
     try { await gfetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(ev) });
       A.reply(`Listo, agendé «${ev.summary}» ${L.spokenWhen(new Date(ev.start.dateTime))} en tu Google Calendar.`); }
     catch (e) { A.reply(e.message, "err"); }
