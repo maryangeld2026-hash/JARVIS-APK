@@ -266,7 +266,9 @@
   }
 
   // ======================================================================== MODO PROYECTOR
-  let proj = null, pState = { que: "", i: 0, reveal: false };
+  let proj = null, pState = { que: "", i: 0, reveal: false }, projText = "";
+  /** 3.4: proyectar cualquier respuesta, en letra grande y con las fórmulas dibujadas. */
+  function projectText(md) { projText = String(md || ""); openProjector("texto"); }
   function openProjector(que) {
     if (!proj) {
       proj = mk("div", "proy"); proj.id = "proyector"; proj.hidden = true;
@@ -291,7 +293,11 @@
     body.textContent = ""; nav.textContent = "";
     const navBtn = (l, fn, cls = "") => { const b = mk("button", "btn " + cls, l); b.type = "button"; b.addEventListener("click", fn); nav.append(b); };
     const q = pState.que;
-    if (q === "tiempo") {
+    if (q === "texto") {
+      const d = mk("div", "p-texto"); d.innerHTML = A.md(projText || "—"); body.append(d);
+      navBtn("A−", () => { const s = +(body.dataset.z || 1); body.dataset.z = Math.max(0.6, s - 0.15); body.style.fontSize = body.dataset.z + "em"; });
+      navBtn("A+", () => { const s = +(body.dataset.z || 1); body.dataset.z = Math.min(2.2, s + 0.15); body.style.fontSize = body.dataset.z + "em"; }, "primary");
+    } else if (q === "tiempo") {
       const t = A.timer, left = t.end ? Math.max(0, Math.ceil((t.end - Date.now()) / 1000)) : (D.ultimoTiempo || 300);
       body.append(mk("div", "p-clock" + (t.end ? (left <= 10 ? " low" : " run") : ""), L.fmtClock(left)));
       [1, 3, 5, 10].forEach((m) => navBtn(m + " min", () => { A.startTimer(m * 60); drawProj(); }));
@@ -581,5 +587,5 @@
     // copia automática en Drive una vez al día si ya conectaste Google
     if (native() && D.ajustes.google.cuenta && Date.now() - (D.ajustes.google.copia || 0) > 20 * 3600e3) setTimeout(() => driveSave(false), 15000);
   }
-  window.JX = { init, intent, run, promptExtra, heard, renderClase, afterGrade, quizButtons, settings, onPick, onGroups, _: { openProjector, closeProjector, risk, student } };
+  window.JX = { init, intent, run, promptExtra, heard, renderClase, afterGrade, quizButtons, settings, onPick, onGroups, _: { openProjector, closeProjector, projectText, risk, student } };
 })();

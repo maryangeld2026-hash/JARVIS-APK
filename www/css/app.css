@@ -385,3 +385,6 @@ select.inp { appearance: auto; }
 #btn-salir svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 @media (max-width: 380px) { .top .icon-btn { width: 36px; height: 36px; } .top { gap: 4px; } .top .brand { letter-spacing: .08em; font-size: 13px; } }
 .mic-test { white-space: pre-wrap; font: 12.5px/1.5 var(--mono); background: #050b14; border: 1px solid var(--line); border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto; margin: 8px 0 0; }
+/* 3.4: respuesta proyectada */
+.p-texto { font-size: clamp(20px, 3.4vw, 40px); line-height: 1.45; max-width: 1200px; text-align: left; overflow: auto; max-height: 100%; padding: 0 2vw; }
+.p-texto h1, .p-texto h2, .p-texto h3 { font-size: 1.15em; margin: .4em 0; }
