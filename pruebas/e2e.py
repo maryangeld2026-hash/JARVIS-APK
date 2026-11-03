@@ -344,7 +344,7 @@ def main():
         say_("ficha de Pablo Mora", "Promedio")
         check("participó mucho" in LASTJ_PY(pg), "ficha del estudiante con observador")
         say_("¿quién viene bajando?", "")
-        pg.evaluate("window.__jarvis.D.ajustes.horario = 'lunes 0:00-23:59 8B Potencias'")
+        pg.evaluate("window.__jarvis.D.ajustes.horario = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][new Date().getDay()] + ' 0:00-23:59 8B Potencias'")
         say_("¿qué clase tengo ahora?", "Ahora tienes 8B")
         say_("tarjetas de estudio sobre potencias", "tarjetas")
         check(pg.locator(".flash").count() == 1, "tarjetas de estudio (para voltear y exportar a Anki)")
