@@ -160,6 +160,33 @@ public class EscuchaPlugin extends Plugin {
         call.resolve();
     }
 
+    /** 3.7.1: cuándo escuchar (ahorro de batería): {cuidarBateria, bateriaMin, soloPantalla, soloHorario, ventanas:[{dia, ini, fin}]} */
+    @PluginMethod
+    public void config(PluginCall call) {
+        android.content.SharedPreferences.Editor e = getContext().getSharedPreferences("jarvis_escucha", 0).edit();
+        e.putBoolean("cuidarBateria", call.getBoolean("cuidarBateria", true));
+        e.putInt("bateriaMin", call.getInt("bateriaMin", 15));
+        e.putBoolean("soloPantalla", call.getBoolean("soloPantalla", false));
+        e.putBoolean("soloHorario", call.getBoolean("soloHorario", false));
+        e.putString("ventanas", call.getArray("ventanas", new com.getcapacitor.JSArray()).toString());
+        e.apply();
+        call.resolve();
+    }
+
+    /** 3.7.1: ¿Android está dejando a Jarvis sin restricciones de batería? */
+    @PluginMethod
+    public void bateriaEstado(PluginCall call) {
+        JSObject r = new JSObject();
+        try {
+            PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+            Intent b = getContext().registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            r.put("nivel", b != null ? b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) * 100 / Math.max(1, b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100)) : -1);
+            r.put("ahorro", pm != null && pm.isPowerSaveMode());
+            r.put("sinRestriccion", Build.VERSION.SDK_INT < 23 || (pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName())));
+        } catch (Exception ignored) { }
+        call.resolve(r);
+    }
+
     @PluginMethod
     public void pausar(PluginCall call) {
         // 3.3: responde solo cuando el micrófono quedó libre de verdad (antes respondía de una vez y el reconocedor oía silencio)
@@ -188,6 +215,10 @@ public class EscuchaPlugin extends Plugin {
     /** Abre el ajuste para que Android no apague a Jarvis por ahorro de batería. */
     @PluginMethod
     public void bateria(PluginCall call) {
+        if (call.getBoolean("lista", false)) {                      // 3.7.1: la lista de Android, para quitar la excepción
+            try { getContext().startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
+            call.resolve(); return;
+        }
         try {
             Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getContext().getPackageName()));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

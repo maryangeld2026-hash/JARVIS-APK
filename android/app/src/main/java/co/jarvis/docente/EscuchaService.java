@@ -104,9 +104,49 @@ public class EscuchaService extends Service {
         if (hilo != null) { try { hilo.join(1500); } catch (InterruptedException ignored) { } hilo = null; }
     }
 
+    // ======================================================================== 3.7.1: ahorro de batería
+    /** ¿Se puede escuchar ahora? Respeta: horario (si lo escogiste), pantalla encendida (si lo escogiste) y batería. → null si sí, o el motivo */
+    private String motivoPausa() {
+        android.content.SharedPreferences sp = getSharedPreferences("jarvis_escucha", 0);
+        try {
+            if (sp.getBoolean("cuidarBateria", true)) {
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                Intent b = registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+                int nivel = b != null ? b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 100) * 100 / Math.max(1, b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100)) : 100;
+                int est = b != null ? b.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, 0) : 0;
+                boolean cargando = est == android.os.BatteryManager.BATTERY_STATUS_CHARGING || est == android.os.BatteryManager.BATTERY_STATUS_FULL;
+                if (!cargando && pm != null && pm.isPowerSaveMode()) return "En pausa: el celular está en ahorro de batería";
+                if (!cargando && nivel <= sp.getInt("bateriaMin", 15)) return "En pausa: batería baja (" + nivel + " %)";
+            }
+            if (sp.getBoolean("soloPantalla", false)) {
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                if (pm != null && !pm.isInteractive()) return "En pausa: pantalla apagada";
+            }
+            if (sp.getBoolean("soloHorario", false)) {
+                java.util.Calendar c = java.util.Calendar.getInstance();
+                int dia = c.get(java.util.Calendar.DAY_OF_WEEK) - 1, min = c.get(java.util.Calendar.HOUR_OF_DAY) * 60 + c.get(java.util.Calendar.MINUTE);
+                org.json.JSONArray v = new org.json.JSONArray(sp.getString("ventanas", "[]"));
+                boolean dentro = v.length() == 0;
+                for (int k = 0; k < v.length() && !dentro; k++) {
+                    org.json.JSONObject o = v.getJSONObject(k);
+                    if (o.optInt("dia", -1) == dia && min >= o.optInt("ini", 0) && min < o.optInt("fin", 0)) dentro = true;
+                }
+                if (!dentro) return "En pausa: fuera de tu horario";
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    /** Volumen de un trozo de audio (16 bits). */
+    private static double rms(byte[] b, int n) {
+        long s = 0; int k = 0;
+        for (int i = 0; i + 1 < n; i += 4) { int v = (short) ((b[i] & 0xff) | (b[i + 1] << 8)); s += (long) v * v; k++; }
+        return k == 0 ? 0 : Math.sqrt((double) s / k);
+    }
+
     private void bucle() {
-        AudioRecord rec = null;
         Recognizer r = null;
+        String ultimoAviso = "";
         try {
             if (modelo == null) {
                 String ruta = EscuchaPlugin.rutaModelo(this);
@@ -114,42 +154,87 @@ public class EscuchaService extends Service {
                 modelo = new Model(ruta);
             }
             r = new Recognizer(modelo, 16000.0f);
+            while (correr) {
+                // fuera de horario, pantalla apagada o batería baja: el micrófono queda cerrado y se revisa cada 30 s
+                String motivo = motivoPausa();
+                if (motivo != null) {
+                    if (!motivo.equals(ultimoAviso)) { ultimoAviso = motivo; final String m = motivo; main.post(() -> aviso(m)); EscuchaPlugin.emitir("estado", "pausa"); }
+                    for (int k = 0; k < 60 && correr; k++) { try { Thread.sleep(500); } catch (InterruptedException e) { break; } }
+                    continue;
+                }
+                if (!ultimoAviso.isEmpty()) { ultimoAviso = ""; main.post(() -> aviso("Di «Jarvis» cuando me necesites")); }
+                if (escuchar(r)) break;                                   // true: te oyó y abrió Jarvis
+            }
+        } catch (Throwable e) {
+            Log.e(TAG, "Escucha", e);
+            EscuchaPlugin.emitir("error", String.valueOf(e.getMessage()));
+        } finally {
+            if (r != null) r.close();
+            correr = false;
+        }
+    }
+
+    /** Escucha hasta que te oye, hasta que hay que pausar (vuelve a revisar cada 20 s) o hasta que lo paran. */
+    private boolean escuchar(Recognizer r) throws Exception {
+        AudioRecord rec = null;
+        try {
             int min = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
             rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 8192));
             if (rec.getState() != AudioRecord.STATE_INITIALIZED) throw new IllegalStateException("El micrófono está ocupado.");
             rec.startRecording();
             grabando = true;
             EscuchaPlugin.emitir("estado", "escuchando");
-            byte[] buf = new byte[4096];
-            boolean oyo = false;
+            final int TROZO = 3200;                                       // 100 ms de audio
+            byte[][] previo = new byte[4][];                              // los últimos 400 ms, para no perder el comienzo de «Jarvis»
+            int[] previoN = new int[4]; int pi = 0;
+            byte[] buf = new byte[TROZO];
+            double piso = 200;                                            // el ruido de fondo (se ajusta solo)
+            long ultimaVoz = 0, revisar = System.currentTimeMillis() + 20000;
+            boolean abierto = false, oyo = false;
             long desde = 0;
             while (correr) {
                 int n = rec.read(buf, 0, buf.length);
                 if (n <= 0) continue;
-                if (r.acceptWaveForm(buf, n)) {
-                    String t = new JSONObject(r.getResult()).optString("text", "");
-                    String resto = Despertar.resto(t);
-                    if (resto != null) { despertar(resto); break; }
-                    oyo = false;
-                } else {
-                    String p = new JSONObject(r.getPartialResult()).optString("partial", "");
-                    if (!oyo && Despertar.resto(p) != null) { oyo = true; desde = System.currentTimeMillis(); }
-                    // dijo «Jarvis» y siguió hablando: se espera el final de la frase (máx. 6 s) para pasar la orden completa
-                    if (oyo && System.currentTimeMillis() - desde > 6000) {
-                        String resto = Despertar.resto(new JSONObject(r.getFinalResult()).optString("text", p));
-                        despertar(resto == null ? "" : resto);
-                        break;
-                    }
+                long ahora = System.currentTimeMillis();
+                double v = rms(buf, n);
+                boolean voz = v > Math.max(piso * 2.6, 260);
+                if (!voz) piso = piso * 0.97 + v * 0.03;                     // el piso sigue al ruido del lugar
+                if (voz) ultimaVoz = ahora;
+                if (!abierto && voz) {
+                    abierto = true;                                       // alguien habla: se despierta el reconocedor con lo que venía antes
+                    for (int k = 0; k < previo.length; k++) { int idx = (pi + k) % previo.length; if (previo[idx] != null) r.acceptWaveForm(previo[idx], previoN[idx]); }
                 }
+                if (abierto) {
+                    if (r.acceptWaveForm(buf, n)) {
+                        String t = new JSONObject(r.getResult()).optString("text", "");
+                        String resto = Despertar.resto(t);
+                        if (resto != null) { despertar(resto); return true; }
+                        oyo = false;
+                    } else {
+                        String p = new JSONObject(r.getPartialResult()).optString("partial", "");
+                        if (!oyo && Despertar.resto(p) != null) { oyo = true; desde = ahora; }
+                        if (oyo && ahora - desde > 6000) {
+                            String resto = Despertar.resto(new JSONObject(r.getFinalResult()).optString("text", p));
+                            despertar(resto == null ? "" : resto);
+                            return true;
+                        }
+                    }
+                    if (!oyo && ahora - ultimaVoz > 1500) {               // 1,5 s de silencio: el reconocedor vuelve a dormir
+                        String t = new JSONObject(r.getFinalResult()).optString("text", "");
+                        String resto = Despertar.resto(t);
+                        if (resto != null) { despertar(resto); return true; }
+                        abierto = false;
+                    }
+                } else {
+                    byte[] copia = previo[pi] != null && previo[pi].length == n ? previo[pi] : new byte[n];
+                    System.arraycopy(buf, 0, copia, 0, n); previo[pi] = copia; previoN[pi] = n; pi = (pi + 1) % previo.length;
+                }
+                if (!abierto && ahora > revisar) { revisar = ahora + 20000; if (motivoPausa() != null) return false; }
             }
-        } catch (Throwable e) {
-            Log.e(TAG, "Escucha", e);
-            EscuchaPlugin.emitir("error", String.valueOf(e.getMessage()));
+            return false;
         } finally {
             if (rec != null) { try { rec.stop(); } catch (Exception ignored) { } rec.release(); }
             grabando = false;
-            if (r != null) r.close();
-            correr = false;
         }
     }
 

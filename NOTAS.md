@@ -1,3 +1,18 @@
+# Jarvis para Android 3.7.1: gasta mucha menos batería
+
+## 🔋 Lo que cambió por dentro
+- **«Jarvis» en segundo plano duerme en silencio:** antes el reconocedor de voz trabajaba sin parar, aunque nadie hablara. Ahora solo despierta cuando oye una voz, y vuelve a dormir tras 1,5 s de silencio. Es lo que más batería gastaba.
+- **Se pausa sola** con batería de 15 % o menos (si no está cargando) o con el ahorro de batería del celular. La notificación dice por qué está en pausa.
+- **Nada corre con Jarvis minimizado:** el reloj, los indicadores, el widget y los recordatorios en pantalla se detienen al salir de la app y vuelven al regresar.
+- **El temporizador** solo mantiene la pantalla encendida si es de 15 minutos o menos.
+
+## ⚙️ Ajustes › Batería (nuevo)
+- **Modo ahorro de Jarvis:** automático (con el ahorro del celular o batería de 20 % o menos), siempre o nunca. Quita las animaciones, usa la voz del celular, no vigila si lo interrumpes y no se conecta con la IA por adelantado.
+- **¿Cuándo escuchar «Jarvis»?** Siempre, solo en tu jornada (L–V, 6:00–18:00) o solo en tus horas de clase (según tu horario, 15 min antes y después).
+- **Solo con la pantalla encendida**, y **pausar con batería baja**.
+- **Lo que gasta batería ahora:** la lista de lo que está prendido, cuánto gasta y un botón para apagarlo.
+- Por voz: «modo ahorro», «quita el modo ahorro», «¿qué me está gastando la batería?».
+
 # Jarvis para Android 3.7: un asistente más completo
 
 ## 🗣️ Conversar más natural

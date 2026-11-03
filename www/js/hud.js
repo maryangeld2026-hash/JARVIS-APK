@@ -158,8 +158,13 @@
     A = api; D = api.D;
     try { baseInit(api); } catch (e) { console.error("init 2.0", e); }
     try { reactor(); leds(); hoy(); paintLeds(); } catch (e) { console.error("hud", e); }
-    setInterval(() => { try { tickHoy(); resumeLater(); paintLeds(); } catch (e) { /* el siguiente segundo */ } }, 1000);
-    setInterval(() => { try { hoy(); } catch (e) { /* nada */ } }, 30000);
+    window.JEVERY(1000, () => { tickHoy(); resumeLater(); paintLeds(); });
+    window.JEVERY(30000, hoy);
+    // 3.7.1: al salir de Jarvis, la escucha de fondo vuelve de una vez (los relojes se detienen al salir)
+    document.addEventListener("visibilitychange", () => {
+      const S = E();
+      if (document.hidden && S && fondoOn && fondoPausa && A.getState() !== "listening" && !V.isSpeaking()) { idleDesde = 0; fondoPausa = false; despierto = false; S.reanudar().catch(() => {}); }
+    });
     const S = E();
     if (S) {
       window.JON(S, "despertar", onWake);

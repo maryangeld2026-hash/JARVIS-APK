@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.7";
+  const VERSION = "3.7.1";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -376,8 +376,9 @@
     stopTimer(true);
     D.ultimoTiempo = secs; save();
     timer.total = secs; timer.end = Date.now() + secs * 1000;
-    timer.iv = setInterval(tick, 250); tick();
-    N.keepAwake(true);
+    timer.iv = setInterval(tick, 500); tick();
+    // 3.7.1: la pantalla queda encendida solo en temporizadores cortos (los de clase); en los largos avisa la notificación
+    if (secs <= 15 * 60 || (D.ajustes.pantallaTemp && !D.ajustes.ahorroActivo)) N.keepAwake(true);
     N.notifyAt(timer.nid, "⏰ Se acabó el tiempo", `Pasaron ${L.spokenDuration(secs)}.`, timer.end);
     if (window.JX && window.JX.onTimer) window.JX.onTimer(timer.end, secs);
     $("#btn-tiempo").textContent = "Reiniciar";
@@ -390,6 +391,11 @@
     $("#btn-tiempo").textContent = "Empezar";
     if (!quiet) $("#alarma").hidden = true;
   }
+  // 3.7.1: con Jarvis fuera de pantalla el reloj no se dibuja (la notificación y la alarma siguen); al volver se pone al día
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { if (timer.iv) { clearInterval(timer.iv); timer.iv = null; } }
+    else if (timer.end && !timer.iv) { timer.iv = setInterval(tick, 500); tick(); }
+  });
   function tick() {
     const left = Math.max(0, (timer.end - Date.now()) / 1000);
     const r = $("#reloj");
@@ -520,12 +526,12 @@
     $("#in-recordar").value = "";
     addReminder(t, false);
   });
-  setInterval(() => {                                         // con la app abierta, Jarvis también avisa de viva voz
+  window.JEVERY(15000, () => {                                // con la app abierta, Jarvis también avisa de viva voz (cerrada, avisa la notificación)
     const now = Date.now();
     D.recordatorios.forEach((r) => {
       if (!r.avisado && r.cuando <= now) { r.avisado = true; save(); if (now - r.cuando < 10 * 60000) { alarm("Recordatorio: " + r.texto); add("assistant", "⏰ **Recordatorio:** " + r.texto, "tool"); } renderReminders(); }
     });
-  }, 15000);
+  });
 
   // ======================================================================== QUICES
   let current = null;

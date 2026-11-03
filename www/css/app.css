@@ -476,3 +476,10 @@ body[data-letra="enorme"] .msg { max-width: 96%; }
 .live-tr .lt { margin: 4px 0; padding: 6px 10px; border-radius: 10px; background: rgba(5, 11, 20, .6); }
 .live-tr .lt.tu { color: var(--muted); }
 .live-row { gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* 3.7.1 · modo ahorro: sin animaciones ni sombras animadas */
+body.ahorro *, body.ahorro *::before, body.ahorro *::after { animation: none !important; transition: none !important; }
+#aj-bat .bat-list li { display: flex; gap: 8px; align-items: center; }
+#aj-bat .grow { flex: 1; }
+#aj-bat .bat-list { list-style: none; padding: 0; margin: 6px 0; }
+#aj-bat .bat-list li { padding: 8px 0; border-bottom: 1px solid var(--line, rgba(255,255,255,.08)); }

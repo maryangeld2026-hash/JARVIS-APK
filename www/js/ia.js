@@ -59,6 +59,7 @@
   let warmAt = 0;
   async function warm() {
     const c = cfg();
+    if (c.a.ahorroActivo) return;                               // 3.7.1: en modo ahorro no se calienta la conexión
     if (c.prov === "local" || (!c.key && !c.p.sinClave) || !navigator.onLine || Date.now() - warmAt < 45000) return;
     warmAt = Date.now();
     try {

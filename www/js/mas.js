@@ -402,7 +402,7 @@
       entradas(); widget(); applySilencio();
       if (D.ajustes.bloqueo && hiddenAt && Date.now() - hiddenAt > 90000) lock();
     });
-    setInterval(() => { try { headStatus(); widget(); } catch (e) { /* el siguiente */ } }, 20000);
+    window.JEVERY(20000, () => { headStatus(); widget(); });
     setTimeout(headStatus, 800);
     // botón «Pasar lista» en la pestaña Clase
     const k = $("#k-azar");

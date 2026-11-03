@@ -319,7 +319,7 @@
   const speaker = {
     prepare(text) {
       const p = D.ajustes.vozIA, key = p && (D.ajustes.claves[p] || "").trim();
-      if (!p || !key || !navigator.onLine || text.length > 600 || namesIn(text)) return null;      // los nombres de estudiantes nunca van a la IA
+      if (!p || !key || !navigator.onLine || D.ajustes.ahorroActivo || text.length > 600 || namesIn(text)) return null;      // los nombres de estudiantes nunca van a la IA
       if (cache.has(p + text)) return Promise.resolve(cache.get(p + text));
       const pr = (p === "openai" ? openaiTTS(text, key) : geminiTTS(text, key)).then((b) => { cache.set(p + text, b); if (cache.size > 80) cache.delete(cache.keys().next().value); return b; });
       return pr.catch(() => null);

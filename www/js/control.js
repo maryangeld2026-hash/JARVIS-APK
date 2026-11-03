@@ -181,7 +181,7 @@
   let vigilando = false;
   function vigilar(on) {
     const O = plug("Oido"); if (!O || !O.vigilar) return;
-    if (on && !vigilando && D.ajustes.interrumpir) { vigilando = true; O.vigilar({ palabras: PALABRAS }).then((r) => { if (!r || !r.ok) vigilando = false; }).catch(() => { vigilando = false; }); }
+    if (on && !vigilando && D.ajustes.interrumpir && !D.ajustes.ahorroActivo) { vigilando = true; O.vigilar({ palabras: PALABRAS }).then((r) => { if (!r || !r.ok) vigilando = false; }).catch(() => { vigilando = false; }); }
     else if (!on && vigilando) { vigilando = false; O.dejarDeVigilar().catch(() => {}); }
   }
   function onInterrupt(d) {

@@ -279,7 +279,7 @@
       [["tiempo", "Tiempo"], ["estudiante", "Estudiante"], ["grupos", "Grupos"], ["quiz", "Quiz"], ["pasos", "Pasos"], ["ticket", "Ticket"]].forEach(([k, l]) => {
         const b = mk("button", "chip", l); b.type = "button"; b.dataset.k = k; b.addEventListener("click", () => { pState = { que: k, i: 0, reveal: false }; drawProj(); }); tabs.append(b);
       });
-      setInterval(() => { if (!proj.hidden && pState.que === "tiempo") drawProj(); }, 500);
+      window.JEVERY(500, () => { if (!proj.hidden && pState.que === "tiempo") drawProj(); });
     }
     pState = { que: que || pState.que || "tiempo", i: 0, reveal: false };
     proj.hidden = false; N.keepAwake(true);

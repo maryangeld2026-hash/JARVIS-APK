@@ -9,6 +9,16 @@
   /** 3.3.1: en el celular, addListener de los plugins no siempre devuelve una promesa (no tiene .catch). Esto sirve en ambos casos. */
   const on = (p, ev, fn) => Promise.resolve().then(() => p.addListener(ev, fn)).catch((e) => { console.warn("addListener", ev, e); return null; });
   window.JON = on;
+  /** 3.7.1: un reloj que se detiene cuando Jarvis no está en pantalla (ahorra batería) y corre una vez al volver. */
+  window.JEVERY = function (ms, fn) {
+    let id = null;
+    const run = () => { try { fn(); } catch (e) { /* el siguiente */ } };
+    const go = () => { if (id == null && !document.hidden) id = setInterval(run, ms); };
+    const halt = () => { if (id != null) { clearInterval(id); id = null; } };
+    document.addEventListener("visibilitychange", () => { if (document.hidden) halt(); else { run(); go(); } });
+    go();
+    return { stop: halt };
+  };
 
   // ======================================================================== ESCUCHAR
   let webRec = null, nativeStop = null;
