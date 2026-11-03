@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.6";
+  const VERSION = "3.7";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -791,6 +791,6 @@
   document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") (V.cancelListening || V.stopListening)(); if (!document.hidden && IA.warm) IA.warm(); });
   if (IA.warm) setTimeout(() => IA.warm(), 1500);
   window.__jarvis = { handle, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
-    getState: () => state, wake, trato, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
+    getState: () => state, wake, trato, systemPrompt, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
   if (window.JX) window.JX.init(window.__jarvis);
 })();

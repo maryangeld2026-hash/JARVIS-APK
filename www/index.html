@@ -233,16 +233,15 @@
 <script src="js/logica3.js"></script>
 <script src="js/logica4.js"></script>
 <script src="js/logica5.js"></script>
+<script src="js/logica6.js"></script>
 <script src="js/datos.js"></script>
-<script src="js/voz.js"></script>
-<script src="js/ia.js"></script>
-<script src="js/pdf.js"></script>
-<script src="js/app2.js"></script>
-<script src="js/hud.js"></script>
-<script src="js/habilidades.js"></script>
-<script src="js/mas.js"></script>
-<script src="js/omr.js"></script>
-<script src="js/control.js"></script>
-<script src="js/app.js"></script>
+<script>
+/* 3.7: la app arranca cuando los datos están listos (en el celular se descifran primero). */
+(function () {
+  var files = ["js/voz.js", "js/ia.js", "js/pdf.js", "js/app2.js", "js/hud.js", "js/habilidades.js", "js/mas.js", "js/omr.js", "js/control.js", "js/extra.js", "js/live.js", "js/app.js"];
+  function next(i) { if (i >= files.length) return; var s = document.createElement("script"); s.src = files[i]; s.async = false; s.onload = function () { next(i + 1); }; s.onerror = function () { console.error("No cargó " + files[i]); next(i + 1); }; document.body.appendChild(s); }
+  JD.ready().catch(function (e) { console.error(e); }).then(function () { next(0); });
+})();
+</script>
 </body>
 </html>

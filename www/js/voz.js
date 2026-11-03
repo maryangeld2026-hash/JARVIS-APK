@@ -169,13 +169,25 @@
       setTimeout(end, Math.max(4000, text.length * 120));                            // por si el navegador no avisa al terminar
     });
   }
+  /** 3.7: voz con IA. speaker = {prepare(texto) → promesa de audio, play(audio) → promesa, stop()}; si falla, habla el celular. */
+  let speaker = null;
+  function setSpeaker(sp) { speaker = sp; }
+  async function speakItem(it) {
+    if (it.pre) {
+      try {
+        const audio = await Promise.race([it.pre, new Promise((r) => setTimeout(() => r(null), 8000))]);
+        if (audio && speaker) { await speaker.play(audio); return; }
+      } catch (e) { /* habla el celular */ }
+    }
+    return speakOne(it.t);
+  }
   async function pump(myGen) {
     if (speaking) return;
     speaking = true;
     if (onState) onState(true);
     while (q.length && myGen === gen) {
-      const t = q.shift();
-      await speakOne(t);
+      const it = q.shift();
+      await speakItem(it);
     }
     speaking = false;
     if (onState && myGen === gen) onState(false);
@@ -186,13 +198,16 @@
   function say(text) {
     const t = String(text || "").trim();
     if (!t) return;
-    q.push(t);
+    let pre = null;
+    if (speaker) { try { pre = speaker.prepare(t); if (pre && pre.catch) pre.catch(() => null); } catch (e) { pre = null; } }   // se pide el audio de una vez: mientras dice una frase, ya viene la otra
+    q.push({ t, pre });
     pump(gen);
   }
   /** → promesa que se cumple cuando terminó de decir todo lo que tenía en la cola. */
   function idle() { return !speaking && !q.length ? Promise.resolve() : new Promise((r) => waiters.push(r)); }
   function hush() {
     gen++; q.length = 0;
+    if (speaker && speaker.stop) { try { speaker.stop(); } catch (e) { /* nada */ } }
     if (native() && plug("TextToSpeech")) plug("TextToSpeech").stop().catch(() => {});
     if (window.speechSynthesis) speechSynthesis.cancel();
     speaking = false;
@@ -268,6 +283,6 @@
     } catch (e) { /* no es grave */ }
   }
 
-  window.JV = { micTest, onListenState: (f) => { onListenState = f; }, lastListen: () => lastListen, native, canListen, listen, stopListening, cancelListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 };
+  window.JV = { setSpeaker, micTest, onListenState: (f) => { onListenState = f; }, lastListen: () => lastListen, native, canListen, listen, stopListening, cancelListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 };
   window.JN = { notifyAt, cancelNotify, showNow, share, keepAwake };
 })();

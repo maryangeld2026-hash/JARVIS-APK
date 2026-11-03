@@ -1,3 +1,26 @@
+# Jarvis para Android 3.7: un asistente más completo
+
+## 🗣️ Conversar más natural
+- **Conversación en vivo:** el botón de ondas junto a «enviar», o «conversación en vivo». Hablas y Jarvis contesta hablando casi al instante, como en una llamada. Lo interrumpes cuando quieras y en la pantalla ves lo que dice cada uno. También hace las órdenes de la app («pon 5 minutos», «escoge un estudiante de 7A»). Usa el modo de voz en vivo de Gemini, con tu clave de Gemini.
+- **Voz natural con IA:** en *Ajustes › Voz natural con IA*, las respuestas con una voz de Gemini o de ChatGPT, mucho más humana; también escoges cuál voz. Si no hay internet, habla la voz del celular. Lo que diga nombres de estudiantes siempre lo dice la voz del celular: los nombres no van a la IA.
+- **Leer y responder tus mensajes:** «¿qué me escribieron?» te lee los WhatsApp, SMS, Telegram y correos que llegaron. «Respóndele a Carolina que sí, mañana a las 3» le contesta desde la notificación, después de preguntarte. Se activa una vez en *Ajustes › Mensajes*, con el acceso a notificaciones. Jarvis no guarda tus mensajes ni los envía a ningún lado.
+
+## 👩‍🏫 Para la clase
+- **Solucionario verificado, sin internet:** «resuelve 3x − 5 = x + 7» (con los pasos y la comprobación), «resuelve el sistema x + y = 10, x − y = 2», «deriva x³ + 2x», «integral de x²», «factoriza x² − 9», «calcula 3/4 + 2/5», «verifica que x = 4 es solución de…». Todo lo hace un motor de álgebra dentro del celular.
+- **La IA, revisada:** cuando la IA resuelve una ecuación, el motor de álgebra lo comprueba. Pone «✓ Verificado» o «⚠ Ojo, el motor de álgebra no confirma esa respuesta», con la solución correcta.
+- **Figuras exactas:** «dibuja un triángulo rectángulo con catetos 3 y 4», «un triángulo de lados 5, 6 y 7», «un hexágono», «un círculo de radio 5», «un ángulo de 60 grados», «la recta numérica del −5 al 5 con −2 y 3/4», «un plano cartesiano con A(2,3), B(−1,4) y C(0,−2) y únelos», «3/4 en un círculo». Traen las medidas (hipotenusa, área, perímetro, ángulos) y se pueden proyectar o compartir como imagen.
+- **Mensajes a los acudientes:** en la pestaña Clase › «📱 Acudientes», pega una vez los WhatsApp. Después di «avísale a los acudientes de los que van en riesgo en 7A», «manda las notas a los acudientes de 7A» o «manda un mensaje a los acudientes de 7A: mañana hay salida». Cada acudiente recibe un mensaje propio, con el promedio, las fallas y lo que su hijo necesita para pasar. Se abren uno por uno en WhatsApp y tú solo tocas enviar. Se arman en el celular: los nombres no van a la IA.
+- **Modo reunión:** «modo reunión», o el botón del clip. Jarvis escucha la reunión y, al terminar, la IA arma el acta: asistentes, temas, acuerdos y tareas con responsable. Queda en Material para pasarla a Word.
+- **Tu clase en una orden:** «prepárame la clase de mañana de 7A sobre fracciones». Arma el plan de clase, un quiz de 5 preguntas y el ticket de salida. Si no dices el tema, toma lo que sigue en tu diario de clase.
+
+## 🔒 Datos
+- **Sincronizar con el Jarvis del computador:** «sincroniza con el computador», o *Ajustes › Sincronizar*. Los cursos, las notas, las fallas y el observador pasan en los dos sentidos por el wifi, sin borrar nada. Necesita actualizar el Jarvis del computador (el paquete «jarvis-pc-sincronizar»).
+- **Datos cifrados:** todo lo que Jarvis guarda en el celular queda cifrado (AES-256), con una llave que guarda Android y que no sale del celular. Tus copias de Drive y de Documentos siguen sin cifrar, para poder abrirlas en otro celular.
+
+*Se instala encima de la 3.6, sin perder tus datos: la primera vez los cifra.*
+
+---
+
 # Jarvis para Android 3.6: controla el celular por voz
 
 ## 📱 El celular por voz

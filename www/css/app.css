@@ -450,3 +450,29 @@ body[data-letra="enorme"] .msg { max-width: 96%; }
 #prac-sh.grande .prac-qr { width: min(92vw, 92vh); }
 #prac-sh.grande .omr-list, #prac-sh.grande .hint { display: none; }
 .omr-list small { color: var(--muted); margin-right: 8px; }
+
+/* ================================================================= 3.7 */
+.verif { margin-top: 8px; padding: 7px 10px; border-radius: 10px; font-size: 13.5px; }
+.verif.ok { background: rgba(61, 255, 154, .1); border: 1px solid rgba(61, 255, 154, .45); color: #b9ffd9; }
+.verif.mal { background: rgba(255, 181, 71, .12); border: 1px solid rgba(255, 181, 71, .55); color: #ffe2b0; }
+.fig { background: #fff; border-radius: 12px; padding: 6px; margin: 2px 0 8px; }
+.fig svg { width: 100%; height: auto; display: block; }
+.fig-proy { max-width: min(90vw, 900px); margin: 0 auto 12px; }
+.acud-card { border: 1px solid var(--line); border-radius: 14px; padding: 10px; margin-bottom: 10px; display: grid; gap: 8px; opacity: .8; }
+.acud-card.now { opacity: 1; border-color: rgba(var(--a-rgb), .6); }
+.acud-card.hecho { opacity: .55; border-color: rgba(61, 255, 154, .5); }
+.acud-card textarea { font-size: 14px; }
+.reu-t { font: 800 30px/1 var(--mono); text-align: center; color: var(--a); margin: 4px 0; }
+#f-escribir .live-btn { flex-shrink: 0; border-radius: 50%; color: var(--ok); }
+#f-escribir .live-btn svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+@media (max-width: 360px) { #f-escribir .icon-btn { width: 40px; height: 40px; } #f-escribir { gap: 5px; } }
+.live-sh .sheet-in { background: radial-gradient(120% 70% at 50% 25%, #0b2a3d, var(--bg) 70%); }
+.live-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; min-height: 0; }
+.live-orb { --lv: 0; width: 170px; height: 170px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle, rgba(var(--a-rgb), .45), rgba(var(--a-rgb), .05) 65%); box-shadow: 0 0 calc(20px + var(--lv) * 60px) rgba(var(--a-rgb), .6); transform: scale(calc(1 + var(--lv) * .18)); transition: transform .08s, box-shadow .08s; }
+.live-orb i { width: 70px; height: 70px; border-radius: 50%; background: var(--a); box-shadow: 0 0 30px var(--a); }
+[data-state="speaking"] .live-orb i { animation: rxbeat .45s ease-in-out infinite alternate; background: #7ff3ff; }
+.live-st { font-size: 17px; text-align: center; margin: 0; }
+.live-tr { width: 100%; max-width: 560px; max-height: 30vh; overflow: auto; font-size: 14.5px; }
+.live-tr .lt { margin: 4px 0; padding: 6px 10px; border-radius: 10px; background: rgba(5, 11, 20, .6); }
+.live-tr .lt.tu { color: var(--muted); }
+.live-row { gap: 10px; flex-wrap: wrap; justify-content: center; }
