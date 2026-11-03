@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.5";
+  const VERSION = "3.6";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -70,7 +70,7 @@
     return { m, e };
   }
   /** Jarvis contesta algo propio (herramientas): lo muestra y lo dice. */
-  function reply(text, cls = "tool", spoken) { add("assistant", text, cls); say(spoken || text); if (window.JX) window.JX.onReply(spoken || text); }
+  function reply(text, cls = "tool", spoken) { add("assistant", text, cls); say(D.ajustes.bolsillo ? text : (spoken || text)); if (window.JX) window.JX.onReply(spoken || text); }
 
   let pendingReminder = null, lastByVoice = false;
   async function handle(text, byVoice) {

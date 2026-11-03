@@ -13,4 +13,5 @@
     <string name="atajo_foto_l">Calificar con una foto</string>
     <string name="atajo_lista">Pasar lista</string>
     <string name="atajo_lista_l">Pasar lista del curso</string>
+    <string name="control_desc">Deja que Jarvis haga por voz los botones del celular: ir al inicio, atrás, ver las notificaciones, bloquear la pantalla y tomar una captura. No lee la pantalla ni lo que escribes.</string>
 </resources>

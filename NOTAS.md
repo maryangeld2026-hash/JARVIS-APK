@@ -1,3 +1,37 @@
+# Jarvis para Android 3.6: controla el celular por voz
+
+## 📱 El celular por voz
+- **Llamar:** «llama a mi mamá», «llámale a Juan Pérez». Jarvis busca en tus contactos y **pregunta antes** («¿Llamo a Juan Pérez?»): dices «sí» o tocas el botón.
+- **WhatsApp a un contacto:** «mándale un WhatsApp a Carolina diciendo que llego en 10 minutos». Abre el chat de Carolina con el mensaje ya escrito; tú tocas enviar. Android no deja que una app envíe WhatsApp sola.
+- **Mensaje de texto (SMS):** «manda un mensaje a Pedro que ya salí». También pregunta antes de enviarlo.
+- **Abrir y cerrar apps:** «abre WhatsApp», «abre la calculadora», «cierra YouTube». Android solo deja cerrar las apps que están en segundo plano; para salir de la que tienes en pantalla, di «ve al inicio».
+- **Linterna, volumen y alarmas:** «prende la linterna», «sube el volumen», «silencia el celular», «pon una alarma a las 5 y 30 de la mañana», «despiértame a las 6».
+- **Los botones del celular:** «ve al inicio», «atrás», «abre las notificaciones», «apps recientes», «bloquea el celular», «toma una captura». Para todos menos «ve al inicio», activa una vez *Ajustes del celular › Accesibilidad › Jarvis: control por voz*. Solo hace esos botones; no lee la pantalla ni lo que escribes.
+- **Mapas y YouTube:** «¿cómo llego a la Universidad Nacional?», «busca en YouTube fracciones equivalentes».
+
+## 🎙️ Dictado y notas de voz
+- **Dictado:** «modo dictado», o el botón del clip › Dictado. Hablas y Jarvis escribe. Di «coma», «punto», «dos puntos», «nueva línea», «punto y aparte» o «abre interrogación». «Borra la última frase» la quita y «fin del dictado» lo guarda en Material. Desde ahí lo copias, lo mandas por WhatsApp o lo pasas a Word.
+- **Notas de voz que se guardan solas:** «nota de voz: Pablo Mora no trajo la tarea» va al observador de Pablo. «Toma nota: en 7A vimos fracciones» va al diario. «Apunta: tengo que imprimir las guías» va a compromisos. Lo demás queda como nota en Material.
+
+## 🗣️ Hablarle sin tocarlo
+- **Interrumpir a Jarvis:** mientras habla, di «basta», «silencio», «cállate» o «Jarvis», y se calla para escucharte. Usa la voz sin internet de «Jarvis en segundo plano», que se descarga en Ajustes. Se activa en *Ajustes › Mientras Jarvis habla*.
+- **Modo bolsillo:** «modo bolsillo». Te dice todo en voz alta, sigue escuchando después de cada respuesta y se puede interrumpir.
+- **Resumen de la mañana:** a la hora que escojas, un aviso con tus clases del día, la agenda del calendario, los recordatorios, los compromisos y quiénes van en riesgo. Al tocarlo, Jarvis te lo lee. También: «resumen de la mañana».
+
+## 👩‍🏫 Para la clase
+- **Práctica con QR:** en un quiz, «📶 Práctica con QR». Los estudiantes se conectan al mismo wifi (o a tu punto de acceso), escanean el código y responden en su celular. Ves llegar las respuestas con la nota y al final tienes los resultados y el botón para pasarlos al seguimiento. No necesita internet. La clave no sale de tu celular: la página de los estudiantes no la trae.
+- **Banco de preguntas:** todas las preguntas de tus quices quedan en un banco. «Ármame un quiz de 10 preguntas del banco de fracciones» lo arma al instante, sin gastar IA. Para ver los temas: «¿qué hay en el banco?».
+- **Versiones A, B, C y D:** en un quiz, «🔀 Versiones A–D», o di «hazme las versiones A, B, C y D». Salen las mismas preguntas en otro orden y con las opciones mezcladas, cada versión con su PDF, su clave y su propia hoja de burbujas.
+- **Informe del periodo:** «informe del periodo de Pablo Mora» o «informes del periodo de 7A» (también hay botón en la pestaña Clase). Es un PDF por estudiante con sus notas, el promedio y desempeño, lo que necesita para pasar, las fallas, el observador y espacio para tus observaciones. Se hace en el celular, sin enviar nombres a la IA.
+
+## 💾 Y además
+- **Copia semanal en el celular:** cada semana Jarvis guarda una copia de tus datos, sin las claves, en *Documentos › Jarvis*. También: «haz una copia de seguridad».
+- **Recordatorios por lugar:** estando en el colegio, di «guarda este lugar como colegio». Después: «cuando llegue al colegio, recuérdame imprimir las guías» o «recuérdame comprar pan cuando salga del colegio». Funciona con Jarvis cerrado si en la ubicación escoges «Permitir todo el tiempo». La ubicación no sale del celular.
+
+*Se instala encima de la 3.5, sin perder tus datos. La primera vez que uses cada cosa, Android te pide su permiso: contactos, llamadas, SMS o ubicación.*
+
+---
+
 # Jarvis para Android 3.5: más tiempo para hablar y «¿Sí, profesor?»
 
 - **Más tiempo para dar la orden.** El reconocimiento de voz de Android se rendía a los 5 segundos si no empezabas a hablar, y Jarvis quedaba «En espera». Ahora Jarvis sigue escuchando solo hasta que hables: 14 segundos cuando lo llamas con «Jarvis», el botón de asistente o la burbuja; 11 al tocar el orbe; 8 en la conversación continua.

@@ -27,6 +27,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.vosk.Model;
 import org.vosk.Recognizer;
@@ -121,8 +122,11 @@ public class OidoPlugin extends Plugin {
             actual = call;
             ultimo = ""; oyoAlgo = false; nivel = -100f; idioma = lang; silencio = sil; espera = esp; inicio = System.currentTimeMillis();
             final int mio = ++turno;
-            // primero: que «Jarvis en segundo plano» suelte el micrófono (en otro hilo, para no trabar la pantalla)
+            // primero: que «Jarvis en segundo plano» y la vigilancia suelten el micrófono (en otro hilo, para no trabar la pantalla)
+            vigila = false;
+            final Thread tv = hiloVigila;
             new Thread(() -> {
+                if (tv != null && tv.isAlive()) { try { tv.join(1500); } catch (InterruptedException ignored) { } }
                 if (EscuchaService.grabando) { yoPause = EscuchaService.soltarMicrofono(getContext(), 2500) || yoPause; }
                 h.post(() -> {
                     if (mio != turno || actual == null) return;
@@ -319,6 +323,67 @@ public class OidoPlugin extends Plugin {
                 terminar(f, null);
             });
         }, "jarvis-vosk").start();
+    }
+
+    // ======================================================================== 3.6: interrumpir a Jarvis mientras habla
+    private volatile boolean vigila = false;
+    private Thread hiloVigila;
+
+    /** Mientras Jarvis habla, escucha solo unas pocas palabras (con cancelación de eco) y avisa «interrumpir». */
+    @PluginMethod
+    public void vigilar(PluginCall call) {
+        if (EscuchaPlugin.rutaModelo(getContext()) == null) { JSObject r = new JSObject(); r.put("ok", false); r.put("error", "sin_modelo"); call.resolve(r); return; }
+        if (getPermissionState("microfono") != PermissionState.GRANTED || actual != null || voskCorre) { JSObject r = new JSObject(); r.put("ok", false); call.resolve(r); return; }
+        if (vigila) { JSObject r = new JSObject(); r.put("ok", true); call.resolve(r); return; }
+        final JSONArray palabras = call.getArray("palabras", new JSArray());
+        vigila = true;
+        hiloVigila = new Thread(() -> {
+            AudioRecord rec = null; Recognizer r = null;
+            try {
+                if (EscuchaService.grabando) EscuchaService.soltarMicrofono(getContext(), 2000);
+                if (voskModelo == null) voskModelo = new Model(EscuchaPlugin.rutaModelo(getContext()));
+                JSONArray g = new JSONArray();
+                for (int i = 0; i < palabras.length(); i++) g.put(palabras.getString(i));
+                g.put("[unk]");
+                r = new Recognizer(voskModelo, 16000.0f, g.toString());
+                int min = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, 16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 8192));
+                if (rec.getState() != AudioRecord.STATE_INITIALIZED) return;
+                rec.startRecording();
+                byte[] buf = new byte[3200];
+                while (vigila) {
+                    int n = rec.read(buf, 0, buf.length);
+                    if (n <= 0) continue;
+                    String t = r.acceptWaveForm(buf, n) ? new JSONObject(r.getResult()).optString("text", "") : new JSONObject(r.getPartialResult()).optString("partial", "");
+                    t = t.replace("[unk]", "").trim();
+                    if (!t.isEmpty()) {
+                        for (int i = 0; i < palabras.length(); i++) {
+                            String p = palabras.getString(i);
+                            if ((" " + t + " ").contains(" " + p + " ")) {
+                                vigila = false;
+                                final String w = p;
+                                h.post(() -> { JSObject ev = new JSObject(); ev.put("palabra", w); notifyListeners("interrumpir", ev); });
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable e) { Log.w(TAG, "vigilar", e); }
+            finally {
+                if (rec != null) { try { rec.stop(); } catch (Exception ignored) { } rec.release(); }
+                if (r != null) r.close();
+                vigila = false;
+            }
+        }, "jarvis-vigila");
+        hiloVigila.start();
+        JSObject res = new JSObject(); res.put("ok", true); call.resolve(res);
+    }
+
+    @PluginMethod
+    public void dejarDeVigilar(PluginCall call) {
+        vigila = false;
+        final Thread t = hiloVigila;
+        new Thread(() -> { if (t != null) { try { t.join(1500); } catch (InterruptedException ignored) { } } call.resolve(); }).start();
     }
 
     // ======================================================================== parar
