@@ -144,8 +144,7 @@
     A.tab("hablar");
     const rest = String((d && d.resto) || "").trim();
     if (rest.split(/\s+/).length >= 2) { A.handle(rest, true); return; }
-    V.say("¿Sí?");
-    setTimeout(() => A.listen(false), 700);
+    if (A.wake) A.wake(); else { V.say("¿Sí?"); setTimeout(() => A.listen(false), 700); }
   }
   function renderFondo() {
     const st = $("#fondo-st"), b = $("#fondo-chk");

@@ -519,7 +519,7 @@
     if (!hfMode) return false;
     const rest = L2.afterWake(text);
     if (rest === null) return true;                                        // conversación del salón: no era para Jarvis
-    if (rest === "") { A.say("¿Sí?"); hfMode = false; setTimeout(() => A.listen(false), 700); return true; }
+    if (rest === "") { hfMode = false; if (A.wake) A.wake(); else { A.say("¿Sí?"); setTimeout(() => A.listen(false), 700); } return true; }
     A.handle(rest, true);
     return true;
   }
@@ -603,7 +603,7 @@
     if (D.ajustes.manosLibres) setHandsFree(true);
     const B = native() && plug("Burbuja");
     if (B) {
-      window.JON(B, "toque", () => { A.tab("hablar"); setTimeout(() => A.listen(false), 400); });
+      window.JON(B, "toque", () => { A.tab("hablar"); setTimeout(() => (A.wake ? A.wake() : A.listen(false)), 400); });
       if (D.ajustes.burbuja) bubble(true, false);
     }
     // copia automática en Drive una vez al día si ya conectaste Google

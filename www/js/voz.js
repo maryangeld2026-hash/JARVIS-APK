@@ -20,9 +20,10 @@
     return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   }
   /** Escucha una frase. onPartial(texto) mientras hablas. → texto final ("" si no se oyó nada). */
-  async function listen(onPartial) {
+  /** opts: {espera: ms que espera a que empieces a hablar, silencio: ms de pausa que da por terminada la frase} */
+  async function listen(onPartial, opts) {
     stopListening();
-    if (native() && plug("Oido") && oidoFallas < 2) return listenOido(onPartial);
+    if (native() && plug("Oido") && oidoFallas < 2) return listenOido(onPartial, opts);
     if (native() && plug("SpeechRecognition")) return listenNative(onPartial);
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!R) throw new Error("Este navegador no reconoce la voz. Escribe la orden, o instala la app de Jarvis.");
@@ -53,7 +54,7 @@
   let oidoOk = false, oidoFallas = 0;
   let onListenState = null, lastListen = null;
   const MOTOR = { google: "reconocimiento de Google", celular: "reconocimiento del celular", vosk: "voz sin internet (Vosk)" };
-  async function listenOido(onPartial) {
+  async function listenOido(onPartial, opts) {
     const O = plug("Oido");
     if (!oidoOk) {
       const p = await Promise.race([O.permiso(), new Promise((r) => setTimeout(() => r({ ok: "espera" }), 20000))]).catch(() => ({ ok: false }));
@@ -64,7 +65,8 @@
     const h2 = await on(O, "estado", (d) => { if (onListenState && d) onListenState(d.s, d); });
     nativeStop = () => { O.detener().catch(() => {}); };
     try {
-      const r = (await O.escuchar({ idioma: LANG, silencio: 1100, maximo: 15000 })) || {};
+      const o = opts || {};
+      const r = (await O.escuchar({ idioma: LANG, silencio: o.silencio || 1600, espera: o.espera || 9000, maximo: 15000 })) || {};
       lastListen = r;
       if (r.error === "permiso") { oidoOk = false; throw new Error("Jarvis no tiene permiso para el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos › Micrófono."); }
       if (!r.texto && r.error === "red") throw new Error("El reconocimiento de voz necesita internet en este celular. Revisa la conexión, o descarga la voz sin internet en Ajustes › «Jarvis» en segundo plano.");

@@ -1,3 +1,13 @@
+# Jarvis para Android 3.5: más tiempo para hablar y «¿Sí, profesor?»
+
+- **Más tiempo para dar la orden.** El reconocimiento de voz de Android se rendía a los 5 segundos si no empezabas a hablar, y Jarvis quedaba «En espera». Ahora Jarvis sigue escuchando solo hasta que hables: 14 segundos cuando lo llamas con «Jarvis», el botón de asistente o la burbuja; 11 al tocar el orbe; 8 en la conversación continua.
+- **No te corta a la mitad.** Ahora aguanta pausas de 1,6 segundos mientras piensas, antes cortaba con 1,1. Si oye un ruido que no son palabras, sigue escuchando.
+- **Al activarse dice «¿Sí, profesor?»** (o «Dígame, profesor», «A la orden, profesor»), y abre el micrófono cuando termina de hablar, así no se oye a sí mismo. En *Ajustes › Cómo te llama Jarvis* escoges profesor, profesora, señor, señora, profe o tu nombre. La IA también te trata así en las respuestas.
+
+*Se instala encima de la 3.4, sin perder tus datos.*
+
+---
+
 # Jarvis para Android 3.4: Jarvis aprovecha el celular
 
 ## 📱 Jarvis en todo el celular

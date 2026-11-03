@@ -50,7 +50,8 @@ public class OidoPlugin extends Plugin {
     private SpeechRecognizer sr;
     private PluginCall actual;
     private String ultimo = "", motor = "", idioma = "es-CO";
-    private int turno = 0, silencio = 1100;
+    private int turno = 0, silencio = 1100, espera = 9000;
+    private long inicio = 0;                       // 3.5: cuándo empezó a esperar tu voz
     private boolean yoPause = false, oyoAlgo = false;
     private float nivel = -100f;                     // el volumen más alto que llegó del micrófono (dB del reconocedor)
     private static String preferido = "";          // el camino que funcionó la última vez
@@ -112,12 +113,13 @@ public class OidoPlugin extends Plugin {
     public void escuchar(PluginCall call) {
         final String lang = call.getString("idioma", "es-CO");
         final int sil = call.getInt("silencio", 1100);
-        final int maximo = call.getInt("maximo", 15000);
+        final int esp = Math.max(3000, Math.min(30000, call.getInt("espera", 9000)));
+        final int maximo = Math.max(call.getInt("maximo", 15000), esp + 15000);
         final String forzar = call.getString("motor", "");
         h.post(() -> {
             if (actual != null) terminar("", "otra");
             actual = call;
-            ultimo = ""; oyoAlgo = false; nivel = -100f; idioma = lang; silencio = sil;
+            ultimo = ""; oyoAlgo = false; nivel = -100f; idioma = lang; silencio = sil; espera = esp; inicio = System.currentTimeMillis();
             final int mio = ++turno;
             // primero: que «Jarvis en segundo plano» suelte el micrófono (en otro hilo, para no trabar la pantalla)
             new Thread(() -> {
@@ -219,10 +221,19 @@ public class OidoPlugin extends Plugin {
                 if (!ultimo.isEmpty()) { terminar(ultimo, null); return; }
                 if (e == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) { terminar("", "permiso"); return; }
                 // no dijiste nada: no es una falla del micrófono
-                if ((e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) && oyoAlgo) { terminar("", null); return; }
-                if (e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT && intento > 0) { terminar("", null); return; }
+                if ((e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) && oyoAlgo) {
+                    // oyó ruido pero no palabras: si queda tiempo, sigue escuchando
+                    if (System.currentTimeMillis() - inicio < espera - 1200) { oyoAlgo = false; destruir(); h.postDelayed(() -> iniciar(motor, 0, mio), 120); return; }
+                    terminar("", null); return;
+                }
+                if (e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT && intento > 0 && System.currentTimeMillis() - inicio >= espera - 1200) { terminar("", null); return; }
                 boolean ocupado = e == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || e == SpeechRecognizer.ERROR_CLIENT || e == 11;
                 if (ocupado && intento < 2) { destruir(); h.postDelayed(() -> iniciar(motor, intento + 1, mio), 500); return; }
+                // 3.5: todavía no has dicho nada y no ha pasado el tiempo de espera: sigue escuchando (Android se rinde a los ~5 s)
+                if ((e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) && !oyoAlgo && ultimo.isEmpty()
+                        && System.currentTimeMillis() - inicio < espera - 1200) {
+                    destruir(); h.postDelayed(() -> iniciar(motor, 0, mio), 120); return;
+                }
                 if (e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) { terminar("", null); return; }
                 fallo(motor, nombre(e), mio);
             }
@@ -288,7 +299,7 @@ public class OidoPlugin extends Plugin {
                         }
                     }
                     long ahora = System.currentTimeMillis();
-                    if (parcial.isEmpty() && ahora - t0 > 7000) break;                 // no dijiste nada
+                    if (parcial.isEmpty() && ahora - t0 > espera) break;               // no dijiste nada
                     if (!parcial.isEmpty() && ahora - ultimaVoz > 1800) break;         // terminaste de hablar
                 }
                 if (fin.isEmpty()) fin = new JSONObject(r.getFinalResult()).optString("text", parcial).trim();

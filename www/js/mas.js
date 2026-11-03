@@ -29,7 +29,7 @@
     if (e.tipo === "atajo") {
       A.tab("hablar");
       switch (e.atajo) {
-        case "hablar": setTimeout(() => A.listen(false), 350); return;
+        case "hablar": setTimeout(() => (A.wake ? A.wake() : A.listen(false)), 350); return;
         case "tiempo5": A.startTimer(300); return A.reply("Listo: 5 minutos. Te aviso cuando termine.");
         case "parar_tiempo": { const b = $("#btn-tiempo-parar"); if (b) b.click(); return A.reply("Paré el temporizador."); }
         case "foto": return askPick("¿Qué quieres hacer?", [["📷 Calificar hojas de respuesta", () => X._omr && X._omr.open()], ["📷 Foto a la conversación", () => clickInput("#chat-cam-in")], ["🖼️ De la galería", () => clickInput("#chat-foto-in")]]);
@@ -328,6 +328,9 @@
     h3("Pantalla");
     const ls = mk("select", "inp"); [["normal", "Letra normal"], ["grande", "Letra grande"], ["enorme", "Letra muy grande (para proyectar)"]].forEach(([k, t]) => ls.append(new Option(t, k)));
     ls.value = D.ajustes.letra || "normal"; ls.addEventListener("change", () => { D.ajustes.letra = ls.value; save(); applyLetra(); }); sec.append(ls);
+    h3("Cómo te llama Jarvis");
+    const tr = mk("select", "inp"); [["profesor", "Profesor («¿Sí, profesor?»)"], ["profesora", "Profesora"], ["señor", "Señor"], ["señora", "Señora"], ["profe", "Profe"], ["nombre", "Por mi nombre (el de «¿Cómo te llamo?»)"]].forEach(([k, t]) => tr.append(new Option(t, k)));
+    tr.value = D.ajustes.trato || "profesor"; tr.addEventListener("change", () => { D.ajustes.trato = tr.value; save(); V.hush(); V.say("¿Sí, " + A.trato() + "?"); }); sec.append(tr);
     h3("La voz de Jarvis");
     const vs = mk("select", "inp"); vs.append(new Option("La voz del celular (automática)", "")); sec.append(vs);
     voices().then((l) => { l.forEach((v) => vs.append(new Option(`${v.name} · ${v.lang}${v.local ? " · sin internet" : ""}`, v.web ? "w:" + v.name : String(v.i)))); vs.value = D.ajustes.vozWeb ? "w:" + D.ajustes.vozWeb : D.ajustes.vozIdx != null ? String(D.ajustes.vozIdx) : ""; });

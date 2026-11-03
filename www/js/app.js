@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.4";
+  const VERSION = "3.5";
   const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -99,6 +99,7 @@
   function systemPrompt() {
     const a = D.ajustes, now = new Date();
     return `Eres Jarvis, el asistente de voz de ${a.nombre ? "«" + a.nombre + "», " : ""}una docente de matemáticas de un colegio en Colombia. ` +
+      `Dirígete a la persona como «${trato()}». ` +
       "Hablas en español de Colombia, con calidez y de forma directa. Tu respuesta se lee en voz alta: responde breve (2 a 4 frases), " +
       "salvo que te pidan un texto, una explicación detallada o una lista. Las fórmulas, en LaTeX entre $…$. No inventes datos de estudiantes. " +
       `Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, son las ${hora(now)}. ` +
@@ -157,7 +158,8 @@
 
   // ---------------------------------------------------------------- micrófono
   let misses = 0, listenGen = 0, heardPart = false;
-  async function listen(auto) {
+  /** auto: la conversación continua (no tocaste el orbe). wake: te activó «Jarvis» o el botón de asistente (espera más). */
+  async function listen(auto, wake) {
     if (navigator.vibrate && !auto) { try { navigator.vibrate(20); } catch (e) { /* nada */ } }
     if (state === "listening") {
       // 3.2: si ya dijiste algo, tocar el orbe lo envía; si todavía no, vuelve a escuchar desde cero (antes parecía no hacer nada)
@@ -174,7 +176,9 @@
     if (IA.warm) IA.warm();                                   // mientras hablas, ya se abre la conexión con la IA
     if (!V.native()) $("#live").textContent = auto ? "Te escucho…" : "Te escucho… habla ahora";
     let text = "";
-    try { text = await V.listen((p) => { heardPart = true; $("#live").textContent = p; }); }
+    // 3.5: más tiempo para empezar a hablar (antes Android cortaba a los ~5 s) y pausas de 1,6 s sin cortar la frase
+    const espera = wake ? 14000 : auto ? 8000 : 11000;
+    try { text = await V.listen((p) => { heardPart = true; $("#live").textContent = p; }, { espera, silencio: 1600 }); }
     catch (e) { if (my !== listenGen) return; setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
     if (my !== listenGen) return;                              // otra escucha ya empezó (tocaste el orbe de nuevo)
     $("#live").textContent = "";
@@ -191,6 +195,23 @@
     handle(text, true);
   }
   $("#btn-mic").addEventListener("click", () => listen(false));
+  // 3.5: al activarse (por «Jarvis», el asistente o la burbuja) saluda —«¿Sí, profesor?»— y espera a que termine de hablar para escuchar
+  function trato() {
+    const t = D.ajustes.trato || "profesor";
+    return t === "nombre" ? (D.ajustes.nombre || "profe") : t;
+  }
+  let saludo = 0;
+  async function wake() {
+    if (state === "listening") return;
+    V.hush();
+    const tr = trato(), f = ["¿Sí, " + tr + "?", "Dígame, " + tr + ".", "A la orden, " + tr + "."];
+    if (D.ajustes.voz) {
+      V.say(f[saludo++ % f.length]);
+      await Promise.race([V.idle(), new Promise((r) => setTimeout(r, 2500))]);
+      await new Promise((r) => setTimeout(r, 250));            // que el micrófono no oiga el final del saludo
+    }
+    return listen(false, true);
+  }
   // 3.3: lo que va pasando con el micrófono, a la vista
   if (V.onListenState) V.onListenState((s, d) => {
     if (state !== "listening" || heardPart) return;
@@ -770,6 +791,6 @@
   document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") (V.cancelListening || V.stopListening)(); if (!document.hidden && IA.warm) IA.warm(); });
   if (IA.warm) setTimeout(() => IA.warm(), 1500);
   window.__jarvis = { handle, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
-    getState: () => state, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
+    getState: () => state, wake, trato, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
   if (window.JX) window.JX.init(window.__jarvis);
 })();
