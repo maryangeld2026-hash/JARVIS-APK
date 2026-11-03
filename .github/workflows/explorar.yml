@@ -1,0 +1,9 @@
+name: explorar
+on: { push: { branches: [explorar2] } }
+jobs:
+  x:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for a in com/google/android/gms/play-services-mlkit-document-scanner com/google/mlkit/text-recognition androidx/biometric/biometric com/google/android/gms/play-services-mlkit-text-recognition; do
+            echo "== $a"; curl -sS -m 20 "https://dl.google.com/android/maven2/$a/maven-metadata.xml" | grep -o '<version>[^<]*</version>' | tail -6; done
