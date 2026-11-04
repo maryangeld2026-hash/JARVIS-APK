@@ -1,11 +1,12 @@
-/* Jarvis para Android · la pantalla: conversación por voz, herramientas de la clase, quices y ajustes. */
+/* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.7.1";
-  const L = window.JL, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
+  const VERSION = "3.8";
+  const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const save = () => window.JD.save();
+  if (D.ajustes.docente == null) D.ajustes.docente = D.cursos.length > 0 || !!(D.quices && D.quices.length);   // 3.8: el modo docente, solo si ya usas lo de la clase
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const md = (t) => (window.JMD ? window.JMD.md(t) : `<p>${esc(t)}</p>`);
   const mdInline = (t) => md(t).replace(/^<p>([\s\S]*)<\/p>$/, "$1");
@@ -50,9 +51,10 @@
   function emptyChat() {
     const e = mk("div", "empty");
     e.append(mk("b", "", `Hola${D.ajustes.nombre ? ", " + D.ajustes.nombre : ""}. Soy Jarvis.`),
-      mk("span", "", D.ajustes.claves[D.ajustes.proveedor] ? "Toca el micrófono y háblame, o escribe." : "Toca el micrófono y pídeme algo de la clase. Para conversar con la IA, pon tu clave en Ajustes (el engranaje)."));
+      mk("span", "", D.ajustes.claves[D.ajustes.proveedor] ? "Toca el micrófono y háblame, o escribe." : "Toca el micrófono y pídeme algo. Para conversar con la IA, pon tu clave en Ajustes (el engranaje)."));
     const s = mk("div", "sug");
-    ["Escoge un estudiante", "Pon 5 minutos", "Haz 4 grupos", "Hazme un quiz de fracciones de 5 preguntas", "¿Cómo explico los números negativos?"].forEach((x) => {
+    const ej = ["¿Cómo estará el clima mañana?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos", "¿Qué tengo hoy?"];
+    (D.ajustes.docente !== false ? ej.concat(["Escoge un estudiante", "Hazme un quiz de fracciones de 5 preguntas"]) : ej.concat(["Cuando diga modo enfoque, silencia el celular y pon 25 minutos", "Activa el modo docente"])).forEach((x) => {
       const c = mk("button", "chip", x); c.type = "button"; c.addEventListener("click", () => handle(x, false)); s.append(c);
     });
     e.append(s);
@@ -76,18 +78,25 @@
   async function handle(text, byVoice) {
     text = String(text || "").trim();
     if (!text) return;
+    if (byVoice && window.JX && window.JX.corregir) { try { text = window.JX.corregir(text) || text; } catch (e) { /* sin corrección */ } }   // 3.8: tus nombres y palabras, bien escritos
     lastByVoice = byVoice;
     add("user", text);
     if (pendingReminder) {                                    // «¿a qué hora te lo recuerdo?»
       const p = pendingReminder; pendingReminder = null;
       if (!/^(?:no|cancela|olvidalo|nada)$/.test(L.norm(text))) { addReminder(`recuérdame ${p} ${text}`, true); return afterTurn(); }
     }
-    const it2 = window.JX ? window.JX.intent(text) : null;           // 2.0: seguimiento, memoria, tutor, proyector, Google…
-    if (it2) { try { await window.JX.run(it2, text); } catch (e) { reply(e.message || String(e), "err"); } return afterTurn(); }
-    const it = L.intent(text, D.cursos);
-    if (it) { try { await doIntent(it, text); } catch (e) { reply(e.message || String(e), "err"); } return afterTurn(); }
-    await askAI(text);
+    await dispatch(text);
     afterTurn();
+  }
+  /** Hace una orden (sin mostrarla como mensaje tuyo). noAI: si no es una orden de la app, no la manda a la IA → false. */
+  async function dispatch(text, noAI) {
+    const it2 = window.JX ? window.JX.intent(text) : null;           // 2.0: seguimiento, memoria, tutor, proyector, Google…
+    if (it2) { try { await window.JX.run(it2, text); } catch (e) { reply(e.message || String(e), "err"); } return true; }
+    const it = L.intent(text, D.cursos);
+    if (it) { try { await doIntent(it, text); } catch (e) { reply(e.message || String(e), "err"); } return true; }
+    if (noAI) return false;
+    await askAI(text);
+    return true;
   }
   async function afterTurn() {
     if (!(lastByVoice && D.ajustes.seguir)) return;
@@ -96,16 +105,19 @@
     if (state === "idle" && D.ajustes.seguir && !V.isSpeaking()) listen(true);
   }
 
-  function systemPrompt() {
-    const a = D.ajustes, now = new Date();
-    return `Eres Jarvis, el asistente de voz de ${a.nombre ? "«" + a.nombre + "», " : ""}una docente de matemáticas de un colegio en Colombia. ` +
-      `Dirígete a la persona como «${trato()}». ` +
-      "Hablas en español de Colombia, con calidez y de forma directa. Tu respuesta se lee en voz alta: responde breve (2 a 4 frases), " +
-      "salvo que te pidan un texto, una explicación detallada o una lista. Las fórmulas, en LaTeX entre $…$. No inventes datos de estudiantes. " +
+  /** 3.8: Jarvis es un asistente personal; lo de la clase entra solo con el modo docente. live: la conversación en vivo (sin etiquetas). */
+  function systemPrompt(live) {
+    const a = D.ajustes, now = new Date(), doc = a.docente !== false;
+    const hace = "recordatorios y alarmas («recuérdame a las 3 llamar a mamá», «pon una alarma a las 6»), temporizador («pon 10 minutos»), llamar y mandar WhatsApp o SMS a tus contactos (la app pide confirmar), abrir apps, linterna, volumen, clima («dime el clima de mañana»), notas de voz, el calendario del celular, mapas, música en YouTube, modo ahorro" +
+      (doc ? "; y de la clase: escoger un estudiante, hacer grupos, pasar lista, quices, notas y ticket de salida" : "");
+    return `Eres Jarvis, el asistente personal de voz de ${a.nombre ? "«" + a.nombre + "»" : "la persona"}, en Colombia. Dirígete a la persona como «${trato()}». ` +
+      "Hablas en español de Colombia, de forma directa. " + L7.personaPrompt(a.estilo) + " Tu respuesta se lee en voz alta. Las fórmulas, en LaTeX entre $…$. " +
       `Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, son las ${hora(now)}. ` +
-      `Cursos de la profe: ${D.cursos.map((c) => c.nombre).join(", ") || "ninguno todavía"}. ` +
-      "Esta app también hace, sin la IA: escoger un estudiante al azar, hacer grupos, temporizador, recordatorios, quices y calificar la foto de un trabajo. " +
-      "Si te piden algo de eso, dile cómo pedirlo (por ejemplo «escoge un estudiante de 7A» o «pon 5 minutos»)." +
+      (doc ? `La persona también es docente${a.asignatura ? " de " + a.asignatura : ""}; sus cursos: ${D.cursos.map((c) => c.nombre).join(", ") || "ninguno todavía"}. No inventes datos de estudiantes. ` : "") +
+      (live ? `Esta app hace: ${hace}. ` :
+        `Puedes hacer cosas en el celular con las órdenes de esta app: ${hace}. Cuando te pidan hacer algo de eso (aunque sean varias cosas en una frase), contesta en una frase y escribe AL FINAL cada orden en su propia línea, así: <<orden: pon 10 minutos>>. ` +
+        "Escribe cada orden completa y como la diría la persona. Si solo te preguntan algo, no escribas órdenes. " +
+        (a.memoriaAuto !== false ? "Si la persona te cuenta algo importante y duradero sobre ella (gustos, personas cercanas, fechas, rutinas, metas), escribe al final <<recordar: el dato en una frase corta>>. Nunca guardes claves, números de cuenta, datos de salud delicados ni datos de estudiantes. " : "")) +
       (window.JX ? window.JX.promptExtra(lastQuestion) : "");
   }
   let lastQuestion = "";
@@ -115,7 +127,7 @@
     const hist = L.trimHistory(D.chat.filter((m) => !m.cls || m.cls === "").slice(-13, -1).map((m) => ({ role: m.role, content: m.content })));
     const { m, e } = add("assistant", "", "");
     e.classList.add("typing");
-    let spoken = 0, first = true, buf = "", lastDraw = 0, gotFirst = false;
+    let spoken = 0, first = true, buf = "", lastDraw = 0, gotFirst = false, shown = "", raw = "";
     // si la IA tarda en arrancar, Jarvis dice algo corto de una vez (como «A ver…» en el computador): cero silencio
     const ackT = D.ajustes.voz && lastByVoice ? setTimeout(() => { if (!gotFirst && !V.isSpeaking()) V.say(L.ackFor(text)); }, 700) : null;
     const draw = (force) => {
@@ -128,15 +140,16 @@
     try {
       const full = await IA.chat({ system: systemPrompt(), messages: hist.concat([{ role: "user", content: text }]), onAviso: (t) => { if (!gotFirst) { e.innerHTML = ""; e.append(mk("em", "hint", t)); $("#status").textContent = "REINTENTO"; } }, onDelta: (d, all) => {
         if (!gotFirst) { gotFirst = true; clearTimeout(ackT); }
-        m.content = all;
+        const vis = L7.visible(all), dv = vis.startsWith(shown) ? vis.slice(shown.length) : "";
+        shown = vis; m.content = vis;
         draw();
         if (!D.ajustes.voz) return;
-        buf += d;
+        buf += dv;
         const r = L.takeSentences(buf, first);
         buf = r.resto;
         r.frases.forEach((s) => { V.say(L.forSpeech(s)); spoken++; first = false; });
       } });
-      m.content = full || "(sin respuesta)";
+      raw = full || ""; m.content = L7.visible(raw) || (L7.tags(raw).ordenes.length ? "Listo." : "(sin respuesta)");
       if (D.ajustes.voz && buf.trim()) V.say(L.forSpeech(buf));
     } catch (er) {
       m.content = (m.content ? m.content + "\n\n" : "") + (er.code === "abort" ? "*(detenido)*" : er.message);
@@ -154,6 +167,24 @@
     if (window.JX && m.cls !== "err") window.JX.onReply(m.content);
     if (window.JX && window.JX.afterAnswer && m.cls !== "err" && m.content) { try { window.JX.afterAnswer(e, m); } catch (er) { console.error(er); } }
     void spoken;
+    if (raw && m.cls !== "err") await ordenesIA(raw);
+  }
+  /** 3.8: la IA usa las habilidades de Jarvis: hace las órdenes que escribió (las delicadas piden confirmar, como siempre) y guarda lo que vale la pena recordar. */
+  async function ordenesIA(raw) {
+    const tg = L7.tags(raw);
+    if (tg.recordar.length && D.ajustes.memoriaAuto !== false) {
+      const nombres = [].concat(...D.cursos.map((c) => c.estudiantes || []));
+      D.memoria = D.memoria || [];
+      tg.recordar.filter((r) => L7.recuerdoOk(r, nombres) && !L7.memDup(D.memoria, r)).forEach((r) => { D.memoria.push({ id: window.JD.uid(), texto: r, t: Date.now(), auto: true }); toast("🧠 Lo recordaré: " + r, 3500); });
+      save();
+    }
+    for (const o of tg.ordenes) {
+      if (!L7.ordenSegura(o)) { add("assistant", `No hice «${o}»: eso lo haces tú directamente.`, "tool"); continue; }
+      if (D.ajustes.voz) await V.idle();
+      add("assistant", "▶ " + o, "tool orden");
+      const ok = await dispatch(o, true);
+      if (!ok) add("assistant", `No sé hacer «${o}» todavía.`, "tool");
+    }
   }
 
   // ---------------------------------------------------------------- micrófono
@@ -796,7 +827,7 @@
   if ("serviceWorker" in navigator && !V.native() && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
   document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") (V.cancelListening || V.stopListening)(); if (!document.hidden && IA.warm) IA.warm(); });
   if (IA.warm) setTimeout(() => IA.warm(), 1500);
-  window.__jarvis = { handle, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
+  window.__jarvis = { handle, dispatch, renderChat, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
     getState: () => state, wake, trato, systemPrompt, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
   if (window.JX) window.JX.init(window.__jarvis);
 })();

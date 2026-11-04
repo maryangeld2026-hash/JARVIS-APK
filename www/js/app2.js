@@ -609,5 +609,5 @@
     // copia automática en Drive una vez al día si ya conectaste Google
     if (native() && D.ajustes.google.cuenta && Date.now() - (D.ajustes.google.copia || 0) > 20 * 3600e3) setTimeout(() => driveSave(false), 15000);
   }
-  window.JX = { init, intent, run, promptExtra, heard, renderClase, afterGrade, quizButtons, settings, onPick, onGroups, _: { openProjector, closeProjector, projectText, risk, student } };
+  window.JX = { init, intent, run, promptExtra, heard, renderClase, afterGrade, quizButtons, settings, onPick, onGroups, _: { openProjector, closeProjector, projectText, risk, student, driveSave } };
 })();

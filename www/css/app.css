@@ -483,3 +483,14 @@ body.ahorro *, body.ahorro *::before, body.ahorro *::after { animation: none !im
 #aj-bat .grow { flex: 1; }
 #aj-bat .bat-list { list-style: none; padding: 0; margin: 6px 0; }
 #aj-bat .bat-list li { padding: 8px 0; border-bottom: 1px solid var(--line, rgba(255,255,255,.08)); }
+
+/* 3.8 · asistente general */
+body.sin-docente .tabs, body.sin-docente .doc-only { display: none !important; }
+.convbar { display: flex; gap: 6px; align-items: center; padding: 4px 12px 0; }
+.convbar .conv-n { flex: 1; text-align: left; background: none; border: 0; color: var(--muted, #9ab); font: inherit; font-size: 13px; padding: 4px 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.convbar .conv-b { background: none; border: 1px solid var(--line, rgba(255,255,255,.12)); color: inherit; border-radius: 999px; width: 30px; height: 30px; font-size: 14px; }
+.conv-list { list-style: none; padding: 0; margin: 8px 0; }
+.conv-list li { display: flex; gap: 8px; align-items: center; padding: 9px 4px; border-bottom: 1px solid var(--line, rgba(255,255,255,.08)); cursor: pointer; }
+.conv-list li.on b { color: var(--a); }
+.conv-list .grow { flex: 1; min-width: 0; }
+.msg.orden { font-size: 13px; opacity: .85; padding: 6px 11px; }

@@ -217,7 +217,7 @@
     e.classList.add("typing"); A.setState("thinking");
     const gem = IA.proveedor() === "gemini";
     try {
-      const full = await IA.chat({ system: "Eres un asistente de investigación para una docente en Colombia. Responde en español con datos actuales y concretos" + (fondo ? ", en un informe con secciones (### ) y conclusiones" : ", breve") + ". Si algo no es seguro, dilo.",
+      const full = await IA.chat({ system: "Eres un asistente de investigación para una persona en Colombia. Responde en español con datos actuales y concretos" + (fondo ? ", en un informe con secciones (### ) y conclusiones" : ", breve") + ". Si algo no es seguro, dilo.",
         messages: [{ role: "user", content: q }], buscar: true, maxTokens: fondo ? 3500 : 1200, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
       const f = IA.fuentes();
       m.content = full + (f.length ? "\n\n**Fuentes:**\n" + f.slice(0, 6).map((x) => `- ${x.titulo} ${x.uri}`).join("\n") : gem ? "" : "\n\n*(Con ChatGPT o Claude la respuesta no busca en internet: usa lo que el modelo ya sabe.)*");
@@ -238,7 +238,7 @@
     const u = A.add("user", q); const im = mk("img", "msg-img"); im.src = url; u.e.prepend(im);
     const { m, e } = A.add("assistant", "", ""); e.classList.add("typing"); A.setState("thinking");
     try {
-      const full = await IA.chat({ system: "Eres Jarvis, asistente de una docente de matemáticas en Colombia. Responde en español; fórmulas en LaTeX entre $…$.",
+      const full = await IA.chat({ system: "Eres Jarvis, asistente personal en Colombia. Responde en español; fórmulas en LaTeX entre $…$.",
         messages: [{ role: "user", content: q, image: { mime: "image/jpeg", data: url.split(",")[1] } }], maxTokens: 2500, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
       m.content = full; e.classList.remove("typing"); e.innerHTML = A.md(full);
       A.say(L.forSpeech(full).split(/(?<=[.!?])\s+/).slice(0, 3).join(" "));
@@ -529,7 +529,7 @@
       const MAX = 60000, corto = d.texto && d.texto.length > MAX;
       const content = d.pdf ? q : `${q}\n\n--- Documento «${file.name}» ---\n${d.texto.slice(0, MAX)}${corto ? "\n[… el documento sigue; solo se leyó el comienzo]" : ""}`;
       e.textContent = "";
-      const full = await IA.chat({ system: "Eres Jarvis, asistente de una docente de matemáticas en Colombia. Te comparten un documento: respóndele sobre él en español, claro y ordenado; fórmulas en LaTeX entre $…$.",
+      const full = await IA.chat({ system: "Eres Jarvis, asistente personal en Colombia. Te comparten un documento: respóndele sobre él en español, claro y ordenado; fórmulas en LaTeX entre $…$.",
         messages: [{ role: "user", content, doc: d.pdf || null }], maxTokens: 3000, onDelta: ((pt) => (_, all) => { m.content = all; pt(all); })(painter(e)) });
       m.content = full + (corto ? "\n\n*(El documento era largo: leí las primeras páginas.)*" : "");
       e.classList.remove("typing"); e.innerHTML = A.md(m.content);

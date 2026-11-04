@@ -126,6 +126,10 @@ def main():
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(base)
         pg.wait_for_selector(".empty")
+        check(pg.evaluate("document.body.classList.contains('sin-docente')") and not pg.is_visible(".tabs button[data-tab=clase]"), "3.8: sin cursos, Jarvis arranca como asistente general (sin pestañas de clase)")
+        pg.fill("#in-texto", "activa el modo docente"); pg.press("#in-texto", "Enter"); pg.wait_for_timeout(300)
+        check(pg.is_visible(".tabs button[data-tab=clase]"), "3.8: «activa el modo docente» muestra Clase y Quices")
+        pg.evaluate("JD.load().chat = []; JD.save(); window.__jarvis.renderChat()")
         pg.screenshot(path=f"{OUT}/1-inicio.png")
 
         # sin clave: las herramientas igual funcionan

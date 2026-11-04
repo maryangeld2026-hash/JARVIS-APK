@@ -48,7 +48,7 @@ public class LugaresPlugin extends Plugin {
 
     @SuppressLint("MissingPermission")
     private void ubicar(PluginCall call) {
-        LocationServices.getFusedLocationProviderClient(getContext()).getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+        LocationServices.getFusedLocationProviderClient(getContext()).getCurrentLocation(call.getBoolean("aprox", false) ? Priority.PRIORITY_BALANCED_POWER_ACCURACY : Priority.PRIORITY_HIGH_ACCURACY, null)   // 3.8: el clima no necesita GPS (ahorra batería)
             .addOnSuccessListener((loc) -> {
                 if (loc == null) { call.reject("No pude saber dónde estás. Activa la ubicación del celular."); return; }
                 JSObject r = new JSObject(); r.put("lat", loc.getLatitude()); r.put("lng", loc.getLongitude()); r.put("precision", loc.getAccuracy()); call.resolve(r);

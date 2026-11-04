@@ -1,3 +1,32 @@
+# Jarvis para Android 3.8: tu asistente personal (y el de la clase, cuando lo necesitas)
+
+## 🧭 Un asistente para todo el día
+- **Modo docente:** cursos, notas, asistencia, quices y herramientas de la clase quedan como un módulo. Se prende y se apaga en *Ajustes › Asistente* o diciendo «activa / desactiva el modo docente». Apagado, Jarvis es solo tu asistente personal (se esconden Clase y Quices) y tus datos de la clase no se borran. Si ya tienes cursos, sigue prendido.
+- **Sugerencias según tu momento:** en horas de clase salen las de la clase; el resto del día, clima, agenda, recordatorios.
+- **El resumen de la mañana** trae el clima, tu agenda y tus pendientes; las clases, solo con el modo docente.
+
+## 🤖 La IA usa las habilidades de Jarvis
+- Pide varias cosas en una frase («tengo médico a las 3, recuérdamelo a las 2 y dime cómo estará el clima») y Jarvis las hace una por una. Llamar, enviar mensajes o responder siguen pidiendo tu confirmación; nada que borre datos lo hace la IA por su cuenta.
+- **Memoria automática:** recuerda lo importante que le cuentas (gustos, personas cercanas, fechas, rutinas). Nunca guarda claves, números de cuenta ni datos de estudiantes. Se puede apagar.
+- **Cómo te habla:** cálido, formal o como un amigo; respuestas cortas, normales o con detalles; con o sin humor; y lo que quieras agregar.
+
+## 🎙️ Te entiende mejor
+- **Corrige lo que oyó el micrófono** con tus palabras: nombres de tus contactos, tus estudiantes y cursos («siete a» → 7A), y las palabras que escribas en Ajustes (lugares, marcas). Todo pasa en el celular.
+
+## ✨ Nuevas habilidades
+- **Habilidades propias:** «cuando diga modo gimnasio, pon mi música, silencia el celular y cuenta 45 minutos». Luego dices «modo gimnasio» y lo hace todo.
+- **Órdenes programadas:** «cada lunes a las 6 de la mañana dime el clima», «de lunes a viernes a las 9 de la noche activa el modo ahorro». A la hora, Android te avisa; lo tocas y Jarvis lo hace (si está abierto, lo hace de una).
+- **Clima** sin clave: «¿va a llover hoy?», «el clima en Medellín mañana», «el clima de la semana».
+- **Varias conversaciones:** «nueva conversación sobre el viaje», «cambia a la conversación del trabajo», y el botón 💬 arriba del chat. **Buscar en el chat:** 🔍 o «busca en el chat la receta de arepas».
+- **Uso de la IA:** «¿cuánto he gastado de la IA?» y en *Ajustes › Asistente*.
+- **Copia semanal automática en tu Google Drive** (si conectaste Google), sin tus claves.
+
+## 🔋 Sin gastar más batería
+- Las órdenes programadas las avisa Android: Jarvis no queda despierto esperando.
+- El clima usa la ubicación aproximada (sin GPS) y se guarda 30 minutos (2 horas en modo ahorro).
+- La IA hace las órdenes y la memoria en la misma respuesta: no hay preguntas extra a internet.
+- Con Jarvis minimizado no corre nada de esto.
+
 # Jarvis para Android 3.7.1: gasta mucha menos batería
 
 ## 🔋 Lo que cambió por dentro

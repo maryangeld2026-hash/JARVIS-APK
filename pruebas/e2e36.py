@@ -39,7 +39,7 @@ def main():
         ctx.add_init_script(e2e.FAKE_VOICE); ctx.add_init_script(NATIVE)
         pg = ctx.new_page(); errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(base); pg.wait_for_timeout(1200)
+        pg.goto(base); pg.wait_for_timeout(1200); pg.evaluate("JD.load().ajustes.docente = true; JD.save(); document.body.classList.remove('sin-docente')")
         pg.evaluate("""(() => { const d = JD.load(); d.ajustes.seguir = false; d.ajustes.voz = true;
           d.cursos.push({ id: 'c1', nombre: '7A', estudiantes: ['Ana Rojas', 'Beto Díaz', 'Pablo Mora'] }); d.cursoActual = 'c1';
           const q = (id, t, ps) => ({ id, fecha: Date.now(), tema: t, quiz: { titulo: t, preguntas: ps.map((e, i) => ({ enunciado: e, opciones: ['a', 'b', 'c', 'd'], correcta: i % 4, explicacion: 'x' })) } });

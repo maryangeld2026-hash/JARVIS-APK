@@ -57,13 +57,13 @@
       const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(key)}`);
       S.ws = ws;
       ws.onopen = () => {
-        const sys = (A.systemPrompt ? A.systemPrompt() : "Eres Jarvis, el asistente de una docente en Colombia.") + " Estás en una conversación de voz en vivo: responde corto, natural y cálido, en español de Colombia. Si te piden algo que hace la app (temporizador, escoger un estudiante, grupos, recordatorios, pasar lista, abrir una app, llamar), usa la herramienta jarvis_orden con la orden en palabras.";
+        const sys = (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto, natural y cálido, en español de Colombia. Si te piden algo que hace la app (temporizador, escoger un estudiante, grupos, recordatorios, pasar lista, abrir una app, llamar), usa la herramienta jarvis_orden con la orden en palabras.";
         send({ setup: { model: "models/" + model,
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre && !/^[a-z]/.test(D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : "Kore" } } } },
           systemInstruction: { parts: [{ text: sys }] },
           inputAudioTranscription: {}, outputAudioTranscription: {},
-          tools: [{ functionDeclarations: [{ name: "jarvis_orden", description: "Hace una orden de la app Jarvis del celular (temporizador, escoger estudiante, hacer grupos, recordatorios, pasar lista, quiz, abrir una app, llamar a un contacto…). Devuelve lo que respondió la app.",
-            parameters: { type: "OBJECT", properties: { orden: { type: "STRING", description: "La orden en español, como la diría la profe. Ej.: «pon 5 minutos», «escoge un estudiante de 7A»." } }, required: ["orden"] } }] }] } });
+          tools: [{ functionDeclarations: [{ name: "jarvis_orden", description: "Hace una orden de la app Jarvis del celular (recordatorios, alarmas, temporizador, clima, abrir una app, llamar o escribir a un contacto, linterna, volumen; y de clase: escoger estudiante, grupos, pasar lista, quiz…). Devuelve lo que respondió la app.",
+            parameters: { type: "OBJECT", properties: { orden: { type: "STRING", description: "La orden en español, como la diría la persona. Ej.: «pon 5 minutos», «escoge un estudiante de 7A»." } }, required: ["orden"] } }] }] } });
       };
       ws.onmessage = async (ev) => { let j; try { j = JSON.parse(typeof ev.data === "string" ? ev.data : await ev.data.text()); } catch (e) { return; } onMsg(j); };
       ws.onerror = () => estado("Se perdió la conexión.");

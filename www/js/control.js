@@ -204,7 +204,9 @@
     const p = [];
     const h = now.getHours();
     p.push(`${h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches"}, ${A.trato ? A.trato() : "profe"}. Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}.`);
-    if (c.hoy.length) p.push(`Tienes ${c.hoy.length} clase${c.hoy.length > 1 ? "s" : ""}: ${c.hoy.map((x) => `${x.que} a las ${L3.hhmm(x.ini)}`).join(", ")}.`);
+    const doc = D.ajustes.docente !== false;
+    if (window.JX && window.JX.climaHoy) { try { const cl = await Promise.race([window.JX.climaHoy(), new Promise((r) => setTimeout(() => r(""), 4000))]); if (cl) p.push(cl); } catch (e) { /* sin clima */ } }
+    if (!doc) { /* sin clases */ } else if (c.hoy.length) p.push(`Tienes ${c.hoy.length} clase${c.hoy.length > 1 ? "s" : ""}: ${c.hoy.map((x) => `${x.que} a las ${L3.hhmm(x.ini)}`).join(", ")}.`);
     else if (s.length) p.push("Hoy no tienes clases en tu horario.");
     const C = plug("Calendario");
     if (C && !(D.ajustes.google || {}).cuenta) {
@@ -221,9 +223,9 @@
     const comp = (D.compromisos || []).filter((x) => !x.hecho);
     if (comp.length) p.push(`Tienes ${comp.length} compromiso${comp.length > 1 ? "s" : ""} pendiente${comp.length > 1 ? "s" : ""}${comp.length <= 3 ? ": " + comp.map((x) => x.texto).join("; ") : ""}.`);
     let riesgo = 0;
-    D.cursos.forEach((cu) => { if (cu.notas && cu.notas.actividades && cu.notas.actividades.length) { try { riesgo += L2.courseStats(cu, D.ajustes.escala).riesgo.length; } catch (e) { /* nada */ } } });
+    if (doc) D.cursos.forEach((cu) => { if (cu.notas && cu.notas.actividades && cu.notas.actividades.length) { try { riesgo += L2.courseStats(cu, D.ajustes.escala).riesgo.length; } catch (e) { /* nada */ } } });
     if (riesgo) p.push(`${riesgo} estudiante${riesgo > 1 ? "s van" : " va"} en riesgo.`);
-    if (D.ajustes.periodoFin) { const d = Math.ceil((D.ajustes.periodoFin - Date.now()) / 864e5); if (d > 0 && d <= 21) p.push(`Faltan ${d} días para cerrar el periodo.`); }
+    if (doc && D.ajustes.periodoFin) { const d = Math.ceil((D.ajustes.periodoFin - Date.now()) / 864e5); if (d > 0 && d <= 21) p.push(`Faltan ${d} días para cerrar el periodo.`); }
     return p.join(" ");
   }
   async function routineNow() { const t = await summary(); R("☀️ " + t, "tool", t); }

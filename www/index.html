@@ -187,11 +187,11 @@
       <label class="lbl check"><input type="checkbox" id="a-voz"> Responder en voz alta</label>
       <label class="lbl check"><input type="checkbox" id="a-seguir"> Conversación continua (vuelve a escuchar después de responder)</label>
 
-      <h3 class="sub">Tú y tu colegio</h3>
+      <h3 class="sub">Tú</h3>
       <label class="lbl" for="a-nombre">¿Cómo te llamo?</label>
-      <input class="inp" id="a-nombre" type="text" placeholder="Profe">
-      <label class="lbl">Escala de desempeño (de 1 a 5)</label>
-      <div class="row wrap esc">
+      <input class="inp" id="a-nombre" type="text" placeholder="Tu nombre">
+      <label class="lbl doc-only">Escala de desempeño (de 1 a 5) · modo docente</label>
+      <div class="row wrap esc doc-only">
         <label>Básico desde <input class="inp tiny" id="a-basico" type="number" min="1" max="5" step="0.1"></label>
         <label>Alto desde <input class="inp tiny" id="a-alto" type="number" min="1" max="5" step="0.1"></label>
         <label>Superior desde <input class="inp tiny" id="a-superior" type="number" min="1" max="5" step="0.1"></label>
@@ -234,11 +234,12 @@
 <script src="js/logica4.js"></script>
 <script src="js/logica5.js"></script>
 <script src="js/logica6.js"></script>
+<script src="js/logica7.js"></script>
 <script src="js/datos.js"></script>
 <script>
 /* 3.7: la app arranca cuando los datos están listos (en el celular se descifran primero). */
 (function () {
-  var files = ["js/voz.js", "js/ia.js", "js/pdf.js", "js/app2.js", "js/hud.js", "js/habilidades.js", "js/mas.js", "js/omr.js", "js/control.js", "js/extra.js", "js/live.js", "js/ahorro.js", "js/app.js"];
+  var files = ["js/voz.js", "js/ia.js", "js/pdf.js", "js/app2.js", "js/hud.js", "js/habilidades.js", "js/mas.js", "js/omr.js", "js/control.js", "js/extra.js", "js/live.js", "js/ahorro.js", "js/general.js", "js/app.js"];
   function next(i) { if (i >= files.length) return; var s = document.createElement("script"); s.src = files[i]; s.async = false; s.onload = function () { next(i + 1); }; s.onerror = function () { console.error("No cargó " + files[i]); next(i + 1); }; document.body.appendChild(s); }
   JD.ready().catch(function (e) { console.error(e); }).then(function () { next(0); });
 })();
