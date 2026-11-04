@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     packagingOptions { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }
@@ -8,8 +9,8 @@ android {
         applicationId "co.jarvis.docente"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 22
-        versionName "3.11.1"
+        versionCode 23
+        versionName "3.12.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // solo los procesadores de los celulares Android (el motor de voz pesa ~10 MB por cada uno)
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
@@ -29,6 +30,11 @@ android {
             keyPassword 'jarvis-docente'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    kotlinOptions { jvmTarget = '21' }
     buildTypes {
         debug {
             signingConfig signingConfigs.jarvis
@@ -62,6 +68,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-mlkit-document-scanner:16.0.0'
     implementation 'com.google.mlkit:text-recognition:16.0.1'
     implementation 'com.google.mlkit:image-labeling:17.0.9'
+    // 3.12: Gemma 4 en el celular (LiteRT-LM de Google)
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:latest.release'
     // 3.6: recordatorios por lugar
     implementation 'com.google.android.gms:play-services-location:21.3.0'
     testImplementation "junit:junit:$junitVersion"

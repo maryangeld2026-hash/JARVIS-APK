@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.11.1";
+  const VERSION = "3.12";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -691,6 +691,10 @@
   }
   // ---------------------------------------------------------------- 3.2: IA de respaldo e IA del celular
   const LOCALES = {
+    gemma4e2b: { nombre: "Gemma 4 E2B de Google (2,6 GB · celulares con 8 GB de RAM o más) · recomendada", archivo: "gemma-4-E2B-it.litertlm", ramMin: 7000, mb: 2600,
+      url: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm" },
+    gemma4e4b: { nombre: "Gemma 4 E4B de Google (3,7 GB · la más inteligente, celulares con 12 GB de RAM)", archivo: "gemma-4-E4B-it.litertlm", ramMin: 10500, mb: 3700,
+      url: "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm" },
     qwen05: { nombre: "Liviana · Qwen 2.5 0,5B (550 MB)", archivo: "Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
       url: "https://huggingface.co/litert-community/Qwen2.5-0.5B-Instruct/resolve/main/Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task" },
     qwen15: { nombre: "Mejor · Qwen 2.5 1,5B (1,6 GB, celulares con 6 GB de RAM o más)", archivo: "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
@@ -711,7 +715,7 @@
     $("#a-local-box").hidden = !showLocal;
     const ms = $("#a-local-modelo");
     if (!ms.options.length) Object.entries(LOCALES).forEach(([k, x]) => ms.append(new Option(x.nombre, k)));
-    ms.value = A.localModelo || "qwen05";
+    ms.value = LOCALES[A.localModelo] ? A.localModelo : "qwen05";
     if (showLocal) localStatus();
   }
   async function localStatus() {
@@ -719,7 +723,7 @@
     if (!P) { st.textContent = "La IA del celular funciona en la app instalada (el APK)."; return; }
     try {
       const e = await P.estado();
-      st.textContent = e.listo ? `Lista en este celular (${e.nombre.split("_")[0]}, ${e.mb} MB). Funciona sin internet.` : `No está descargada. Espacio libre: ${(e.libreMb / 1024).toFixed(1).replace(".", ",")} GB.`;
+      st.textContent = e.listo ? `Lista en este celular (${e.nombre.replace(/\.litertlm$/, "").replace(/-it$/, "").split("_")[0]}, ${(e.mb / 1024).toFixed(1).replace(".", ",")} GB). Funciona sin internet.` : `No está descargada. Espacio libre: ${(e.libreMb / 1024).toFixed(1).replace(".", ",")} GB.`;
       $("#btn-local-borrar").hidden = !e.listo; $("#btn-local-probar").hidden = !e.listo;
       $("#btn-local-bajar").textContent = e.listo ? "Cambiar modelo" : "Descargar";
     } catch (er) { st.textContent = er.message || String(er); }
@@ -731,6 +735,14 @@
     if (bajando) { P.cancelar(); return; }
     if (!navigator.onLine) return toast("Para descargarla necesitas internet (mejor wifi). Después funciona sin internet.", 5000);
     const m = LOCALES[A.localModelo || "qwen05"];
+    if (m.ramMin && P.memoria) {                                 // 3.12: Gemma 4 necesita memoria (RAM) y espacio
+      try {
+        const mem = await P.memoria();
+        if (mem.discoMb < m.mb + 500) return toast(`No hay espacio: se necesitan ${((m.mb + 500) / 1024).toFixed(1).replace(".", ",")} GB libres y tienes ${(mem.discoMb / 1024).toFixed(1).replace(".", ",")} GB.`, 7000);
+        if (mem.totalMb < m.ramMin && !confirm(`Tu celular tiene ${(mem.totalMb / 1024).toFixed(0)} GB de RAM y este modelo pide ${Math.round(m.ramMin / 1024 + 0.5)} GB. Puede ir muy lento o cerrarse. ${A.localModelo === "gemma4e4b" ? "Te recomiendo Gemma 4 E2B. " : ""}¿Descargarlo igual?`)) return;
+      } catch (e) { /* sigue */ }
+      if (!confirm(`Son ${(m.mb / 1024).toFixed(1).replace(".", ",")} GB: descárgalo con wifi y con Jarvis abierto. Si se corta, sigue donde iba. ¿Empiezo?`)) return;
+    }
     bajando = true; $("#btn-local-bajar").textContent = "Cancelar";
     const h = await window.JON(P, "progreso", (d) => { st.textContent = `Descargando… ${d.p >= 0 ? d.p + " % · " : ""}${d.mb} MB (puedes seguir usando Jarvis)`; });
     try { await P.descargar({ url: m.url, nombre: m.archivo }); toast("Listo: la IA del celular quedó descargada. Ya funciona sin internet.", 5000); if (!A.respaldo && A.proveedor !== "local") { A.respaldo = "local"; save(true); } }

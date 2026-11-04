@@ -4,7 +4,7 @@
   const KEY = "jarvis.android.v1";
   const DEF = () => ({
     ajustes: { proveedor: "gemini", claves: { gemini: "", openai: "", claude: "", groq: "", openrouter: "", deepseek: "", mistral: "", propio: "" }, modelo: "", modeloAuto: {},
-      respaldo: "", propioUrl: "", localModelo: "qwen05", velocidad: 1.0, tono: 1.0,
+      respaldo: "", propioUrl: "", localModelo: "gemma4e2b", velocidad: 1.0, tono: 1.0,
       voz: true, seguir: true, nombre: "", escala: { basico: 3.0, alto: 4.0, superior: 4.6 } },
     cursos: [], cursoActual: "", recordatorios: [], quices: [], fotos: [], chat: [], ultimoTiempo: 300,
   });

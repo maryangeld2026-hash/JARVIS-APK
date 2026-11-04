@@ -102,6 +102,9 @@
         </service>
         <!-- 3.6: recordatorios por lugar -->
         <receiver android:name=".LugarReceiver" android:exported="false" />
+        <!-- 3.12: Gemma 4 con la GPU (si el celular la tiene) -->
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
 
         <!-- 3.9: disparadores automáticos (Bluetooth, cargador) -->
         <receiver android:name=".DisparoReceiver" android:exported="true">

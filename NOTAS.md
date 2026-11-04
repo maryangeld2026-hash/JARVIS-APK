@@ -1,3 +1,11 @@
+# Jarvis para Android 3.12: Gemma 4 dentro del celular
+
+- **Gemma 4 de Google, sin internet:** en *Ajustes › IA de respaldo › IA del celular* ahora puedes escoger **Gemma 4 E2B** (2,6 GB, celulares con 8 GB de RAM o más, recomendada) o **Gemma 4 E4B** (3,7 GB, la más inteligente, celulares con 12 GB de RAM). Corre con LiteRT-LM de Google: entiende la conversación completa, las instrucciones de Jarvis y responde por partes.
+- Antes de descargar, Jarvis revisa la memoria (RAM) y el espacio de tu celular y te avisa si el modelo es muy grande. La descarga sigue donde iba si se corta (mejor con wifi).
+- Usa la GPU solo si el celular tiene 12 GB de RAM o más; si no, el procesador (más estable).
+- **Batería:** el modelo se carga al usarlo y se libera solo a los 3 minutos sin usarse. Mientras responde, el celular trabaja fuerte (como un juego): úsalo como respaldo sin internet, no como IA principal todo el día.
+- Puedes ponerla también como IA principal (*Ajustes › Inteligencia artificial › IA del celular*).
+
 # Jarvis para Android 3.11.1: batería
 
 ## 🔋 Diagnóstico de batería
