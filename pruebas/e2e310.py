@@ -101,9 +101,14 @@ def main():
         check("Arroz blanco" in pg.inner_text("#chat") and "pantalla on" in logs(), "modo cocina: receta con ingredientes (pantalla prendida)")
         pg.wait_for_timeout(1500)
         check(any("Paso 1 de 3: Lava el arroz" in x for x in said()), "modo cocina: «siguiente» por voz, sin tocar")
-        say("siguiente", 300); say("siguiente", 800)
+        say("siguiente", 600); say("siguiente", 800)
+        try: pg.wait_for_function("window.__said.some(x => x.includes('Paso 3 de 3')) && (JD.load().timers || []).some(t => t.nombre === 'paso 3')", timeout=10000)
+        except Exception: pass
         check(any("Paso 3 de 3" in x for x in said()) and pg.evaluate("(JD.load().timers || []).some(t => t.nombre === 'paso 3')"), "modo cocina: el paso con tiempo pone el temporizador solo")
-        say("repite", 300); check(sum(1 for x in said() if "Paso 3 de 3" in x) >= 2, "modo cocina: repite")
+        say("repite", 300)
+        try: pg.wait_for_function("window.__said.filter(x => x.includes('Paso 3 de 3')).length >= 2", timeout=8000)
+        except Exception: pass
+        check(sum(1 for x in said() if "Paso 3 de 3" in x) >= 2, "modo cocina: repite")
         say("terminar", 300); check("pantalla off" in logs() and pg.evaluate("!window.JX._casa.estado().cocina"), "modo cocina: terminar (apaga la pantalla prendida)")
         # pantalla
         say("¿qué dice esta pantalla?", 1500)
