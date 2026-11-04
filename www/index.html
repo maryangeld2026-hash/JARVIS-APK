@@ -226,6 +226,19 @@
 <div class="toast" id="toast" hidden></div>
 <div class="alarm" id="alarma" hidden><div><b id="alarma-t">¡Se acabó el tiempo!</b><button class="btn primary" id="btn-alarma" type="button">Listo</button></div></div>
 
+<script>
+/* 3.10: los errores recientes, para «Reportar un problema» (se limpian de datos personales al armar el informe) */
+(function () {
+  var K = "jarvis.errores", l = [];
+  try { l = JSON.parse(localStorage.getItem(K) || "[]"); } catch (e) { l = []; }
+  var t0 = 0;
+  function add(m) { m = String(m || "").slice(0, 300); if (!m) return; l.push({ t: Date.now(), m: m }); if (l.length > 60) l = l.slice(-60); clearTimeout(t0); t0 = setTimeout(function () { try { localStorage.setItem(K, JSON.stringify(l)); } catch (e) {} }, 2000); }
+  window.__jerr = { add: add, lista: function () { return l.slice(); }, borrar: function () { l = []; try { localStorage.removeItem(K); } catch (e) {} } };
+  window.addEventListener("error", function (e) { add((e.message || "error") + (e.filename ? " @" + String(e.filename).split("/").pop() + ":" + e.lineno : "")); });
+  window.addEventListener("unhandledrejection", function (e) { var r = e.reason; add("promesa: " + (r && (r.message || r)) ); });
+  var ce = console.error; console.error = function () { try { add([].map.call(arguments, function (a) { return a && a.message ? a.message : String(a); }).join(" ")); } catch (e) {} return ce.apply(console, arguments); };
+})();
+</script>
 <script src="vendor/katex/katex.min.js"></script>
 <script src="js/mdmath.js"></script>
 <script src="js/logica.js"></script>
@@ -236,13 +249,15 @@
 <script src="js/logica6.js"></script>
 <script src="js/logica7.js"></script>
 <script src="js/logica8.js"></script>
+<script src="js/logica9.js"></script>
 <script src="js/datos.js"></script>
 <script>
 /* 3.7: la app arranca cuando los datos están listos (en el celular se descifran primero). */
 (function () {
-  var files = ["js/voz.js", "js/ia.js", "js/pdf.js", "js/app2.js", "js/hud.js", "js/habilidades.js", "js/mas.js", "js/omr.js", "js/control.js", "js/extra.js", "js/live.js", "js/ahorro.js", "js/general.js", "js/vida.js", "js/app.js"];
-  function next(i) { if (i >= files.length) return; var s = document.createElement("script"); s.src = files[i]; s.async = false; s.onload = function () { next(i + 1); }; s.onerror = function () { console.error("No cargó " + files[i]); next(i + 1); }; document.body.appendChild(s); }
-  JD.ready().catch(function (e) { console.error(e); }).then(function () { next(0); });
+  var files = ["js/voz.js", "js/ia.js", "js/pdf.js", "js/app2.js", "js/hud.js", "js/habilidades.js", "js/mas.js", "js/omr.js", "js/control.js", "js/extra.js", "js/live.js", "js/ahorro.js", "js/general.js", "js/vida.js", "js/casa.js", "js/app.js"];
+  /* 3.10: se piden todos a la vez y el navegador los corre en orden (async = false): arranca más rápido */
+  function cargar() { files.forEach(function (f) { var s = document.createElement("script"); s.src = f; s.async = false; s.onerror = function () { console.error("No cargó " + f); }; document.body.appendChild(s); }); }
+  JD.ready().catch(function (e) { console.error(e); }).then(cargar);
 })();
 </script>
 </body>

@@ -367,24 +367,27 @@
   }
 
   // ======================================================================== GOOGLE
-  let gToken = null, gExp = 0;
-  async function google() {
-    if (gToken && Date.now() < gExp) return gToken;
+  let gToken = null, gExp = 0, gConGmail = false;
+  const GMAIL = ["https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/gmail.send"];
+  /** gmail: 3.10, pide también los permisos de Gmail (solo si activaste el correo). */
+  async function google(gmail) {
+    gmail = gmail || !!(D.ajustes.google && D.ajustes.google.gmail);
+    if (gToken && Date.now() < gExp && (!gmail || gConGmail)) return gToken;
     const SL = native() && plug("SocialLogin");
     const cid = (D.ajustes.google.clienteWeb || "").trim();
     if (!SL) throw new Error("Google funciona en la app instalada (el APK), no en el navegador.");
     if (!cid) throw new Error("Falta conectar Google: en Ajustes › Google pon el «ID de cliente web» (la guía está en el README del proyecto).");
     await SL.initialize({ google: { webClientId: cid, mode: "online" } });
-    const r = await SL.login({ provider: "google", options: { scopes: L2.SCOPES } });
+    const r = await SL.login({ provider: "google", options: { scopes: gmail ? L2.SCOPES.concat(GMAIL) : L2.SCOPES } });
     const res = r && r.result;
     const tok = res && res.accessToken && (res.accessToken.token || res.accessToken);
     if (!tok || typeof tok !== "string") throw new Error("Google no dio permiso para el calendario, Classroom y Forms. Vuelve a conectar y acepta los permisos.");
-    gToken = tok; gExp = Date.now() + 50 * 60000;
+    gToken = tok; gExp = Date.now() + 50 * 60000; gConGmail = gmail;
     if (res.profile && res.profile.email) { D.ajustes.google.cuenta = res.profile.email; save(); }
     return tok;
   }
-  async function gfetch(url, opt = {}) {
-    const tok = await google();
+  async function gfetch(url, opt = {}, gmail) {
+    const tok = await google(gmail);
     const res = await fetch(url, Object.assign({}, opt, { headers: Object.assign({ Authorization: "Bearer " + tok }, opt.headers || {}) }));
     if (res.status === 401) { gToken = null; throw new Error("Se venció el permiso de Google. Intenta de nuevo."); }
     const j = await res.json().catch(() => ({}));
@@ -609,5 +612,5 @@
     // copia automática en Drive una vez al día si ya conectaste Google
     if (native() && D.ajustes.google.cuenta && Date.now() - (D.ajustes.google.copia || 0) > 20 * 3600e3) setTimeout(() => driveSave(false), 15000);
   }
-  window.JX = { init, intent, run, promptExtra, heard, renderClase, afterGrade, quizButtons, settings, onPick, onGroups, _: { openProjector, closeProjector, projectText, risk, student, driveSave } };
+  window.JX = { init, intent, run, promptExtra, heard, renderClase, afterGrade, quizButtons, settings, onPick, onGroups, _: { openProjector, closeProjector, projectText, risk, student, driveSave, google, gfetch } };
 })();

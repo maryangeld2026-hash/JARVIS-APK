@@ -82,6 +82,46 @@ public class TelefonoPlugin extends Plugin {
         JSObject r = new JSObject(); r.put("lista", out); call.resolve(r);
     }
 
+    /** 3.10: «No molestar» encendido o apagado (si diste el permiso; si no, abre el ajuste). {on} → {ok} */
+    @PluginMethod
+    public void noMolestar(PluginCall call) {
+        android.app.NotificationManager nm = (android.app.NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        JSObject r = new JSObject();
+        if (nm == null || !nm.isNotificationPolicyAccessGranted()) {
+            try { getContext().startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
+            r.put("ok", false); call.resolve(r); return;
+        }
+        nm.setInterruptionFilter(call.getBoolean("on", true) ? android.app.NotificationManager.INTERRUPTION_FILTER_PRIORITY : android.app.NotificationManager.INTERRUPTION_FILTER_ALL);
+        r.put("ok", true); call.resolve(r);
+    }
+
+    /** 3.10: el brillo de la pantalla {nivel: 0–100} (Android pide un permiso especial la primera vez). */
+    @PluginMethod
+    public void brillo(PluginCall call) {
+        JSObject r = new JSObject();
+        if (android.os.Build.VERSION.SDK_INT >= 23 && !Settings.System.canWrite(getContext())) {
+            try { getContext().startActivity(new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:" + getContext().getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
+            r.put("ok", false); call.resolve(r); return;
+        }
+        try {
+            int n = Math.max(1, Math.min(100, call.getInt("nivel", 20)));
+            Settings.System.putInt(getContext().getContentResolver(), Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+            Settings.System.putInt(getContext().getContentResolver(), Settings.System.SCREEN_BRIGHTNESS, Math.round(n * 2.55f));
+            r.put("ok", true);
+        } catch (Exception e) { r.put("ok", false); }
+        call.resolve(r);
+    }
+
+    /** 3.10: el texto de la pantalla que estabas viendo cuando llamaste a Jarvis: {app, texto, t, activo} */
+    @PluginMethod
+    public void pantalla(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("activo", ControlServicio.instancia != null);
+        r.put("app", ControlServicio.capApp); r.put("texto", ControlServicio.capTexto); r.put("t", ControlServicio.capT);
+        if (call.getBoolean("borrar", false)) { ControlServicio.capTexto = ""; ControlServicio.capApp = ""; ControlServicio.capT = 0; }
+        call.resolve(r);
+    }
+
     /** 3.9: los cumpleaños guardados en tus contactos: {lista:[{nombre, fecha}]} (fecha «--MM-DD» o «AAAA-MM-DD»). */
     @PluginMethod
     public void cumpleanos(PluginCall call) {

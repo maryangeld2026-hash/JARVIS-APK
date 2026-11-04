@@ -76,7 +76,12 @@
     clearTimeout(timer);
     const w = () => { if (llave) return escribir(); try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) { console.warn("No se pudo guardar", e); } return Promise.resolve(); };
     if (now) return w();
-    timer = setTimeout(w, 150);
+    timer = setTimeout(w, 600);                                 // 3.10: varias escrituras seguidas → una sola (más rápido, menos batería)
+  }
+  // 3.10: al salir de la app o apagar la pantalla, se guarda de una vez
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => { if (document.hidden && timer) save(true); });
+    window.addEventListener("pagehide", () => { if (timer) save(true); });
   }
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   function backup() {

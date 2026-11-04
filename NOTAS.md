@@ -1,3 +1,49 @@
+# Jarvis para Android 3.10: más útil, más rápido
+
+## ⚡ Más rápido y con menos batería
+- **Arranca más rápido:** las partes de la app se cargan todas a la vez (antes, una por una).
+- **Guarda menos veces:** varios cambios seguidos se guardan (y cifran) en una sola escritura; al salir de la app se guarda de una vez.
+- Todo lo nuevo lo avisa Android (SMS, Bluetooth, pagos, diario): nada queda corriendo con Jarvis minimizado.
+
+## 🚗 ¿Dónde dejé el carro?
+- «Mi carro es el Bluetooth Mazda»: cada vez que apagas el carro, Android guarda dónde quedó. «¿Dónde dejé el carro?» → hace cuánto, a qué distancia y «🚶 Llévame caminando». Sin Bluetooth: «guarda dónde parqueé».
+
+## 📍 Encontrar el celular
+- «Activa encontrar mi celular con la clave girasol». Si lo pierdes, desde otro celular le mandas un SMS: **Jarvis girasol**. Suena fuerte aunque esté en silencio y le responde a quien escribió con la ubicación. Sin la clave exacta no hace nada.
+
+## 💳 Pagos y suscripciones
+- «La luz se paga el 15», «Netflix cada mes el 3 por 45 mil». Te avisa 2 días antes y ese día. «Ya pagué la luz» (si tiene valor, queda en tus gastos), «mis pagos», «borra el pago de Netflix».
+
+## 🌙 Rutina de la noche
+- «Buenas noches» (o «buenas noches, despiértame a las 6»): te dice qué tienes mañana (agenda, recordatorios, clases, pagos, cumpleaños y el clima), pone la alarma, activa «No molestar» y baja el brillo. «Buenos días» apaga el «No molestar».
+
+## 👩‍🍳 Modo cocina
+- «Cocinemos arroz con pollo para 4 personas»: ingredientes y luego paso a paso, sin tocar la pantalla: «siguiente», «anterior», «repite», «ingredientes», «terminar». Los pasos con tiempo ponen su temporizador solos. La pantalla queda prendida solo mientras cocinas.
+
+## 📱 «¿Qué dice esta pantalla?»
+- Llama a Jarvis desde cualquier app (burbuja, botón de asistente, botón de la cortina o «Jarvis») y pregúntale: «¿qué dice esta pantalla?», «explícame esto», «ayúdame a responder este mensaje» o «léeme la pantalla». Usa el control por voz (Accesibilidad): solo copia la pantalla en ese momento, nunca lee contraseñas, y lo que tiene nombres de estudiantes no va a la IA.
+
+## 📧 Gmail
+- «¿Tengo correos nuevos?», «resume mis correos de hoy», «léeme el correo de Carolina», «respóndele al correo de Carolina que sí» (pide confirmar). Usa tu Google conectado; hay que habilitar la «Gmail API» en tu proyecto de Google Cloud.
+
+## 📔 Diario y ánimo
+- «Querido diario, …» u «hoy fue un día…»: lo guarda con tu ánimo (lo calcula el celular, sin IA). «¿Cómo he estado esta semana?», «analiza mi diario». Opcional: que te pregunte cada noche a una hora.
+
+## 🗣️ Practicar idiomas
+- «Practiquemos inglés» (francés, portugués…): conversación en vivo con un profesor que te corrige con cariño.
+
+## 💱 Conversor
+- «¿Cuánto son 50 dólares?», «100 euros a pesos», «convierte 5 millas a km», «2 libras a kilos», «100 Fahrenheit a Celsius», «¿qué hora es en Madrid?».
+
+## 🏠 Casa inteligente
+- Con Home Assistant (*Ajustes › Casa*): «prende la luz de la sala», «apaga el ventilador», «¿está abierta la puerta del garaje?». También enlaces de IFTTT, Tuya u otros: «activa el calentador».
+
+## ➕ Botón en la cortina
+- *Ajustes › Más › Botón «Jarvis» en la cortina*: lo tocas desde cualquier pantalla y Jarvis te escucha.
+
+## 🛠️ Reportar un problema
+- «Reportar un problema» o el botón en *Ajustes › Más*: arma un informe de los errores recientes, sin nombres, claves ni números, para compartirlo con quien te ayuda con la app.
+
 # Jarvis para Android 3.9: tu día a día
 
 ## 💸 Plata
@@ -39,7 +85,7 @@
 - «Jarvis, emergencia»: te ofrece enviar tu ubicación por SMS a tus contactos de confianza (los escribes en *Ajustes › Vida diaria*) o llamar al 123. Solo envía si dices «sí» o tocas el botón.
 
 ## ⏲ Temporizadores con nombre
-- «Pon 10 minutos para el arroz y…», «pon 25 minutos para el horno», «¿cuánto le falta al arroz?», «cancela el del horno». Salen en el panel de arriba y Android te avisa aunque Jarvis esté cerrado.
+- «Pon 10 minutos para el arroz», «pon 25 minutos para el horno», «¿cuánto le falta al arroz?», «cancela el del horno». Salen en el panel de arriba y Android te avisa aunque Jarvis esté cerrado.
 
 ## 🎓 Modo docente
 - **Planeador semanal:** «planea mi semana de clases (de 7A) sobre fracciones»: arma la semana con tu horario y la guarda en Material (Word, PDF o compartir). Las rúbricas siguen con «hazme una rúbrica para…».

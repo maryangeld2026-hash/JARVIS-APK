@@ -155,6 +155,11 @@ def main():
         say("modo intérprete con inglés", 4500)
         check(live["setup"] and "intérprete en vivo entre español y inglés" in json.dumps(live["setup"]["systemInstruction"], ensure_ascii=False), "intérprete: conversación en vivo con instrucción de traducir")
         if pg.is_visible("#live-sh"): pg.click("#live-sh >> text=Colgar"); pg.wait_for_timeout(300)
+        # 3.10: practicar idiomas
+        live["setup"] = None
+        say("practiquemos inglés", 4500)
+        check(live["setup"] and "profesor de inglés" in json.dumps(live["setup"]["systemInstruction"], ensure_ascii=False), "practicar inglés en vivo")
+        if pg.is_visible("#live-sh"): pg.click("#live-sh >> text=Colgar"); pg.wait_for_timeout(300)
         # 3.7.1: ahorro de batería
         say("modo ahorro", 400)
         check(pg.evaluate("document.body.classList.contains('ahorro') && JD.load().ajustes.ahorroActivo"), "modo ahorro: se activa con la voz")

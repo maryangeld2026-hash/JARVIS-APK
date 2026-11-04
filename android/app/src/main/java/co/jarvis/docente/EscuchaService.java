@@ -240,6 +240,7 @@ public class EscuchaService extends Service {
 
     private void despertar(String resto) {
         pausado = true;
+        ControlServicio.capturar();                                   // 3.10: lo que estabas viendo, por si preguntas «¿qué dice esta pantalla?»
         main.post(() -> {
             aviso("En pausa mientras conversamos");
             boolean puede = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this);

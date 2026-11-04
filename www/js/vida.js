@@ -205,7 +205,7 @@
   async function syncDisparadores() {
     const P = plug("Disparadores");
     const rs = (D.disparadores || []).filter((r) => /^(?:bt|carga)/.test(r.tipo)).map((r) => ({ tipo: r.tipo, dispositivo: r.dispositivo || "", frase: r.frase }));
-    if (P) { try { await P.guardar({ reglas: rs, abrir: D.ajustes.dispAbrir !== false }); } catch (e) { /* nada */ } }
+    if (P) { try { await P.guardar({ reglas: rs, abrir: D.ajustes.dispAbrir !== false, carro: D.ajustes.carroBt || ((D.disparadores || []).find((r) => r.tipo === "bt_on" && /conduccion/.test(r.frase) && r.dispositivo) || {}).dispositivo || "" }); } catch (e) { /* nada */ } }
   }
   async function runDisp(it) {
     const pasos = L7.pasos(it.accion);
@@ -644,5 +644,5 @@
     window.JEVERY(10 * 60000, () => revisarBanco());
     const callar = $("#btn-callar"); if (callar) callar.addEventListener("click", () => { lectura++; });
   };
-  X._vida = { leer, leerUrl, leerCompartido, recibo, tarjeta, queEs, notas, noticias, titulares, emergencia, enviarEmergencia, anotar, revisarBanco, runLista, extrasHoy, syncDisparadores, tickTimers, conduccion, llego, perdi };
+  X._vida = { pick, http, cancelar, programar, timers, leer, leerUrl, leerCompartido, recibo, tarjeta, queEs, notas, noticias, titulares, emergencia, enviarEmergencia, anotar, revisarBanco, runLista, extrasHoy, syncDisparadores, tickTimers, conduccion, llego, perdi };
 })();
