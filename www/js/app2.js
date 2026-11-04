@@ -498,9 +498,11 @@
   }
 
   // ======================================================================== MANOS LIBRES Y BURBUJA
-  let hfOn = false, hfLoop = null;
+  let hfOn = false, hfLoop = null, hfUso = 0;
+  const HF_MAX = 20 * 60000;                                    // 3.11.1: sin órdenes en 20 minutos, manos libres se apaga solo
+  document.addEventListener("visibilitychange", () => { if (!hfOn) return; clearTimeout(hfLoop); if (document.hidden) N.keepAwake(false); else { N.keepAwake(true); hfUso = Date.now(); hfLoop = setTimeout(tickHF, 600); } });
   function setHandsFree(on) {
-    D.ajustes.manosLibres = !!on; save(); hfOn = !!on;
+    D.ajustes.manosLibres = !!on; save(); hfOn = !!on; hfUso = Date.now();
     document.body.classList.toggle("manoslibres", hfOn);
     const p = $("#hf-pill"); if (p) p.hidden = !hfOn;
     N.keepAwake(hfOn);
@@ -510,10 +512,13 @@
   async function tickHF() {
     if (!hfOn) return;
     if (window.__jarvisFondo) { hfLoop = setTimeout(tickHF, 3000); return; }     // 2.2: ya escucha el servicio de fondo
-    if (document.hidden || A.getState() !== "idle" || V.isSpeaking()) { hfLoop = setTimeout(tickHF, 1200); return; }
+    if (document.hidden) return;                                // 3.11.1: minimizado no se queda dando vueltas (vuelve al regresar)
+    if (Date.now() - hfUso > HF_MAX) { setHandsFree(false); A.toast("Apagué manos libres: llevabas 20 minutos sin pedirme nada (así cuido la batería).", 6000); return; }
+    if (A.getState() !== "idle" || V.isSpeaking()) { hfUso = Date.now(); hfLoop = setTimeout(tickHF, 1200); return; }
     hfMode = true;
     await A.listen(true);
     hfMode = false;
+    if (A.getState() !== "idle") hfUso = Date.now();
     hfLoop = setTimeout(tickHF, 400);
   }
   let hfMode = false;

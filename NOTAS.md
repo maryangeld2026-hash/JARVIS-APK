@@ -1,3 +1,13 @@
+# Jarvis para Android 3.11.1: batería
+
+## 🔋 Diagnóstico de batería
+- «Diagnóstico de batería» (o *Ajustes › Batería › Diagnóstico*): cuánto tiempo estuvo el micrófono abierto por «Jarvis» en segundo plano, cuánto trabajó el reconocedor, cuánto tiempo mantuvo Jarvis la pantalla encendida, cuánto estuvo abierto en pantalla, cuánto duraron las conversaciones en vivo, y **cuánto baja tu batería por hora** sin cargar. Al final dice qué es lo que más gasta y qué hacer. «Reinicia el diagnóstico» para medir desde cero.
+
+## Lo que cambió
+- **«Jarvis» en segundo plano, por defecto solo con la pantalla encendida** (si no lo habías escogido): con la pantalla apagada el micrófono queda cerrado. Al prender la pantalla vuelve a escuchar de una vez. Lo cambias en *Ajustes › Batería*.
+- **Manos libres** se apaga solo tras 20 minutos sin órdenes, y con Jarvis minimizado ya no se queda revisando cada segundo ni deja la pantalla encendida.
+- **Recordatorios y disparadores por lugar:** Android revisa la ubicación con menos frecuencia (avisa con hasta 3 minutos de margen).
+
 # Jarvis para Android 3.11: nivel agente
 
 ## 🤖 Jarvis maneja tus apps

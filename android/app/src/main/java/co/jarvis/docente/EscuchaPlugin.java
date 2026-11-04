@@ -173,6 +173,17 @@ public class EscuchaPlugin extends Plugin {
         call.resolve();
     }
 
+    /** 3.11.1: lo que midió la escucha de fondo: {desde, micMs, voskMs, muestras:"t:nivel:carga:mic;…"} · {reiniciar:true} lo pone en cero */
+    @PluginMethod
+    public void energia(PluginCall call) {
+        android.content.SharedPreferences p = getContext().getSharedPreferences("jarvis_energia", 0);
+        JSObject r = new JSObject();
+        r.put("desde", p.getLong("desde", 0)); r.put("micMs", p.getLong("micMs", 0)); r.put("voskMs", p.getLong("voskMs", 0)); r.put("muestras", p.getString("muestras", ""));
+        r.put("escuchando", EscuchaService.activo && !EscuchaService.pausado); r.put("grabando", EscuchaService.grabando);
+        if (call.getBoolean("reiniciar", false)) p.edit().clear().putLong("desde", System.currentTimeMillis()).apply();
+        call.resolve(r);
+    }
+
     /** 3.7.1: ¿Android está dejando a Jarvis sin restricciones de batería? */
     @PluginMethod
     public void bateriaEstado(PluginCall call) {
@@ -182,6 +193,7 @@ public class EscuchaPlugin extends Plugin {
             Intent b = getContext().registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
             r.put("nivel", b != null ? b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) * 100 / Math.max(1, b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100)) : -1);
             r.put("ahorro", pm != null && pm.isPowerSaveMode());
+            r.put("cargando", b != null && b.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) != 0);
             r.put("sinRestriccion", Build.VERSION.SDK_INT < 23 || (pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName())));
         } catch (Exception ignored) { }
         call.resolve(r);

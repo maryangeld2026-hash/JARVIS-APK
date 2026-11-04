@@ -81,7 +81,7 @@ public class LugaresPlugin extends Plugin {
         boolean salir = call.getBoolean("salir", false);
         getContext().getSharedPreferences("jarvis_lugares", 0).edit().putString(id, call.getString("texto", "Recordatorio")).apply();
         Geofence g = new Geofence.Builder().setRequestId(id).setCircularRegion(lat, lng, Math.max(100f, radio))
-            .setExpirationDuration(Geofence.NEVER_EXPIRE)
+            .setExpirationDuration(Geofence.NEVER_EXPIRE).setNotificationResponsiveness(3 * 60 * 1000)   // 3.11.1: menos revisiones de ubicación
             .setTransitionTypes(salir ? Geofence.GEOFENCE_TRANSITION_EXIT : Geofence.GEOFENCE_TRANSITION_ENTER).build();
         GeofencingRequest req = new GeofencingRequest.Builder().setInitialTrigger(0).addGeofence(g).build();
         GeofencingClient gc = LocationServices.getGeofencingClient(getContext());

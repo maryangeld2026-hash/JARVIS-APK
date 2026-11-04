@@ -92,7 +92,18 @@ public class EscuchaService extends Service {
         else startForeground(72, n);
     }
 
+    // 3.11.1: al prender la pantalla, la escucha vuelve de una vez (no espera la siguiente revisión de 30 s)
+    private volatile boolean ya = false;
+    private android.content.BroadcastReceiver pantallaRx;
+    private void vigilarPantalla() {
+        if (pantallaRx != null) return;
+        pantallaRx = new android.content.BroadcastReceiver() { @Override public void onReceive(android.content.Context c, Intent i) { ya = true; } };
+        android.content.IntentFilter f = new android.content.IntentFilter(Intent.ACTION_SCREEN_ON); f.addAction(Intent.ACTION_USER_PRESENT); f.addAction(Intent.ACTION_POWER_CONNECTED);
+        try { if (Build.VERSION.SDK_INT >= 33) registerReceiver(pantallaRx, f, android.content.Context.RECEIVER_NOT_EXPORTED); else registerReceiver(pantallaRx, f); } catch (Exception ignored) { pantallaRx = null; }
+    }
+
     private synchronized void arrancar() {
+        vigilarPantalla();
         if (correr) return;
         correr = true;
         hilo = new Thread(this::bucle, "jarvis-escucha");
@@ -102,6 +113,35 @@ public class EscuchaService extends Service {
     private synchronized void parar() {
         correr = false;
         if (hilo != null) { try { hilo.join(1500); } catch (InterruptedException ignored) { } hilo = null; }
+    }
+
+    // ======================================================================== 3.11.1: medir el consumo
+    private long micDesde = 0, voskDesde = 0, ultMuestra = 0, ultGuardo = 0;
+    private long micAcum = 0, voskAcum = 0;
+    private void contar(boolean forzar) {
+        long ahora = System.currentTimeMillis();
+        if (micDesde > 0) { micAcum += ahora - micDesde; micDesde = grabando ? ahora : 0; }
+        if (voskDesde > 0) { voskAcum += ahora - voskDesde; voskDesde = ahora; }
+        if (!forzar && ahora - ultGuardo < 5 * 60000) return;
+        ultGuardo = ahora;
+        android.content.SharedPreferences p = getSharedPreferences("jarvis_energia", 0);
+        android.content.SharedPreferences.Editor e = p.edit();
+        if (p.getLong("desde", 0) == 0) e.putLong("desde", ahora);
+        e.putLong("micMs", p.getLong("micMs", 0) + micAcum).putLong("voskMs", p.getLong("voskMs", 0) + voskAcum);
+        micAcum = 0; voskAcum = 0;
+        if (ahora - ultMuestra > 30 * 60000) {                       // cada media hora, el nivel de batería (para ver cuánto baja)
+            ultMuestra = ahora;
+            Intent b = registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (b != null) {
+                int nivel = b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) * 100 / Math.max(1, b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100));
+                boolean carga = b.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) != 0;
+                String m = p.getString("muestras", "");
+                m = (m + ahora + ":" + nivel + ":" + (carga ? 1 : 0) + ":" + (grabando ? 1 : 0) + ";");
+                if (m.length() > 3000) m = m.substring(m.indexOf(';', m.length() - 3000) + 1);
+                e.putString("muestras", m);
+            }
+        }
+        e.apply();
     }
 
     // ======================================================================== 3.7.1: ahorro de batería
@@ -158,8 +198,10 @@ public class EscuchaService extends Service {
                 // fuera de horario, pantalla apagada o batería baja: el micrófono queda cerrado y se revisa cada 30 s
                 String motivo = motivoPausa();
                 if (motivo != null) {
+                    contar(false);
                     if (!motivo.equals(ultimoAviso)) { ultimoAviso = motivo; final String m = motivo; main.post(() -> aviso(m)); EscuchaPlugin.emitir("estado", "pausa"); }
-                    for (int k = 0; k < 60 && correr; k++) { try { Thread.sleep(500); } catch (InterruptedException e) { break; } }
+                    ya = false;
+                    for (int k = 0; k < 60 && correr && !ya; k++) { try { Thread.sleep(500); } catch (InterruptedException e) { break; } }
                     continue;
                 }
                 if (!ultimoAviso.isEmpty()) { ultimoAviso = ""; main.post(() -> aviso("Di «Jarvis» cuando me necesites")); }
@@ -182,7 +224,7 @@ public class EscuchaService extends Service {
             rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 8192));
             if (rec.getState() != AudioRecord.STATE_INITIALIZED) throw new IllegalStateException("El micrófono está ocupado.");
             rec.startRecording();
-            grabando = true;
+            grabando = true; micDesde = System.currentTimeMillis();
             EscuchaPlugin.emitir("estado", "escuchando");
             final int TROZO = 3200;                                       // 100 ms de audio
             byte[][] previo = new byte[4][];                              // los últimos 400 ms, para no perder el comienzo de «Jarvis»
@@ -201,7 +243,7 @@ public class EscuchaService extends Service {
                 if (!voz) piso = piso * 0.97 + v * 0.03;                     // el piso sigue al ruido del lugar
                 if (voz) ultimaVoz = ahora;
                 if (!abierto && voz) {
-                    abierto = true;                                       // alguien habla: se despierta el reconocedor con lo que venía antes
+                    abierto = true; voskDesde = System.currentTimeMillis();   // alguien habla: se despierta el reconocedor con lo que venía antes
                     for (int k = 0; k < previo.length; k++) { int idx = (pi + k) % previo.length; if (previo[idx] != null) r.acceptWaveForm(previo[idx], previoN[idx]); }
                 }
                 if (abierto) {
@@ -223,18 +265,18 @@ public class EscuchaService extends Service {
                         String t = new JSONObject(r.getFinalResult()).optString("text", "");
                         String resto = Despertar.resto(t);
                         if (resto != null) { despertar(resto); return true; }
-                        abierto = false;
+                        abierto = false; if (voskDesde > 0) { voskAcum += System.currentTimeMillis() - voskDesde; voskDesde = 0; }
                     }
                 } else {
                     byte[] copia = previo[pi] != null && previo[pi].length == n ? previo[pi] : new byte[n];
                     System.arraycopy(buf, 0, copia, 0, n); previo[pi] = copia; previoN[pi] = n; pi = (pi + 1) % previo.length;
                 }
-                if (!abierto && ahora > revisar) { revisar = ahora + 20000; if (motivoPausa() != null) return false; }
+                if (!abierto && ahora > revisar) { revisar = ahora + 20000; contar(false); if (motivoPausa() != null) return false; }
             }
             return false;
         } finally {
             if (rec != null) { try { rec.stop(); } catch (Exception ignored) { } rec.release(); }
-            grabando = false;
+            grabando = false; if (voskDesde > 0) { voskAcum += System.currentTimeMillis() - voskDesde; voskDesde = 0; } contar(true); micDesde = 0;
         }
     }
 
@@ -254,6 +296,7 @@ public class EscuchaService extends Service {
     @Override
     public void onDestroy() {
         activo = false;
+        if (pantallaRx != null) { try { unregisterReceiver(pantallaRx); } catch (Exception ignored) { } pantallaRx = null; }
         parar();
         if (modelo != null) { modelo.close(); modelo = null; }
         super.onDestroy();

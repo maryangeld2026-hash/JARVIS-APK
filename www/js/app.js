@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.11";
+  const VERSION = "3.11.1";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
