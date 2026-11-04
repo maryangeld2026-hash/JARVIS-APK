@@ -75,7 +75,7 @@
   function send(o) { if (S && S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); }
   async function onMsg(j) {
     if (!S) return;
-    if (j.setupComplete) { S.listo = true; estado("🎙️ Te escucho. Habla cuando quieras."); return; }
+    if (j.setupComplete) { S.listo = true; estado(S.opts && S.opts.video ? "📷 Te veo y te escucho. Muéstrame lo que quieras." : "🎙️ Te escucho. Habla cuando quieras."); if (S.opts && S.opts.video) camara(); return; }
     const sc = j.serverContent;
     if (sc) {
       if (sc.interrupted) { cortar(); estado("Te escucho…"); }
@@ -115,9 +115,27 @@
     document.body.dataset.state = "speaking";
   }
   function cortar() { if (!S) return; S.fuentes.forEach((s) => { try { s.stop(); } catch (e) { /* ya paró */ } }); S.fuentes = []; S.cola = 0; }
+  /** 3.11: visión en vivo. 1 foto por segundo (640 px) a Gemini mientras la conversación está abierta; se apaga al colgar. */
+  async function camara() {
+    const s = S; if (!s) return;
+    try {
+      s.cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 960 }, height: { ideal: 720 } }, audio: false });
+      const vd = $("#live-video"); if (vd) { vd.srcObject = s.cam; vd.play().catch(() => {}); }
+      const cv = document.createElement("canvas");
+      s.camT = setInterval(() => {
+        if (S !== s || !s.listo || !vd || !vd.videoWidth) return;
+        const k = Math.min(1, 640 / vd.videoWidth); cv.width = Math.round(vd.videoWidth * k); cv.height = Math.round(vd.videoHeight * k);
+        cv.getContext("2d").drawImage(vd, 0, 0, cv.width, cv.height);
+        const data = cv.toDataURL("image/jpeg", 0.6).split(",")[1];
+        send({ realtimeInput: { video: { data, mimeType: "image/jpeg" } } });
+        s.fotos = (s.fotos || 0) + 1;
+      }, 1000);
+    } catch (e) { estado("No pude abrir la cámara: sigo solo con la voz."); }
+  }
   function stop(msg) {
     const s = S; S = null;
     if (!s) return;
+    try { clearInterval(s.camT); s.cam && s.cam.getTracks().forEach((t) => t.stop()); } catch (e) { /* nada */ }
     try { if (s.ws) s.ws.close(1000); } catch (e) { /* nada */ }
     try { s.stream && s.stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* nada */ }
     try { s.node && s.node.disconnect(); s.ctxIn && s.ctxIn.close(); s.ctxOut && s.ctxOut.close(); } catch (e) { /* nada */ }
@@ -132,7 +150,7 @@
   function ui() {
     let sh = $("#live-sh"); if (!sh) { sh = mk("div", "sheet live-sh"); sh.id = "live-sh"; document.body.append(sh); }
     sh.hidden = false; sh.innerHTML = "";
-    const inn = mk("div", "sheet-in full"), hd = mk("div", "sheet-h"); hd.append(mk("h2", "", "En vivo con Jarvis"));
+    const inn = mk("div", "sheet-in full"), hd = mk("div", "sheet-h"); hd.append(mk("h2", "", (S && S.opts && S.opts.titulo) || "En vivo con Jarvis"));
     const sc = mk("div", "live-body");
     const orb = mk("div", "live-orb"); orb.id = "live-orb"; orb.append(mk("i"));
     const st = mk("p", "live-st", "Conectando…"); st.id = "live-st";
@@ -140,7 +158,9 @@
     const row = mk("div", "row live-row");
     const mute = mk("button", "btn", "🔇 Silenciar mi micrófono"); mute.type = "button"; mute.addEventListener("click", () => { if (!S) return; S.mudo = !S.mudo; mute.textContent = S.mudo ? "🎙️ Activar mi micrófono" : "🔇 Silenciar mi micrófono"; estado(S.mudo ? "Micrófono en silencio." : "Te escucho."); });
     const end = mk("button", "btn danger big", "Colgar"); end.type = "button"; end.addEventListener("click", () => stop(""));
-    row.append(mute, end); sc.append(orb, st, tr, row); inn.append(hd, sc); sh.append(inn);
+    row.append(mute, end);
+    if (S && S.opts && S.opts.video) { const vd = mk("video", "live-video"); vd.id = "live-video"; vd.muted = true; vd.setAttribute("playsinline", ""); vd.autoplay = true; sc.append(vd); }
+    sc.append(orb, st, tr, row); inn.append(hd, sc); sh.append(inn);
     document.body.dataset.state = "listening";
   }
   function estado(t) { const e = $("#live-st"); if (e) e.textContent = t; }
@@ -173,5 +193,5 @@
       send.before(b);
     }
   };
-  X._live = { start, stop, onMsg, liveModel };
+  X._live = { start, stop, onMsg, liveModel, estado: () => S };
 })();

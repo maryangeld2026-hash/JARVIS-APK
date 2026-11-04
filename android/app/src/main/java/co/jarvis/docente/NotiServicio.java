@@ -71,6 +71,64 @@ public class NotiServicio extends NotificationListenerService {
             synchronized (banco) { banco.put(g.clave, g); }
         }
     }
+    // ======================================================================== 3.11: estafas y respuestas automáticas
+    /** Qué tanto parece una estafa (0 = nada). Reglas comunes en Colombia: bloqueo de cuenta, premios, links raros, pedir claves o plata. */
+    static int estafa(String texto) {
+        String t = java.text.Normalizer.normalize(texto == null ? "" : texto, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase();
+        int s = 0;
+        boolean link = t.matches("(?s).*(https?://|www\\.|bit\\.ly|tinyurl|cutt\\.ly|t\\.co/|is\\.gd|ow\\.ly|rb\\.gy|wa\\.me/).*");
+        boolean corto = t.matches("(?s).*(bit\\.ly|tinyurl|cutt\\.ly|is\\.gd|ow\\.ly|rb\\.gy|shorturl).*");
+        if (t.matches("(?s).*(cuenta|tarjeta|usuario|clave).{0,40}(bloquead|suspendid|inactivad|desactivad|cancelad|vencid).*")) s += 2;
+        if (t.matches("(?s).*(ganaste|has ganado|ha ganado|ganador|premio|sorteo|bono de|subsidio aprobado|reclama tu|reclamar su).*")) s += 2;
+        if (t.matches("(?s).*(verifi(ca|que)|actualiz(a|e)|confirm(a|e)|valid(a|e)).{0,30}(datos|cuenta|informacion|identidad|clave).*")) s += 2;
+        if (t.matches("(?s).*(codigo de verificacion|codigo que te llego|clave dinamica|token|pin|contrasena).{0,60}(envia|enviame|dime|pasame|comparte|reenvia).*") || t.matches("(?s).*(envia|enviame|dime|pasame|comparte|reenvia).{0,40}(codigo|clave dinamica|pin|contrasena).*")) s += 3;
+        if (t.matches("(?s).*(urgente|inmediatamente|en las proximas 24 horas|hoy mismo|ultimo aviso|evite el bloqueo).*")) s += 1;
+        if (t.matches("(?s).*(soy tu hijo|soy tu hija|cambie de numero|nuevo numero|me robaron el celular).{0,80}(consign|transfier|nequi|daviplata|plata|prestame|presta).*")) s += 4;
+        if (t.matches("(?s).*(premio|bono|ganaste|ganador|sorteo).{0,80}(https?|link|enlace|aqui|ingresa).*")) s += 1;
+        if (t.matches("(?s).*(consigna|transfiere|envia|deposita).{0,30}(\\$|\\d{2,3}\\.\\d{3}|mil|nequi|daviplata).*") && !t.contains("te consigno")) s += 1;
+        if (link) s += 1; if (corto) s += 2;
+        if (t.matches("(?s).*(dian|policia|fiscalia|juzgado|embargo|comparendo|multa).{0,60}(pague|link|ingrese|consulte aqui).*")) s += 2;
+        return s;
+    }
+    private final java.util.Map<String, Long> autoUltimo = new java.util.HashMap<>();
+    private void revisar(Msg m) {
+        android.content.SharedPreferences p = prefs();
+        if (p.getBoolean("estafas", true)) {
+            int e = estafa(m.texto);
+            if (e >= 3) {
+                android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (nm != null) {
+                    if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(new android.app.NotificationChannel("jarvis_estafa", "Posibles estafas", android.app.NotificationManager.IMPORTANCE_HIGH));
+                    Notification.Builder b = android.os.Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, "jarvis_estafa") : new Notification.Builder(this);
+                    String t = "El mensaje de " + m.de + " (" + m.app + ") tiene señales de estafa: no abras links, no des códigos ni claves y no consignes. Si dice ser de tu banco, llama tú al número oficial.";
+                    b.setSmallIcon(R.mipmap.ic_launcher_foreground).setContentTitle("⚠️ Cuidado: posible estafa").setContentText(t).setStyle(new Notification.BigTextStyle().bigText(t)).setAutoCancel(true);
+                    try { nm.notify(("e" + m.clave).hashCode(), b.build()); } catch (Exception ignored) { }
+                }
+            }
+        }
+        if (p.getBoolean("autoResp", false) && m.responder != null) {
+            long hasta = p.getLong("autoHasta", 0), ahora = System.currentTimeMillis();
+            if (hasta != 0 && ahora > hasta) { p.edit().putBoolean("autoResp", false).apply(); return; }
+            boolean grupo = m.de.contains(":") || m.de.matches(".*\\(\\d+ mensajes\\).*");
+            String chat = m.paquete + "|" + m.de;
+            Long u = autoUltimo.get(chat);
+            if (!grupo && (u == null || ahora - u > 30 * 60000L) && estafa(m.texto) < 3) {
+                autoUltimo.put(chat, ahora);
+                responder(this, m, p.getString("autoTexto", "Ahora no puedo contestar; te escribo en un rato. (Respuesta automática de Jarvis)"));
+            }
+        }
+    }
+    static boolean responder(android.content.Context c, Msg m, String texto) {
+        if (m == null || m.responder == null) return false;
+        try {
+            android.content.Intent i = new android.content.Intent(); Bundle b = new Bundle();
+            for (RemoteInput ri : m.entradas) b.putCharSequence(ri.getResultKey(), texto);
+            RemoteInput.addResultsToIntent(m.entradas, i, b);
+            m.responder.actionIntent.send(c, 0, i);
+            return true;
+        } catch (Exception e) { return false; }
+    }
+
     static List<Gasto> gastos(long desde) {
         List<Gasto> out = new ArrayList<>();
         synchronized (banco) { for (Gasto g : banco.values()) if (g.t >= desde) out.add(g); }
@@ -123,6 +181,7 @@ public class NotiServicio extends NotificationListenerService {
                 while (it.hasNext()) { Msg o = it.next().getValue(); if (o.paquete.equals(m.paquete) && o.de.equals(m.de) && o.texto.equals(m.texto)) it.remove(); }
                 recientes.put(m.clave, m);
             }
+            try { revisar(m); } catch (Exception ignored) { }          // 3.11: estafas y respuestas automáticas
             // 3.9: modo conducción — si Jarvis está en pantalla, él te lo lee y te pregunta si respondes; si no, lo lee Android
             if (prefs().getBoolean("conduccion", false)) {
                 if (MainActivity.visible && MensajesPlugin.llego(m)) { /* lo maneja Jarvis */ }

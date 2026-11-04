@@ -49,6 +49,84 @@ public class ControlServicio extends AccessibilityService {
         for (int i = 0; i < n.getChildCount(); i++) recorrer(n.getChild(i), b, d + 1);
     }
 
+    // ======================================================================== 3.11: el agente que maneja tus apps
+    static final java.util.List<AccessibilityNodeInfo> nodos = new java.util.ArrayList<>();
+    /** Lo que se ve ahora, como lista numerada para la IA: [{i, t, c (tocable), e (escribible), s (desplazable)}] (sin contraseñas). */
+    static org.json.JSONObject ui() {
+        org.json.JSONObject o = new org.json.JSONObject();
+        ControlServicio s = instancia; if (s == null) return o;
+        synchronized (nodos) {
+            nodos.clear();
+            org.json.JSONArray l = new org.json.JSONArray();
+            try {
+                AccessibilityNodeInfo r = s.getRootInActiveWindow();
+                if (r != null) {
+                    o.put("pkg", r.getPackageName() == null ? "" : r.getPackageName().toString());
+                    juntar(r, l, 0);
+                }
+                o.put("nodos", l);
+            } catch (Exception ignored) { }
+        }
+        return o;
+    }
+    private static void juntar(AccessibilityNodeInfo n, org.json.JSONArray l, int d) throws org.json.JSONException {
+        if (n == null || d > 40 || nodos.size() >= 160) return;
+        if (n.isVisibleToUser()) {
+            boolean c = n.isClickable() || n.isLongClickable(), e = n.isEditable(), sc = n.isScrollable();
+            CharSequence t = n.getText(), ds = n.getContentDescription();
+            String tx = n.isPassword() ? "(contraseña)" : t != null ? t.toString() : "";
+            String de = ds != null ? ds.toString() : "";
+            if (e && tx.isEmpty() && n.getHintText() != null) tx = "[" + n.getHintText() + "]";
+            if (c && tx.isEmpty() && de.isEmpty()) tx = hijos(n, 0);
+            if (!tx.isEmpty() || !de.isEmpty() || e || sc) {
+                org.json.JSONObject x = new org.json.JSONObject();
+                x.put("i", nodos.size());
+                String lab = (tx + (de.isEmpty() || de.equals(tx) ? "" : " · " + de)).trim();
+                x.put("t", lab.length() > 90 ? lab.substring(0, 90) : lab);
+                if (c) x.put("c", 1); if (e) x.put("e", 1); if (sc) x.put("s", 1);
+                if (n.isPassword()) x.put("p", 1);
+                nodos.add(n); l.put(x);
+            }
+        }
+        for (int k = 0; k < n.getChildCount(); k++) juntar(n.getChild(k), l, d + 1);
+    }
+    private static String hijos(AccessibilityNodeInfo n, int d) {
+        if (n == null || d > 3) return "";
+        StringBuilder b = new StringBuilder();
+        for (int k = 0; k < n.getChildCount() && b.length() < 80; k++) {
+            AccessibilityNodeInfo h = n.getChild(k); if (h == null) continue;
+            CharSequence t = h.getText() != null ? h.getText() : h.getContentDescription();
+            if (t != null && t.length() > 0) b.append(t).append(' '); else b.append(hijos(h, d + 1));
+        }
+        return b.toString().trim();
+    }
+    static boolean tocar(int i) {
+        ControlServicio s = instancia; if (s == null) return false;
+        AccessibilityNodeInfo n; synchronized (nodos) { if (i < 0 || i >= nodos.size()) return false; n = nodos.get(i); }
+        AccessibilityNodeInfo p = n;
+        for (int k = 0; k < 6 && p != null; k++) { if (p.isClickable() && p.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true; p = p.getParent(); }
+        android.graphics.Rect r = new android.graphics.Rect(); n.getBoundsInScreen(r);
+        if (r.isEmpty() || Build.VERSION.SDK_INT < 24) return false;
+        android.graphics.Path path = new android.graphics.Path(); path.moveTo(r.exactCenterX(), r.exactCenterY());
+        return s.dispatchGesture(new android.accessibilityservice.GestureDescription.Builder().addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 60)).build(), null, null);
+    }
+    static boolean escribir(int i, String texto) {
+        AccessibilityNodeInfo n; synchronized (nodos) { if (i < 0 || i >= nodos.size()) return false; n = nodos.get(i); }
+        if (n.isPassword() || !n.isEditable()) return false;                 // nunca escribe contraseñas
+        android.os.Bundle b = new android.os.Bundle(); b.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, texto);
+        n.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+        return n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, b);
+    }
+    static boolean desplazar(boolean abajo) {
+        ControlServicio s = instancia; if (s == null) return false;
+        synchronized (nodos) { for (AccessibilityNodeInfo n : nodos) if (n.isScrollable() && n.performAction(abajo ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return true; }
+        if (Build.VERSION.SDK_INT < 24) return false;
+        android.util.DisplayMetrics dm = s.getResources().getDisplayMetrics();
+        android.graphics.Path path = new android.graphics.Path(); float x = dm.widthPixels / 2f;
+        path.moveTo(x, dm.heightPixels * (abajo ? 0.75f : 0.3f)); path.lineTo(x, dm.heightPixels * (abajo ? 0.3f : 0.75f));
+        return s.dispatchGesture(new android.accessibilityservice.GestureDescription.Builder().addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 350)).build(), null, null);
+    }
+
     boolean accion(String a) {
         switch (a) {
             case "inicio": return performGlobalAction(GLOBAL_ACTION_HOME);

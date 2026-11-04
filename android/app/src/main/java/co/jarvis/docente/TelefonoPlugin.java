@@ -82,6 +82,53 @@ public class TelefonoPlugin extends Plugin {
         JSObject r = new JSObject(); r.put("lista", out); call.resolve(r);
     }
 
+    // ======================================================================== 3.11: el agente
+    @PluginMethod
+    public void agenteUi(PluginCall call) {
+        if (ControlServicio.instancia == null) { call.reject("sin_control"); return; }
+        try { call.resolve(JSObject.fromJSONObject(ControlServicio.ui())); } catch (Exception e) { call.reject(e.getMessage()); }
+    }
+    @PluginMethod
+    public void agenteAccion(PluginCall call) {
+        String a = call.getString("accion", ""); int i = call.getInt("i", -1); boolean ok;
+        switch (a) {
+            case "tocar": ok = ControlServicio.tocar(i); break;
+            case "escribir": ok = ControlServicio.escribir(i, call.getString("texto", "")); break;
+            case "bajar": ok = ControlServicio.desplazar(true); break;
+            case "subir": ok = ControlServicio.desplazar(false); break;
+            case "atras": ok = ControlServicio.instancia != null && ControlServicio.instancia.accion("atras"); break;
+            default: ok = false;
+        }
+        JSObject r = new JSObject(); r.put("ok", ok); call.resolve(r);
+    }
+    /** 3.11: volver a Jarvis cuando el agente termina. */
+    @PluginMethod
+    public void volverAJarvis(PluginCall call) {
+        try { getContext().startActivity(new Intent(getContext(), MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP)); } catch (Exception ignored) { }
+        call.resolve();
+    }
+
+    // ======================================================================== 3.11: filtro de llamadas
+    @PluginMethod
+    public void filtroLlamadas(PluginCall call) {
+        getContext().getSharedPreferences("jarvis_llamadas", 0).edit().putString("modo", call.getString("modo", "off")).putString("negra", call.getString("negra", "")).apply();
+        JSObject r = new JSObject();
+        if (android.os.Build.VERSION.SDK_INT >= 29 && !"off".equals(call.getString("modo", "off"))) {
+            android.app.role.RoleManager rm = getContext().getSystemService(android.app.role.RoleManager.class);
+            if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_CALL_SCREENING) && !rm.isRoleHeld(android.app.role.RoleManager.ROLE_CALL_SCREENING)) {
+                try { getActivity().startActivityForResult(rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_CALL_SCREENING), 7711); r.put("pedido", true); } catch (Exception ignored) { }
+            }
+            r.put("activo", rm != null && rm.isRoleHeld(android.app.role.RoleManager.ROLE_CALL_SCREENING));
+        } else r.put("activo", false);
+        call.resolve(r);
+    }
+    @PluginMethod
+    public void llamadasFiltradas(PluginCall call) {
+        JSObject r = new JSObject();
+        try { r.put("lista", new JSArray(getContext().getSharedPreferences("jarvis_llamadas", 0).getString("log", "[]"))); } catch (Exception e) { r.put("lista", new JSArray()); }
+        call.resolve(r);
+    }
+
     /** 3.10: «No molestar» encendido o apagado (si diste el permiso; si no, abre el ajuste). {on} → {ok} */
     @PluginMethod
     public void noMolestar(PluginCall call) {

@@ -1,3 +1,42 @@
+# Jarvis para Android 3.11: nivel agente
+
+## 🤖 Jarvis maneja tus apps
+- «Pídeme un Uber a la casa», «busca en Mercado Libre audífonos baratos», «pon en Spotify música para estudiar», «hazlo tú en Rappi: pide una pizza». Jarvis abre la app y va tocando y escribiendo paso a paso (lo ves trabajar).
+- **Nunca paga, confirma, envía ni borra por ti:** llega hasta ese botón y te deja el último toque. No escribe contraseñas ni maneja apps de bancos. Si vuelves a Jarvis, se detiene. Si la app le pregunta algo (cuál dirección…), te lo pregunta a ti.
+- Usa el control por voz (Accesibilidad): si ya lo tenías, apágalo y vuelve a prenderlo para que pueda tocar botones.
+
+## 👀 Actuar sobre lo que ves
+- Llama a Jarvis desde cualquier app y dile: «agéndalo», «recuérdamelo», «agrégalo a la lista», «llama a este número», «anota este gasto», «guárdalo como nota», «guarda este contacto» o «¿esto es estafa?».
+
+## 📷 Visión en vivo
+- «Mira esto» o «¿qué ves?»: conversación en vivo con la cámara. Jarvis ve lo que le muestras (1 imagen por segundo) y te ayuda: qué es, cómo se arma, qué dice el letrero, tradúceme el menú. Usa Gemini.
+
+## 💡 Sugerencias que aprende
+- Si sueles pedir algo a cierta hora (el clima a las 6:40, tus pagos los viernes…), te lo sugiere en el panel de arriba. Aprende en el celular.
+
+## 🛡️ Protección
+- **Detector de estafas:** revisa cada mensaje que llega (SMS, WhatsApp…) y te avisa si parece fraude: cuenta bloqueada, premios, links acortados, «soy tu hijo, cambié de número», pedir códigos o consignar. Todo en el celular.
+- **Respuestas automáticas:** «responde que estoy en clase hasta las 11», «responde que estoy manejando por una hora». Una vez por persona cada media hora, nunca a grupos. Opcional: solo mientras el modo conducción.
+- **Filtro de llamadas:** «silencia las llamadas de desconocidos», «bloquea el número 300…», «¿qué llamadas silenciaste?». Tus contactos siempre suenan.
+
+## 📸 Memoria fotográfica
+- «Busca la foto de la cédula», «fotos de mi perro en la playa». El celular lee el texto y lo que se ve en tus fotos, **solo mientras carga** y sin que salgan del celular.
+
+## 🗓️ ¿Qué hice el…?
+- «¿Qué hice ayer?», «¿qué hice el martes pasado?», «la semana pasada»: gastos, diario, recordatorios, hábitos, pagos, calendario y lo que le dijiste a Jarvis. Y «Resúmelo».
+
+## ✍️ Dictado pulido
+- «Díctame un mensaje para Carolina» (hablas como te salga) o «pule este mensaje: …». Quita muletillas, ordena y corrige; luego lo copias, lo compartes o va directo por WhatsApp.
+
+## 🧩 Widget a la carta
+- «Crea un widget con mis pagos del mes» (o tu lista, gastos, recordatorios, rachas, cumpleaños, medicamentos). Se actualiza solo al salir de Jarvis.
+
+## 🖥️ Presentaciones por voz
+- «Hazme una presentación de fracciones de 8 diapositivas»: un PowerPoint listo, con notas para ti, que abres, proyectas o compartes.
+
+## 🔋 Batería
+- El agente y la cámara en vivo trabajan solo mientras se lo pides. Las fotos se leen solo cargando. Estafas, respuestas automáticas y llamadas las avisa Android, sin que Jarvis quede despierto.
+
 # Jarvis para Android 3.10: más útil, más rápido
 
 ## ⚡ Más rápido y con menos batería

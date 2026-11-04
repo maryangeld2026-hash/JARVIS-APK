@@ -116,6 +116,16 @@
         </receiver>
         <service android:name=".CargaJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
 
+        <!-- 3.11: widget a la carta, fotos (solo cargando) y filtro de llamadas -->
+        <receiver android:name=".WidgetDatos" android:exported="true" android:label="Jarvis a la carta">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_datos_info" />
+        </receiver>
+        <service android:name=".FotosJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service android:name=".FiltroLlamadas" android:exported="true" android:permission="android.permission.BIND_SCREENING_SERVICE">
+            <intent-filter><action android:name="android.telecom.CallScreeningService" /></intent-filter>
+        </service>
+
         <!-- 3.10: encontrar el celular por SMS y el botón de los Ajustes rápidos -->
         <receiver android:name=".SmsReceiver" android:exported="true" android:permission="android.permission.BROADCAST_SMS">
             <intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter>
@@ -160,6 +170,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />

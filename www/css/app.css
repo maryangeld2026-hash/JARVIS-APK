@@ -494,3 +494,9 @@ body.sin-docente .tabs, body.sin-docente .doc-only { display: none !important; }
 .conv-list li.on b { color: var(--a); }
 .conv-list .grow { flex: 1; min-width: 0; }
 .msg.orden { font-size: 13px; opacity: .85; padding: 6px 11px; }
+
+/* 3.11 */
+.live-video { width: 100%; max-height: 38vh; object-fit: cover; border-radius: 14px; background: #000; margin-bottom: 10px; }
+.foto-res { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.foto-res img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; }
+.agente-paso { font-size: 13px; opacity: .85; }

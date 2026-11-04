@@ -62,6 +62,8 @@ def main():
                 j = json.loads(m)
                 if "setup" in j:
                     live["setup"] = j["setup"]; ws.send(json.dumps({"setupComplete": {}}))
+                elif "realtimeInput" in j and "video" in j["realtimeInput"]:
+                    live["video"] = live.get("video", 0) + 1
                 elif "realtimeInput" in j:
                     live["audio"] += 1
                     if live["audio"] == 3:
@@ -159,6 +161,12 @@ def main():
         live["setup"] = None
         say("practiquemos inglés", 4500)
         check(live["setup"] and "profesor de inglés" in json.dumps(live["setup"]["systemInstruction"], ensure_ascii=False), "practicar inglés en vivo")
+        if pg.is_visible("#live-sh"): pg.click("#live-sh >> text=Colgar"); pg.wait_for_timeout(300)
+        # 3.11: visión en vivo (cámara de prueba de Chromium)
+        live["setup"] = None; live["video"] = 0
+        say("mira esto", 5500)
+        check(live["setup"] and "VES por la cámara" in json.dumps(live["setup"]["systemInstruction"], ensure_ascii=False) and live["video"] >= 2, f"visión en vivo: manda imágenes de la cámara ({live['video']})")
+        check(pg.locator("#live-video").count() == 1, "visión en vivo: se ve la cámara")
         if pg.is_visible("#live-sh"): pg.click("#live-sh >> text=Colgar"); pg.wait_for_timeout(300)
         # 3.7.1: ahorro de batería
         say("modo ahorro", 400)

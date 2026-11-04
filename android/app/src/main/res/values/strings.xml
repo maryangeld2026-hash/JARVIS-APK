@@ -14,4 +14,5 @@
     <string name="atajo_lista">Pasar lista</string>
     <string name="atajo_lista_l">Pasar lista del curso</string>
     <string name="control_desc">Deja que Jarvis haga por voz los botones del celular (inicio, atrás, notificaciones, bloquear, captura). Y, solo cuando llamas a Jarvis desde otra app, copia el texto de esa pantalla para que le preguntes «¿qué dice esta pantalla?». Nunca lee contraseñas ni vigila la pantalla en segundo plano.</string>
+    <string name="widget2_desc">Jarvis a la carta: tus pagos, tu lista, tus gastos o lo que le pidas.</string>
 </resources>

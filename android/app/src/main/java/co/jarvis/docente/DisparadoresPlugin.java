@@ -51,6 +51,14 @@ public class DisparadoresPlugin extends Plugin {
     @PermissionCallback
     private void smsInListo(PluginCall call) { JSObject o = new JSObject(); o.put("ok", getPermissionState("smsIn") == PermissionState.GRANTED); call.resolve(o); }
 
+    /** 3.11: el widget a la carta: {titulo, texto, cmd, fijar} → {fijado} */
+    @PluginMethod
+    public void widgetDatos(PluginCall call) {
+        getContext().getSharedPreferences("jarvis_widget2", 0).edit().putString("titulo", call.getString("titulo", "Jarvis")).putString("texto", call.getString("texto", "")).putString("cmd", call.getString("cmd", "")).apply();
+        WidgetDatos.actualizar(getContext());
+        JSObject o = new JSObject(); o.put("fijado", call.getBoolean("fijar", false) && WidgetDatos.fijar(getContext())); call.resolve(o);
+    }
+
     /** 3.10: prueba del sonido de «encontrar el celular». */
     @PluginMethod
     public void probarSonido(PluginCall call) { SmsReceiver.sonar(getContext()); call.resolve(); }

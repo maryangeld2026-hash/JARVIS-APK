@@ -38,8 +38,16 @@ public class MensajesPlugin extends Plugin {
         android.content.SharedPreferences.Editor e = getContext().getSharedPreferences("jarvis_noti", 0).edit();
         if (call.hasOption("conduccion")) e.putBoolean("conduccion", call.getBoolean("conduccion", false));
         if (call.hasOption("gastosAuto")) e.putBoolean("gastosAuto", call.getBoolean("gastosAuto", false));
+        if (call.hasOption("estafas")) e.putBoolean("estafas", call.getBoolean("estafas", true));
+        if (call.hasOption("autoResp")) e.putBoolean("autoResp", call.getBoolean("autoResp", false));
+        if (call.hasOption("autoTexto")) e.putString("autoTexto", call.getString("autoTexto", ""));
+        if (call.hasOption("autoHasta")) e.putLong("autoHasta", (long) (double) call.getDouble("autoHasta", 0d));
         e.apply(); call.resolve();
     }
+
+    /** 3.11: ¿parece estafa? (las mismas reglas que revisan los mensajes que llegan) {texto} → {puntaje} */
+    @PluginMethod
+    public void estafa(PluginCall call) { JSObject r = new JSObject(); r.put("puntaje", NotiServicio.estafa(call.getString("texto", ""))); call.resolve(r); }
 
     /** 3.9: avisos de compras y pagos del banco: {lista:[{clave, app, texto, t}]} */
     @PluginMethod

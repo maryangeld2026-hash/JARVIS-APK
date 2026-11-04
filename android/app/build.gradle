@@ -8,8 +8,8 @@ android {
         applicationId "co.jarvis.docente"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
-        versionName "3.10.0"
+        versionCode 21
+        versionName "3.11.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // solo los procesadores de los celulares Android (el motor de voz pesa ~10 MB por cada uno)
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
@@ -61,6 +61,7 @@ dependencies {
     implementation 'androidx.biometric:biometric:1.1.0'
     implementation 'com.google.android.gms:play-services-mlkit-document-scanner:16.0.0'
     implementation 'com.google.mlkit:text-recognition:16.0.1'
+    implementation 'com.google.mlkit:image-labeling:17.0.9'
     // 3.6: recordatorios por lugar
     implementation 'com.google.android.gms:play-services-location:21.3.0'
     testImplementation "junit:junit:$junitVersion"
