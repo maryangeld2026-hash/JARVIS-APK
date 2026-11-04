@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 public class IALocalPlugin extends Plugin {
     private final ExecutorService hilo = Executors.newSingleThreadExecutor();
     private final ExecutorService bajada = Executors.newSingleThreadExecutor();
+    private final ExecutorService grabadora = Executors.newSingleThreadExecutor();
     private LlmInference motor;
     private String motorRuta = "";
     private volatile boolean cancelar = false;
@@ -47,6 +48,8 @@ public class IALocalPlugin extends Plugin {
     private GemmaMotor gemma;
     private final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable liberar = () -> hilo.execute(this::cerrarMotor);
+    @Override public void load() { GemmaMotor.revisarCaida(getContext()); }
+
     private void usado() { main.removeCallbacks(liberar); main.postDelayed(liberar, 3 * 60 * 1000); }
 
     @PluginMethod
@@ -56,6 +59,54 @@ public class IALocalPlugin extends Plugin {
         JSObject r = new JSObject(); r.put("totalMb", mi.totalMem / (1024 * 1024)); r.put("libreMb", mi.availMem / (1024 * 1024)); r.put("discoMb", carpeta().getUsableSpace() / (1024 * 1024));
         call.resolve(r);
     }
+
+    // ======================================================================== 3.13: grabar tu voz para que Gemma la entienda sin internet
+    private volatile boolean grabandoVoz = false;
+    /** Graba hasta que dejas de hablar (1,4 s de silencio) o hasta maxSeg. → {ruta, segundos, hablo}. Eventos «nivel» {v} para el orbe. */
+    @PluginMethod
+    public void grabar(PluginCall call) {
+        if (getContext().checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) { call.reject("Falta el permiso del micrófono."); return; }
+        final int maxSeg = Math.max(2, Math.min(30, call.getInt("maxSeg", 15)));
+        final int esperaMs = Math.max(2000, Math.min(15000, call.getInt("esperaMs", 8000)));
+        grabadora.execute(() -> {
+            EscuchaService.soltarMicrofono(getContext(), 2500);
+            android.media.AudioRecord rec = null;
+            File wav = new File(getContext().getCacheDir(), "gemma_voz.wav");
+            try {
+                int min = android.media.AudioRecord.getMinBufferSize(16000, android.media.AudioFormat.CHANNEL_IN_MONO, android.media.AudioFormat.ENCODING_PCM_16BIT);
+                rec = new android.media.AudioRecord(android.media.MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, android.media.AudioFormat.CHANNEL_IN_MONO, android.media.AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 8192));
+                if (rec.getState() != android.media.AudioRecord.STATE_INITIALIZED) throw new Exception("El micrófono está ocupado.");
+                java.io.ByteArrayOutputStream pcm = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[3200];
+                rec.startRecording(); grabandoVoz = true;
+                long t0 = System.currentTimeMillis(), ultVoz = 0; boolean hablo = false; double piso = 250;
+                while (grabandoVoz) {
+                    int n = rec.read(buf, 0, buf.length); if (n <= 0) continue;
+                    pcm.write(buf, 0, n);
+                    long s = 0; for (int i = 0; i + 1 < n; i += 2) { int v = (short) ((buf[i] & 0xff) | (buf[i + 1] << 8)); s += (long) v * v; }
+                    double rms = Math.sqrt((double) s / Math.max(1, n / 2)), ahora = System.currentTimeMillis();
+                    boolean voz = rms > Math.max(piso * 2.6, 300);
+                    if (!voz) piso = piso * 0.95 + rms * 0.05; else { hablo = true; ultVoz = (long) ahora; }
+                    JSObject ev = new JSObject(); ev.put("v", Math.min(1.0, rms / 3000.0)); notifyListeners("nivel", ev);
+                    if (hablo && ahora - ultVoz > 1400) break;
+                    if (!hablo && ahora - t0 > esperaMs) break;
+                    if (ahora - t0 > maxSeg * 1000L) break;
+                }
+                byte[] d = pcm.toByteArray();
+                try (FileOutputStream out = new FileOutputStream(wav)) {
+                    java.nio.ByteBuffer h = java.nio.ByteBuffer.allocate(44).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+                    h.put("RIFF".getBytes()).putInt(36 + d.length).put("WAVE".getBytes()).put("fmt ".getBytes()).putInt(16).putShort((short) 1).putShort((short) 1)
+                        .putInt(16000).putInt(32000).putShort((short) 2).putShort((short) 16).put("data".getBytes()).putInt(d.length);
+                    out.write(h.array()); out.write(d);
+                }
+                JSObject r = new JSObject(); r.put("ruta", wav.getAbsolutePath()); r.put("segundos", d.length / 32000.0); r.put("hablo", hablo);
+                call.resolve(r);
+            } catch (Exception e) { call.reject(e.getMessage() != null ? e.getMessage() : "No pude grabar."); }
+            finally { grabandoVoz = false; if (rec != null) { try { rec.stop(); } catch (Exception ignored) { } rec.release(); } }
+        });
+    }
+    @PluginMethod
+    public void pararGrabacion(PluginCall call) { grabandoVoz = false; call.resolve(); }
 
     @PluginMethod
     public void detener(PluginCall call) { GemmaMotor g = gemma; if (g != null) g.detener(); call.resolve(); }
@@ -69,7 +120,7 @@ public class IALocalPlugin extends Plugin {
         if (gemma == null || !gemma.getRuta().equals(f.getAbsolutePath())) {
             cerrarMotor();
             JSObject ev = new JSObject(); ev.put("cargando", true); notifyListeners("estado", ev);
-            gemma = new GemmaMotor(getContext(), f.getAbsolutePath(), totalMb() >= 11500 && call.getBoolean("gpu", true));
+            gemma = new GemmaMotor(getContext(), f.getAbsolutePath(), totalMb() >= 10500 && call.getBoolean("gpu", true));
             motorRuta = f.getAbsolutePath();
         }
         java.util.List<String[]> hist = new java.util.ArrayList<>();
@@ -82,13 +133,25 @@ public class IALocalPlugin extends Plugin {
                 if (k == ms.length() - 1 && "user".equals(rol)) ultimo = tx; else if (!tx.isEmpty()) hist.add(new String[] { rol, tx });
             }
         }
+        // 3.13: fotos (base64 → archivo) y audio (archivo .wav ya grabado)
+        java.util.List<String> imgs = new java.util.ArrayList<>(), auds = new java.util.ArrayList<>();
+        com.getcapacitor.JSArray im = call.getArray("imagenes", null);
+        if (im != null) for (int k = 0; k < im.length() && k < 4; k++) {
+            org.json.JSONObject o = im.getJSONObject(k);
+            File fi = new File(getContext().getCacheDir(), "gemma_img_" + k + ".jpg");
+            try (FileOutputStream out = new FileOutputStream(fi)) { out.write(android.util.Base64.decode(o.optString("data", ""), android.util.Base64.DEFAULT)); }
+            imgs.add(fi.getAbsolutePath());
+        }
+        String au = call.getString("audio", "");
+        if (au != null && !au.isEmpty() && new File(au).exists()) auds.add(au);
+        if ((!imgs.isEmpty() || !auds.isEmpty()) && !gemma.getMultimodal()) { call.reject("Este modelo no pudo arrancar con fotos ni audio en tu celular (solo texto)."); return; }
         final long[] ultEv = { 0 };
-        String t = gemma.generar(call.getString("sistema", ""), hist, ultimo, call.getInt("maxTokens", 700), call.getDouble("temperatura", 0.7), (parcial) -> {
+        String t = gemma.generar(call.getString("sistema", ""), hist, ultimo, imgs, auds, call.getInt("maxTokens", 700), call.getDouble("temperatura", 0.7), (parcial) -> {
             long ahora = System.currentTimeMillis();
             if (ahora - ultEv[0] > 120) { ultEv[0] = ahora; JSObject e = new JSObject(); e.put("texto", parcial); notifyListeners("parcial", e); }
             return kotlin.Unit.INSTANCE;
         });
-        JSObject r = new JSObject(); r.put("texto", t == null ? "" : t); r.put("motor", "Gemma · " + gemma.getBackend());
+        JSObject r = new JSObject(); r.put("texto", t == null ? "" : t); r.put("motor", "Gemma · " + gemma.getBackend()); r.put("ve", gemma.getMultimodal());
         call.resolve(r);
     }
 
@@ -100,6 +163,8 @@ public class IALocalPlugin extends Plugin {
         r.put("nombre", f != null ? f.getName() : "");
         r.put("mb", f != null ? f.length() / (1024 * 1024) : 0);
         r.put("libreMb", carpeta().getUsableSpace() / (1024 * 1024));
+        r.put("gemma", f != null && f.getName().endsWith(".litertlm"));
+        r.put("cargada", gemma != null); r.put("ve", gemma != null && gemma.getMultimodal());
         call.resolve(r);
     }
 

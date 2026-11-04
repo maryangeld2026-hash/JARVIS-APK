@@ -208,7 +208,9 @@
     if (!P) throw Object.assign(new Error("La IA del celular funciona en la app instalada (el APK)."), { code: "sin_local" });
     const st = await P.estado().catch(() => ({}));
     if (!st.listo) throw Object.assign(new Error("La IA del celular no está descargada. Ve a Ajustes › IA de respaldo y toca «Descargar»."), { code: "sin_local" });
-    if (messages.some((m) => m.image || m.doc)) throw new Error("La IA del celular no puede ver fotos ni PDF. Para eso se necesita internet.");
+    if (messages.some((m) => m.doc)) throw new Error("La IA del celular no lee PDF todavía. Mándalo como foto, o usa la IA con internet.");
+    if (!st.gemma && messages.some((m) => m.image)) throw new Error("Esta IA del celular no ve fotos. Descarga Gemma 4 en Ajustes › IA de respaldo para que vea fotos sin internet.");
+    const imagenes = messages.filter((m) => m.image).slice(-4).map((m) => ({ data: m.image.data, mime: m.image.mime }));
     const gemma = /\.litertlm$/.test(st.nombre || "");           // 3.12: Gemma 4 entiende instrucciones largas y la conversación completa
     const sys = String(system || "").slice(0, gemma ? 6000 : 900) + " Responde en español" + (gemma ? "." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "");
     const prompt = L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
@@ -218,7 +220,7 @@
     let h = null, parcial = "";
     if (onDelta) h = await window.JON(P, "parcial", (d) => { if (stopped || !d || !d.texto) return; if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: "IA del celular", prov: "local" }; parcial = L.cleanLocal(d.texto); onDelta("", parcial); });
     try {
-      const r = await P.generar({ prompt, sistema: sys, mensajes, maxTokens: Math.min(Math.max(256, maxTokens), gemma ? 2048 : 1024), temperatura: json ? 0.3 : 0.7 });
+      const r = await P.generar({ prompt, sistema: sys, mensajes, imagenes, maxTokens: Math.min(Math.max(256, maxTokens), gemma ? 2048 : 1024), temperatura: json ? 0.3 : 0.7 });
       if (stopped) throw Object.assign(new Error("Detenido."), { code: "abort" });
       const text = L.cleanLocal(r && r.texto);
       if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: (r && r.motor) || "IA del celular", prov: "local" };
@@ -227,6 +229,33 @@
       return text;
     } finally { if (h && h.remove) h.remove(); }
   }
+
+  // ======================================================================== 3.13: Gemma 4 entiende tu voz sin internet
+  let gemmaSt = null;
+  async function gemmaEstado() { const P = native() && plug("IALocal"); if (!P) return null; try { gemmaSt = await P.estado(); } catch (e) { gemmaSt = null; } return gemmaSt; }
+  setTimeout(gemmaEstado, 3000);
+  window.addEventListener("offline", gemmaEstado);
+  window.__gemmaVoz = {
+    refrescar: gemmaEstado,
+    usar() {
+      const m = (window.JD.load().ajustes.vozGemma) || "sin_internet";
+      if (m === "nunca" || !gemmaSt || !gemmaSt.listo || !gemmaSt.gemma) return false;
+      return m === "siempre" || !navigator.onLine;
+    },
+    async oir(onPartial, opts) {
+      const P = plug("IALocal");
+      if (onPartial) onPartial("🎙️ Te escucho (Gemma, sin internet)…");
+      const g = await P.grabar({ maxSeg: 20, esperaMs: (opts && opts.espera) || 8000 });
+      if (!g || !g.hablo) return "";
+      if (onPartial) onPartial("Entendiendo lo que dijiste…");
+      const r = await P.generar({ sistema: "Eres un transcriptor exacto de audio en español de Colombia.", mensajes: [{ role: "user", content: "Escribe exactamente lo que dice la persona en este audio, en español, sin comillas y sin explicar nada más. Si no se entiende nada, responde solo: (nada)" }],
+        audio: g.ruta, maxTokens: 220, temperatura: 0 });
+      let t = L.cleanLocal((r && r.texto) || "").trim().replace(/^["«]|["»]$/g, "");
+      if (/^\(?nada\)?\.?$/i.test(t)) t = "";
+      return t;
+    },
+    parar() { const P = native() && plug("IALocal"); if (P && P.pararGrabacion) P.pararGrabacion().catch(() => {}); },
+  };
 
   /** Pide un JSON (quiz, revisión de una foto). → objeto o null. */
   async function json(opts) {

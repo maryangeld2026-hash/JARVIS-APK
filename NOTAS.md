@@ -1,3 +1,10 @@
+# Jarvis para Android 3.13: Gemma 4 ve y oye
+
+- **Gemma 4 ve fotos sin internet:** las fotos que mandas al chat (cámara, galería, «¿qué es esto?», recibos, tarjetas) las entiende Gemma dentro del celular cuando no hay internet o si la pusiste como IA principal. Hasta 4 fotos por pregunta.
+- **Gemma 4 entiende tu voz sin internet:** sin conexión, el micrófono graba tu voz y Gemma la entiende dentro del celular (mejor que el reconocedor sin internet de antes). En *Ajustes › IA de respaldo* escoges: solo sin internet (por defecto), siempre o nunca. Jarvis te responde hablando con la voz del celular, que también funciona sin internet.
+- **GPU en celulares de 12 GB:** Gemma usa la GPU (respuestas más rápidas, menos memoria) si el celular tiene 12 GB de RAM; si la GPU falla al cargar, usa el procesador, y si alguna vez se cerró la app al cargarla, no vuelve a intentarlo.
+- Arranca con fotos y audio; si el modelo no puede, sigue solo con texto.
+
 # Jarvis para Android 3.12: Gemma 4 dentro del celular
 
 - **Gemma 4 de Google, sin internet:** en *Ajustes › IA de respaldo › IA del celular* ahora puedes escoger **Gemma 4 E2B** (2,6 GB, celulares con 8 GB de RAM o más, recomendada) o **Gemma 4 E4B** (3,7 GB, la más inteligente, celulares con 12 GB de RAM). Corre con LiteRT-LM de Google: entiende la conversación completa, las instrucciones de Jarvis y responde por partes.

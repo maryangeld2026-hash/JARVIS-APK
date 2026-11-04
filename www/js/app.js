@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.12";
+  const VERSION = "3.13";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -745,7 +745,7 @@
     }
     bajando = true; $("#btn-local-bajar").textContent = "Cancelar";
     const h = await window.JON(P, "progreso", (d) => { st.textContent = `Descargando… ${d.p >= 0 ? d.p + " % · " : ""}${d.mb} MB (puedes seguir usando Jarvis)`; });
-    try { await P.descargar({ url: m.url, nombre: m.archivo }); toast("Listo: la IA del celular quedó descargada. Ya funciona sin internet.", 5000); if (!A.respaldo && A.proveedor !== "local") { A.respaldo = "local"; save(true); } }
+    try { await P.descargar({ url: m.url, nombre: m.archivo }); toast("Listo: la IA del celular quedó descargada. Ya funciona sin internet.", 5000); if (window.__gemmaVoz) window.__gemmaVoz.refrescar(); if (!A.respaldo && A.proveedor !== "local") { A.respaldo = "local"; save(true); } }
     catch (e) { toast("No se pudo descargar: " + (e.message || e), 7000); }
     finally { bajando = false; if (h && h.remove) h.remove(); fillBackup(); }
   }
@@ -753,6 +753,8 @@
   $("#a-resp-clave").addEventListener("input", (e) => { if (A.respaldo) { A.claves[A.respaldo] = e.target.value.trim(); delete A.modeloAuto[A.respaldo]; save(); } });
   $("#a-propio").addEventListener("change", (e) => { A.propioUrl = e.target.value.trim(); delete A.modeloAuto.propio; save(); });
   $("#a-local-modelo").addEventListener("change", (e) => { A.localModelo = e.target.value; save(); });
+  $("#a-voz-gemma").value = A.vozGemma || "sin_internet";
+  $("#a-voz-gemma").addEventListener("change", (e) => { A.vozGemma = e.target.value; save(); });
   $("#btn-local-bajar").addEventListener("click", localDownload);
   $("#btn-local-borrar").addEventListener("click", async () => { if (!confirm("¿Borrar la IA del celular? Liberas el espacio; puedes volver a descargarla.")) return; try { await IAL().borrar(); } catch (e) { /* nada */ } localStatus(); });
   $("#btn-local-probar").addEventListener("click", async () => {

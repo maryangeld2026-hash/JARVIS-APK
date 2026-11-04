@@ -33,6 +33,8 @@
   /** opts: {espera: ms que espera a que empieces a hablar, silencio: ms de pausa que da por terminada la frase} */
   async function listen(onPartial, opts) {
     stopListening();
+    // 3.13: sin internet (o si lo escogiste), Gemma 4 entiende tu voz dentro del celular
+    if (window.__gemmaVoz && window.__gemmaVoz.usar()) { try { return await window.__gemmaVoz.oir(onPartial, opts); } catch (e) { console.warn("Gemma no pudo oír", e); } }
     if (native() && plug("Oido") && oidoFallas < 2) return listenOido(onPartial, opts);
     if (native() && plug("SpeechRecognition")) return listenNative(onPartial);
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -141,6 +143,7 @@
     });
   }
   function stopListening() {
+    if (window.__gemmaVoz) window.__gemmaVoz.parar();
     if (webRec) { try { webRec.stop(); } catch (e) { /* ya paró */ } }
     if (nativeStop) nativeStop();
   }

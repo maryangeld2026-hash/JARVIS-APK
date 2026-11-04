@@ -12,10 +12,13 @@ let listo = false;
 const generic = { addListener: on, speak: async (o) => { window.__said.push(o.text); }, stop: async () => {}, checkPermissions: async () => ({}), requestPermissions: async () => ({}), schedule: async () => {}, cancel: async () => {}, registerActionTypes: async () => {}, keepAwake: async () => {}, allowSleep: async () => {}, getSupportedVoices: async () => ({ voices: [] }), config: async () => {}, bateriaEstado: async () => ({ nivel: 80 }) };
 const P = {
   Llavero: { obtener: async () => ({ llave: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=' }) },
-  Ventana: { addListener: on, pendientes: async () => ({ lista: [] }), abrir: async () => {}, textZoom: async () => {}, widget: async () => {}, silencio: async () => {}, verificar: async () => ({ ok: true }) },
-  IALocal: { addListener: on, estado: async () => ({ listo, nombre: listo ? 'gemma-4-E2B-it.litertlm' : '', mb: listo ? 2580 : 0, libreMb: 20000 }), memoria: async () => ({ totalMb: 7800, libreMb: 3000, discoMb: 20000 }),
+  Ventana: { addListener: on, pendientes: async () => ({ lista: [] }), abrir: async () => {}, textZoom: async () => {}, widget: async () => {}, silencio: async () => {}, temporizador: async () => {}, quitarTemporizador: async () => {}, verificar: async () => ({ ok: true }) },
+  IALocal: { addListener: on, estado: async () => ({ listo, gemma: listo, nombre: listo ? 'gemma-4-E2B-it.litertlm' : '', mb: listo ? 2580 : 0, libreMb: 20000 }), memoria: async () => ({ totalMb: 7800, libreMb: 3000, discoMb: 20000 }),
     descargar: async (o) => { log('descargar ' + o.nombre + ' ' + o.url); fire('progreso', { p: 50, mb: 1290 }); listo = true; return { ok: true, mb: 2580 }; },
-    generar: async (o) => { log('generar ' + JSON.stringify({ s: (o.sistema || '').slice(0, 40), n: (o.mensajes || []).length, ult: (o.mensajes || []).slice(-1)[0], max: o.maxTokens })); fire('parcial', { texto: 'París es' }); await new Promise(r => setTimeout(r, 80)); return { texto: 'París es la capital de Francia.', motor: 'Gemma · CPU' }; },
+    grabar: async (o) => { log('grabar'); return { ruta: '/cache/gemma_voz.wav', segundos: 2.1, hablo: true }; }, pararGrabacion: async () => {},
+    generar: async (o) => { log('generar ' + JSON.stringify({ s: (o.sistema || '').slice(0, 40), n: (o.mensajes || []).length, ult: (o.mensajes || []).slice(-1)[0], max: o.maxTokens, img: (o.imagenes || []).length, audio: o.audio || '' }));
+      if (o.audio) return { texto: 'pon cinco minutos', motor: 'Gemma · CPU' };
+      if ((o.imagenes || []).length) return { texto: 'Veo un gato sobre una mesa.', motor: 'Gemma · CPU', ve: true }; fire('parcial', { texto: 'París es' }); await new Promise(r => setTimeout(r, 80)); return { texto: 'París es la capital de Francia.', motor: 'Gemma · CPU' }; },
     detener: async () => log('detener'), cancelar: async () => {}, borrar: async () => { listo = false; } },
 };
 window.Capacitor = { isNativePlatform: () => true, Plugins: new Proxy({}, { get: (t, n) => P[n] || (n === 'SpeechRecognition' || n === 'Escaner' || n === 'Calendario' || n === 'Oido' ? undefined : generic) }) };
@@ -49,6 +52,18 @@ def main():
         gen = [x for x in pg.evaluate("window.__log") if x.startswith("generar ")]
         g = json.loads(gen[-1][8:]) if gen else {}
         check("París es la capital de Francia." in pg.evaluate("LASTJ()") and g.get("ult", {}).get("content") == "¿cuál es la capital de Francia?" and g.get("s", "").startswith("Eres Jarvis"), "responde con Gemma (conversación con roles y sistema)")
+        # fotos con Gemma
+        img = "/tmp/claude-0/gato.png"
+        from PIL import Image; Image.new("RGB", (40, 40), "orange").save(img)
+        pg.set_input_files("#chat-foto-in", img); pg.wait_for_timeout(1500)
+        g2 = [x for x in pg.evaluate("window.__log") if x.startswith("generar ")]
+        check(g2 and json.loads(g2[-1][8:]).get("img") == 1 and "Veo un gato" in pg.evaluate("LASTJ()"), "Gemma ve fotos sin internet")
+        # voz con Gemma (sin internet)
+        ctx.set_offline(True); pg.evaluate("window.__gemmaVoz.refrescar()"); pg.wait_for_timeout(300)
+        pg.click("#btn-mic"); pg.wait_for_timeout(2500)
+        L = pg.evaluate("window.__log")
+        check("grabar" in L and any('"audio":"/cache/gemma_voz.wav"' in x for x in L) and pg.evaluate("window.__jarvis.timer.end > 0"), "sin internet, Gemma entiende tu voz («pon cinco minutos»)")
+        ctx.set_offline(False)
         check(not errs, "sin errores de JavaScript " + str(errs[:3]))
         b.close()
     srv.shutdown()
