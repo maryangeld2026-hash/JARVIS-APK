@@ -224,6 +224,7 @@
     if (comp.length) p.push(`Tienes ${comp.length} compromiso${comp.length > 1 ? "s" : ""} pendiente${comp.length > 1 ? "s" : ""}${comp.length <= 3 ? ": " + comp.map((x) => x.texto).join("; ") : ""}.`);
     let riesgo = 0;
     if (doc) D.cursos.forEach((cu) => { if (cu.notas && cu.notas.actividades && cu.notas.actividades.length) { try { riesgo += L2.courseStats(cu, D.ajustes.escala).riesgo.length; } catch (e) { /* nada */ } } });
+    if (window.JX && window.JX.extrasHoy) { try { const ex = await Promise.race([window.JX.extrasHoy(), new Promise((r) => setTimeout(() => r([]), 5000))]); (ex || []).forEach((x) => x && p.push(x)); } catch (e) { /* nada */ } }   // 3.9: cumpleaños, gastos, noticias
     if (riesgo) p.push(`${riesgo} estudiante${riesgo > 1 ? "s van" : " va"} en riesgo.`);
     if (doc && D.ajustes.periodoFin) { const d = Math.ceil((D.ajustes.periodoFin - Date.now()) / 864e5); if (d > 0 && d <= 21) p.push(`Faltan ${d} días para cerrar el periodo.`); }
     return p.join(" ");

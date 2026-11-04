@@ -33,11 +33,68 @@ public class NotiServicio extends NotificationListenerService {
     };
 
     @Override public void onListenerConnected() { instancia = this; }
-    @Override public void onListenerDisconnected() { instancia = null; }
+    @Override public void onListenerDisconnected() { instancia = null; if (tts != null) { tts.shutdown(); tts = null; } }
+
+    // ======================================================================== 3.9: modo conducción, gastos del banco, «¿qué me perdí?»
+    static class Gasto { String clave, app, texto; long t; }
+    static final LinkedHashMap<String, Gasto> banco = new LinkedHashMap<String, Gasto>() {
+        @Override protected boolean removeEldestEntry(Map.Entry<String, Gasto> e) { return size() > 40; }
+    };
+    static final java.util.regex.Pattern GASTO = java.util.regex.Pattern.compile("(?i)(compra|compraste|pago|pagaste|transferencia|transferiste|retiro|retiraste|d[eé]bito|cargo)[^$]{0,80}\\$\\s?[\\d.,]{3,}|\\$\\s?[\\d.,]{3,}[^.]{0,60}(compra|pago|transferencia|retiro)");
+    private android.speech.tts.TextToSpeech tts;
+    private boolean ttsListo = false;
+    private android.content.SharedPreferences prefs() { return getSharedPreferences("jarvis_noti", 0); }
+    private void decir(String t) {
+        if (tts == null) {
+            tts = new android.speech.tts.TextToSpeech(getApplicationContext(), (st) -> {
+                ttsListo = st == android.speech.tts.TextToSpeech.SUCCESS;
+                if (ttsListo) { tts.setLanguage(new java.util.Locale("es", "CO")); tts.speak(t, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "j" + System.nanoTime()); }
+            });
+            return;
+        }
+        if (ttsListo) tts.speak(t, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "j" + System.nanoTime());
+    }
+    private void extras(StatusBarNotification sbn, Notification n) {
+        android.content.SharedPreferences p = prefs();
+        Bundle x = n.extras;
+        CharSequence ti = x.getCharSequence(Notification.EXTRA_TITLE), te = x.getCharSequence(Notification.EXTRA_TEXT), bt = x.getCharSequence(Notification.EXTRA_BIG_TEXT);
+        String titulo = ti == null ? "" : ti.toString(), texto = (bt != null ? bt : te == null ? "" : te).toString();
+        // una llamada entrante (cualquier app de teléfono): en modo conducción, «Te llama …»
+        if (Notification.CATEGORY_CALL.equals(n.category) && p.getBoolean("conduccion", false) && !titulo.isEmpty() && (n.flags & Notification.FLAG_ONGOING_EVENT) != 0 && n.fullScreenIntent != null) {
+            long ult = p.getLong("llamadaT", 0);
+            if (System.currentTimeMillis() - ult > 8000) { p.edit().putLong("llamadaT", System.currentTimeMillis()).apply(); decir("Te llama " + titulo); }
+            return;
+        }
+        // gastos que avisa el banco (por SMS o en su app): quedan en el celular para que Jarvis los anote
+        if (p.getBoolean("gastosAuto", false) && !getPackageName().equals(sbn.getPackageName()) && GASTO.matcher(texto).find()) {
+            Gasto g = new Gasto(); g.app = etiqueta(sbn.getPackageName()); g.texto = (titulo.isEmpty() ? "" : titulo + ": ") + texto; g.t = sbn.getPostTime(); g.clave = sbn.getKey() + "|" + texto.hashCode();
+            synchronized (banco) { banco.put(g.clave, g); }
+        }
+    }
+    static List<Gasto> gastos(long desde) {
+        List<Gasto> out = new ArrayList<>();
+        synchronized (banco) { for (Gasto g : banco.values()) if (g.t >= desde) out.add(g); }
+        return out;
+    }
+    /** Todas las notificaciones que tienes ahora (menos las fijas y las de Jarvis), para «¿qué me perdí?». */
+    List<String[]> activas() {
+        List<String[]> out = new ArrayList<>();
+        try {
+            for (StatusBarNotification sbn : getActiveNotifications()) {
+                Notification n = sbn.getNotification();
+                if ((n.flags & Notification.FLAG_ONGOING_EVENT) != 0 || (n.flags & Notification.FLAG_GROUP_SUMMARY) != 0 || getPackageName().equals(sbn.getPackageName())) continue;
+                CharSequence ti = n.extras.getCharSequence(Notification.EXTRA_TITLE), te = n.extras.getCharSequence(Notification.EXTRA_TEXT);
+                if (ti == null && te == null) continue;
+                out.add(new String[] { etiqueta(sbn.getPackageName()), ti == null ? "" : ti.toString(), te == null ? "" : te.toString(), String.valueOf(sbn.getPostTime()) });
+            }
+        } catch (Exception ignored) { }
+        return out;
+    }
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         try {
+            try { extras(sbn, sbn.getNotification()); } catch (Exception ignored) { }
             if (!APPS.contains(sbn.getPackageName())) return;
             Notification n = sbn.getNotification();
             if ((n.flags & Notification.FLAG_GROUP_SUMMARY) != 0 || (n.flags & Notification.FLAG_ONGOING_EVENT) != 0) return;
@@ -66,6 +123,11 @@ public class NotiServicio extends NotificationListenerService {
                 while (it.hasNext()) { Msg o = it.next().getValue(); if (o.paquete.equals(m.paquete) && o.de.equals(m.de) && o.texto.equals(m.texto)) it.remove(); }
                 recientes.put(m.clave, m);
             }
+            // 3.9: modo conducción — si Jarvis está en pantalla, él te lo lee y te pregunta si respondes; si no, lo lee Android
+            if (prefs().getBoolean("conduccion", false)) {
+                if (MainActivity.visible && MensajesPlugin.llego(m)) { /* lo maneja Jarvis */ }
+                else decir("Mensaje de " + m.de + " por " + m.app + ": " + (m.texto.length() > 220 ? m.texto.substring(0, 220) : m.texto));
+            } else MensajesPlugin.llego(m);
         } catch (Exception ignored) { }
     }
 

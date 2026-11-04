@@ -1,3 +1,56 @@
+# Jarvis para Android 3.9: tu día a día
+
+## 💸 Plata
+- **Gastos por voz:** «gasté 25 mil en almuerzo», «pagué 120.000 de luz», «me pagaron 2 millones». Jarvis pone la categoría solo.
+- **¿Cómo voy?** «¿cuánto llevo este mes?», «¿cuánto he gastado hoy en comida?», «borra el último gasto».
+- **Presupuesto:** «mi presupuesto es de 2 millones», «pon un presupuesto de 400 mil para comida». Te avisa en el 80 % y si te pasas.
+- **Los avisos del banco se anotan solos** (opcional, en *Ajustes › Vida diaria*): compras y pagos que llegan por SMS o por la app del banco. Se leen en el celular; no salen de él.
+- **Foto de un recibo o factura → gasto anotado** (menú 📎 › Recibo).
+
+## 🛒 Listas
+- «Agrega leche, huevos y pan a la lista», «¿qué me falta comprar?», «ya compré leche», «agrega pilas a la lista de la ferretería», «manda la lista a Carolina» (por WhatsApp).
+
+## 💊 Salud y hábitos
+- **Medicamentos:** «recuérdame tomar la pastilla de la presión a las 8 y a las 8 de la noche». El aviso trae «✅ Ya la tomé» y «⏰ En 10 minutos».
+- **Hábitos con rachas:** «ya hice ejercicio», «registra que tomé agua», «mis rachas».
+- **Pausas activas:** «pausas activas cada hora de 8 a 5», de lunes a viernes, con un ejercicio corto en cada aviso.
+
+## 🎂 Cumpleaños
+- Lee los cumpleaños de tus contactos y los que le digas («el cumpleaños de Ana es el 5 de marzo»). Ese día te avisa a las 8 y te propone 3 felicitaciones para mandar por WhatsApp. «¿Quién cumple años esta semana?»
+
+## ⚡ Disparadores automáticos
+- «Cuando conecte el carro, modo conducción» (escoges tu Bluetooth), «al poner a cargar el celular, activa el modo ahorro», «cuando llegue a la casa, silencia el celular y pon música». También al desconectar o al salir de un lugar.
+- Android avisa estos eventos: Jarvis no queda despierto esperando. Si Jarvis puede mostrarse sobre otras apps, se abre solo y lo hace; si no, te deja un aviso para tocar.
+
+## 🚗 Modo conducción
+- «Modo conducción» (o con el disparador del carro): te lee los mensajes que llegan, te dice quién te llama y respondes hablando («dile que voy en camino» → «¿Le envío…?» → «sí»). «Ya llegué» para terminar.
+- **«¿Qué me perdí?»:** tus notificaciones agrupadas por app.
+
+## 📷 Cámara inteligente (menú 📎)
+- **Recibo → gasto**, **tarjeta de presentación → contacto nuevo** (Android te lo muestra para revisarlo), **¿qué es esto?** (plantas, productos, lugares, aparatos…).
+
+## 🔊 Leer y saber
+- **Leer en voz alta:** «léeme este artículo https://…», «léeme el último documento», o «Compartir › Jarvis › Léelo en voz alta». Botón ⏹ para parar, o «para de leer».
+- **Pregúntale a tus notas:** «según mis notas, ¿cuándo es la reunión de padres?». Busca en tus documentos, notas, compromisos y conversaciones; lo que tiene nombres de estudiantes no va a la IA.
+- **Noticias:** «dame las noticias», «noticias de tecnología». Y en el resumen de la mañana, de los temas que escojas.
+- **Intérprete en vivo:** «modo intérprete con inglés» (o francés, portugués…): hablan por turnos y Jarvis traduce en voz cada frase.
+
+## 🚨 Emergencia
+- «Jarvis, emergencia»: te ofrece enviar tu ubicación por SMS a tus contactos de confianza (los escribes en *Ajustes › Vida diaria*) o llamar al 123. Solo envía si dices «sí» o tocas el botón.
+
+## ⏲ Temporizadores con nombre
+- «Pon 10 minutos para el arroz y…», «pon 25 minutos para el horno», «¿cuánto le falta al arroz?», «cancela el del horno». Salen en el panel de arriba y Android te avisa aunque Jarvis esté cerrado.
+
+## 🎓 Modo docente
+- **Planeador semanal:** «planea mi semana de clases (de 7A) sobre fracciones»: arma la semana con tu horario y la guarda en Material (Word, PDF o compartir). Las rúbricas siguen con «hazme una rúbrica para…».
+
+## 🌅 Resumen de la mañana
+- Ahora trae también cumpleaños, medicamentos del día, cómo vas con los gastos del mes y titulares de noticias.
+
+## 🔋 Batería
+- Medicamentos, pausas, cumpleaños y temporizadores los avisa Android con notificaciones programadas; los disparadores también los da Android (Bluetooth, cargador, lugares). Nada de esto deja a Jarvis despierto.
+- Las noticias se guardan una hora; los avisos del banco se revisan solo con Jarvis en pantalla.
+
 # Jarvis para Android 3.8: tu asistente personal (y el de la clase, cuando lo necesitas)
 
 ## 🧭 Un asistente para todo el día

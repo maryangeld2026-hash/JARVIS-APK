@@ -24,6 +24,7 @@ public class LugarReceiver extends BroadcastReceiver {
         int fl = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0);
         for (Geofence g : ev.getTriggeringGeofences()) {
             String id = g.getRequestId(), t = c.getSharedPreferences("jarvis_lugares", 0).getString(id, "Recordatorio");
+            if (id.startsWith("disp-")) { Disparo.lanzar(c, t, "Llegaste o saliste de un lugar"); continue; }   // 3.9: disparador por lugar (se queda vigilando)
             Intent abrir = new Intent(c, MainActivity.class).putExtra("atajo", "lugar:" + id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, "jarvis_lugar") : new Notification.Builder(c);
             b.setSmallIcon(R.mipmap.ic_launcher_foreground).setContentTitle("📍 Jarvis te recuerda").setContentText(t)

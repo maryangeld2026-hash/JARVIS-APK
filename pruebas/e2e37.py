@@ -150,6 +150,11 @@ def main():
         pg.screenshot(path="/tmp/claude-0/e2e37-vivo.png")
         pg.click("#live-sh >> text=Colgar"); pg.wait_for_timeout(300)
         check(not pg.is_visible("#live-sh") and "puse cinco minutos" in pg.evaluate("JD.load().chat.map(m => m.content).join(' ')"), "colgar: la conversación queda en el chat")
+        # 3.9: intérprete en vivo
+        live["setup"] = None
+        say("modo intérprete con inglés", 4500)
+        check(live["setup"] and "intérprete en vivo entre español y inglés" in json.dumps(live["setup"]["systemInstruction"], ensure_ascii=False), "intérprete: conversación en vivo con instrucción de traducir")
+        if pg.is_visible("#live-sh"): pg.click("#live-sh >> text=Colgar"); pg.wait_for_timeout(300)
         # 3.7.1: ahorro de batería
         say("modo ahorro", 400)
         check(pg.evaluate("document.body.classList.contains('ahorro') && JD.load().ajustes.ahorroActivo"), "modo ahorro: se activa con la voz")

@@ -20,6 +20,44 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  */
 @CapacitorPlugin(name = "Mensajes")
 public class MensajesPlugin extends Plugin {
+    private static MensajesPlugin yo;
+    @Override public void load() { yo = this; }
+
+    /** 3.9: llegó un mensaje (para el modo conducción). → true si Jarvis está escuchando el evento. */
+    static boolean llego(NotiServicio.Msg m) {
+        MensajesPlugin p = yo; if (p == null || !p.hasListeners("llego")) return false;
+        JSObject o = new JSObject();
+        o.put("clave", m.clave); o.put("app", m.app); o.put("de", m.de); o.put("texto", m.texto); o.put("t", m.t); o.put("puedeResponder", m.responder != null);
+        p.notifyListeners("llego", o);
+        return true;
+    }
+
+    /** 3.9: {conduccion, gastosAuto} */
+    @PluginMethod
+    public void config(PluginCall call) {
+        android.content.SharedPreferences.Editor e = getContext().getSharedPreferences("jarvis_noti", 0).edit();
+        if (call.hasOption("conduccion")) e.putBoolean("conduccion", call.getBoolean("conduccion", false));
+        if (call.hasOption("gastosAuto")) e.putBoolean("gastosAuto", call.getBoolean("gastosAuto", false));
+        e.apply(); call.resolve();
+    }
+
+    /** 3.9: avisos de compras y pagos del banco: {lista:[{clave, app, texto, t}]} */
+    @PluginMethod
+    public void banco(PluginCall call) {
+        long desde = (long) (double) call.getDouble("desde", 0d);
+        JSArray l = new JSArray();
+        for (NotiServicio.Gasto g : NotiServicio.gastos(desde)) { JSObject o = new JSObject(); o.put("clave", g.clave); o.put("app", g.app); o.put("texto", g.texto); o.put("t", g.t); l.put(o); }
+        JSObject r = new JSObject(); r.put("lista", l); r.put("sinPermiso", !activo()); call.resolve(r);
+    }
+
+    /** 3.9: «¿qué me perdí?»: todas las notificaciones que tienes. {lista:[{app, titulo, texto, t}]} */
+    @PluginMethod
+    public void activas(PluginCall call) {
+        JSArray l = new JSArray();
+        NotiServicio s = NotiServicio.instancia;
+        if (s != null) for (String[] a : s.activas()) { JSObject o = new JSObject(); o.put("app", a[0]); o.put("titulo", a[1]); o.put("texto", a[2]); o.put("t", Long.parseLong(a[3])); l.put(o); }
+        JSObject r = new JSObject(); r.put("lista", l); r.put("sinPermiso", !activo()); call.resolve(r);
+    }
     private boolean activo() {
         String s = Settings.Secure.getString(getContext().getContentResolver(), "enabled_notification_listeners");
         return s != null && s.contains(new ComponentName(getContext(), NotiServicio.class).flattenToString());

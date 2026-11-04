@@ -84,7 +84,7 @@ def main():
         pg.evaluate("window.__entradas.push({ tipo: 'atajo', atajo: 'tiempo5' }); window.__fire('entrada', {})"); pg.wait_for_timeout(500)
         check("5 minutos" in e2e_last(pg) and any(x.startswith("tiempo 29") or x.startswith("tiempo 30") for x in pg.evaluate("window.__ventana")), "atajo «5 minutos» + temporizador en la notificación")
         pg.evaluate("window.__entradas.push({ tipo: 'compartir', texto: 'Profe, mañana no puede ir Juanita porque tiene cita médica.' }); window.__fire('entrada', {})"); pg.wait_for_timeout(500)
-        check("Recibí este texto" in e2e_last(pg) and pg.locator(".msg.jarvis:last-of-type .chip").count() == 4, "«Compartir › Jarvis» con texto: pregunta qué hacer")
+        check("Recibí este texto" in e2e_last(pg) and pg.locator(".msg.jarvis:last-of-type .chip").count() == 5, "«Compartir › Jarvis» con texto: pregunta qué hacer")
         pg.evaluate("window.__entradas.push({ tipo: 'compartir', nombre: 'tablero.png', mime: 'image/png', base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }); window.__fire('entrada', {})"); pg.wait_for_timeout(500)
         check("tablero.png" in e2e_last(pg), "«Compartir › Jarvis» con una imagen")
         # calendario del celular

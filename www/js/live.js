@@ -25,15 +25,17 @@
   const WORKLET = `class P extends AudioWorkletProcessor{constructor(){super();this.b=[];this.n=0;}process(i){const c=i[0]&&i[0][0];if(c){this.b.push(new Float32Array(c));this.n+=c.length;if(this.n>=2048){const o=new Float32Array(this.n);let k=0;for(const x of this.b){o.set(x,k);k+=x.length;}this.b=[];this.n=0;this.port.postMessage(o,[o.buffer]);}}return true;}}registerProcessor('jarvis-mic',P);`;
 
   let S = null;              // la sesión en vivo
-  async function start() {
+  /** opts.sys: otra instrucción (3.9: el intérprete), opts.titulo para la pantalla. */
+  async function start(opts) {
     if (S) return;
+    opts = opts || {};
     const key = (D.ajustes.claves.gemini || "").trim();
     if (!key) return A.reply("La conversación en vivo usa Gemini: pon tu clave de Gemini en Ajustes.", "err");
     if (!navigator.onLine) return A.reply("La conversación en vivo necesita internet.", "err");
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.AudioWorkletNode) return A.reply("Este celular no permite la conversación en vivo (le falta audio en tiempo real en la app).", "err");
     V.hush(); (V.cancelListening || V.stopListening)();
     if (X.beforeListen) { try { await X.beforeListen(); } catch (e) { /* sigue */ } }
-    S = { key, cola: 0, fuentes: [], entrada: "", salida: "" };
+    S = { key, cola: 0, fuentes: [], entrada: "", salida: "", opts };
     ui();
     try {
       const model = await liveModel(key);
@@ -57,7 +59,7 @@
       const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(key)}`);
       S.ws = ws;
       ws.onopen = () => {
-        const sys = (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto, natural y cálido, en español de Colombia. Si te piden algo que hace la app (temporizador, escoger un estudiante, grupos, recordatorios, pasar lista, abrir una app, llamar), usa la herramienta jarvis_orden con la orden en palabras.";
+        const sys = S.opts.sys ? S.opts.sys : (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto, natural y cálido, en español de Colombia. Si te piden algo que hace la app (temporizador, escoger un estudiante, grupos, recordatorios, pasar lista, abrir una app, llamar), usa la herramienta jarvis_orden con la orden en palabras.";
         send({ setup: { model: "models/" + model,
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre && !/^[a-z]/.test(D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : "Kore" } } } },
           systemInstruction: { parts: [{ text: sys }] },

@@ -8,8 +8,8 @@ android {
         applicationId "co.jarvis.docente"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
-        versionName "3.8.0"
+        versionCode 19
+        versionName "3.9.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // solo los procesadores de los celulares Android (el motor de voz pesa ~10 MB por cada uno)
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }

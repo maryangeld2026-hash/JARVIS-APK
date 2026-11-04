@@ -237,7 +237,7 @@
         const n = { id: numId(id), title, body, schedule: { at: new Date(when), allowWhileIdle: true }, extra: { rid: String(id) } };
         // 3.4: los recordatorios llegan con «Posponer 10 min» y «Listo»
         if (extra && extra.acciones) {
-          if (!tiposListos) { try { await LN.registerActionTypes({ types: [{ id: "recordatorio", actions: [{ id: "posponer", title: "Posponer 10 min" }, { id: "listo", title: "Listo" }] }] }); tiposListos = true; } catch (e) { /* sin botones */ } }
+          if (!tiposListos) { try { await LN.registerActionTypes({ types: [{ id: "recordatorio", actions: [{ id: "posponer", title: "Posponer 10 min" }, { id: "listo", title: "Listo" }] }, { id: "jarvis_med", actions: [{ id: "tomada", title: "✅ Ya la tomé" }, { id: "luego", title: "⏰ En 10 minutos" }] }] }); tiposListos = true; } catch (e) { /* sin botones */ } }
           if (tiposListos) n.actionTypeId = "recordatorio";
         }
         await LN.schedule({ notifications: [n] });

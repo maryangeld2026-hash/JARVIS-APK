@@ -121,6 +121,7 @@ def main():
         say("cuánto he gastado de la IA", 300)
         check("Uso de la IA este mes" in last() and "Gemini" in last(), "uso de la IA")
         # ajustes
+        if pg.is_visible("#alarma"): pg.click("#btn-alarma")          # la prueba forzó el fin del temporizador
         pg.click("#btn-ajustes"); pg.wait_for_timeout(300)
         check(pg.locator("#aj-gen").count() == 1 and "modo enfoque" in pg.inner_text("#aj-gen"), "Ajustes › Asistente con habilidades y órdenes")
         pg.click("#btn-ajustes-cerrar")

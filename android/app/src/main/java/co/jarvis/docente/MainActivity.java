@@ -33,6 +33,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(LugaresPlugin.class);
         registerPlugin(MensajesPlugin.class);
         registerPlugin(LlaveroPlugin.class);
+        registerPlugin(DisparadoresPlugin.class);
         super.onCreate(savedInstanceState);
         // 3.0.2: con la letra del celular muy grande, la barra de arriba no cabía y el botón de Ajustes quedaba por fuera
         try {
@@ -55,6 +56,11 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
             new Thread(() -> VentanaPlugin.recibir(getApplicationContext(), copia), "jarvis-compartir").start();
         } else VentanaPlugin.recibir(getApplicationContext(), copia);
     }
+
+    /** 3.9: ¿Jarvis está en pantalla? (el modo conducción habla desde Android solo si no lo está) */
+    static volatile boolean visible = false;
+    @Override public void onResume() { super.onResume(); visible = true; }
+    @Override public void onPause() { visible = false; super.onPause(); }
 
     @Override
     protected void onNewIntent(Intent intent) {

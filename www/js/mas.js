@@ -28,6 +28,7 @@
   async function entrada(e) {
     if (e.tipo === "atajo") {
       A.tab("hablar");
+      if (/^orden:/.test(e.atajo || "")) { const o = e.atajo.slice(6); A.add("assistant", "▶ Automático: " + o, "tool orden"); return A.dispatch ? A.dispatch(o) : A.handle(o, false); }   // 3.9: disparadores
       switch (e.atajo) {
         case "hablar": setTimeout(() => (A.wake ? A.wake() : A.listen(false)), 350); return;
         case "tiempo5": A.startTimer(300); return A.reply("Listo: 5 minutos. Te aviso cuando termine.");
@@ -55,7 +56,8 @@
           ["Resúmelo", () => A.handle("Resume esto en puntos clave:\n\n" + t, false)],
           ["Respóndele (a un padre o colega)", () => A.handle("Ayúdame a responder este mensaje con cordialidad y en pocas líneas:\n\n" + t, false)],
           ["Guárdalo en Material", () => { (D.docs = D.docs || []).unshift({ id: window.JD.uid(), titulo: t.split("\n")[0].slice(0, 60) || "Texto compartido", md: t, fecha: Date.now(), tipo: "nota" }); save(); A.reply("Guardado en Material."); }],
-          ["Recuérdamelo", () => A.handle("recuérdame " + t.slice(0, 120), false)]]);
+          ["Recuérdamelo", () => A.handle("recuérdame " + t.slice(0, 120), false)],
+          ["🔊 Léelo en voz alta", () => (X._vida ? X._vida.leerCompartido(t) : A.say(t))]]);
       }
     }
   }

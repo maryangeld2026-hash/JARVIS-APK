@@ -82,6 +82,47 @@ public class TelefonoPlugin extends Plugin {
         JSObject r = new JSObject(); r.put("lista", out); call.resolve(r);
     }
 
+    /** 3.9: los cumpleaños guardados en tus contactos: {lista:[{nombre, fecha}]} (fecha «--MM-DD» o «AAAA-MM-DD»). */
+    @PluginMethod
+    public void cumpleanos(PluginCall call) {
+        if (getPermissionState("contactos") != PermissionState.GRANTED) { requestPermissionForAlias("contactos", call, "cumpleListo"); return; }
+        leerCumple(call);
+    }
+    @PermissionCallback
+    private void cumpleListo(PluginCall call) {
+        if (getPermissionState("contactos") != PermissionState.GRANTED) { call.reject("Sin permiso para ver tus contactos."); return; }
+        leerCumple(call);
+    }
+    private void leerCumple(PluginCall call) {
+        JSArray out = new JSArray();
+        String[] cols = { ContactsContract.Data.DISPLAY_NAME, ContactsContract.CommonDataKinds.Event.START_DATE };
+        String sel = ContactsContract.Data.MIMETYPE + "=? AND " + ContactsContract.CommonDataKinds.Event.TYPE + "=" + ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY;
+        try (Cursor k = getContext().getContentResolver().query(ContactsContract.Data.CONTENT_URI, cols, sel, new String[] { ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE }, null)) {
+            while (k != null && k.moveToNext() && out.length() < 2000) {
+                String n = k.getString(0), f = k.getString(1);
+                if (n == null || f == null) continue;
+                JSObject c = new JSObject(); c.put("nombre", n); c.put("fecha", f); out.put(c);
+            }
+        } catch (Exception e) { call.reject("No pude leer los cumpleaños: " + e.getMessage()); return; }
+        JSObject r = new JSObject(); r.put("lista", out); call.resolve(r);
+    }
+
+    /** 3.9: abre «Nuevo contacto» de Android con los datos de una tarjeta de presentación (tú lo revisas y lo guardas). */
+    @PluginMethod
+    public void nuevoContacto(PluginCall call) {
+        try {
+            Intent i = new Intent(ContactsContract.Intents.Insert.ACTION).setType(ContactsContract.RawContacts.CONTENT_TYPE);
+            i.putExtra(ContactsContract.Intents.Insert.NAME, call.getString("nombre", ""));
+            if (!call.getString("telefono", "").isEmpty()) i.putExtra(ContactsContract.Intents.Insert.PHONE, call.getString("telefono", ""));
+            if (!call.getString("email", "").isEmpty()) i.putExtra(ContactsContract.Intents.Insert.EMAIL, call.getString("email", ""));
+            if (!call.getString("empresa", "").isEmpty()) i.putExtra(ContactsContract.Intents.Insert.COMPANY, call.getString("empresa", ""));
+            if (!call.getString("cargo", "").isEmpty()) i.putExtra(ContactsContract.Intents.Insert.JOB_TITLE, call.getString("cargo", ""));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) { call.reject("No pude abrir «Nuevo contacto»: " + e.getMessage()); }
+    }
+
     @PluginMethod
     public void llamar(PluginCall call) {
         if (getPermissionState("llamar") != PermissionState.GRANTED) { requestPermissionForAlias("llamar", call, "llamarListo"); return; }
