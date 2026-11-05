@@ -34,15 +34,16 @@
   async function listen(onPartial, opts) {
     stopListening();
     // 3.13: sin internet (o si lo escogiste), Gemma 4 entiende tu voz dentro del celular
-    if (window.__gemmaVoz && window.__gemmaVoz.usar()) { try { return await window.__gemmaVoz.oir(onPartial, opts); } catch (e) { console.warn("Gemma no pudo oír", e); } }
+    const idi = (opts && opts.idioma) || LANG;                                        // 3.17: también en otros idiomas (traductor)
+    if (idi === LANG && window.__gemmaVoz && window.__gemmaVoz.usar()) { try { return await window.__gemmaVoz.oir(onPartial, opts); } catch (e) { console.warn("Gemma no pudo oír", e); } }
     if (native() && plug("Oido") && oidoFallas < 2) return listenOido(onPartial, opts);
-    if (native() && plug("SpeechRecognition")) return listenNative(onPartial);
+    if (native() && plug("SpeechRecognition")) return listenNative(onPartial, idi);
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!R) throw new Error("Este navegador no reconoce la voz. Escribe la orden, o instala la app de Jarvis.");
     return new Promise((resolve, reject) => {
       const r = new R();
       webRec = r;
-      r.lang = LANG; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+      r.lang = idi; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
       let final = "", last = "";
       r.onresult = (e) => {
         let interim = "";
@@ -78,7 +79,7 @@
     nativeStop = () => { O.detener().catch(() => {}); };
     try {
       const o = opts || {};
-      const r = (await O.escuchar({ idioma: LANG, silencio: o.silencio || 1600, espera: o.espera || 9000, maximo: 15000 })) || {};
+      const r = (await O.escuchar({ idioma: o.idioma || LANG, silencio: o.silencio || 1600, espera: o.espera || 9000, maximo: 15000 })) || {};
       lastListen = r;
       if (r.error === "permiso") { oidoOk = false; throw new Error("Jarvis no tiene permiso para el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos › Micrófono."); }
       if (!r.texto && r.error === "red") throw new Error("El reconocimiento de voz necesita internet en este celular. Revisa la conexión, o descarga la voz sin internet en Ajustes › «Jarvis» en segundo plano.");
@@ -88,7 +89,7 @@
       if (!r.texto && r.error && !/^(?:cancelado|otra|sin_respuesta)$/.test(r.error) && plug("SpeechRecognition")) {
         oidoFallas++; console.warn("Oído:", r.error);
         nativeStop = null; if (h && h.remove) h.remove();
-        const t = await listenNative(onPartial);
+        const t = await listenNative(onPartial, (opts && opts.idioma) || LANG);
         if (!t) throw new Error(`El micrófono no respondió (${r.motor || "voz"}: ${r.error}). Toca Ajustes › Probar el micrófono para ver qué pasa.`);
         return t;
       }
@@ -121,7 +122,7 @@
     }
     onLine("Ningún camino oyó tu voz. Revisa: que ninguna otra app esté usando el micrófono, el permiso, y que la app de Google esté instalada. Si tienes «Jarvis en segundo plano», descarga su modelo: así la conversación también funciona sin Google.");
   }
-  async function listenNative(onPartial) {
+  async function listenNative(onPartial, idioma) {
     const SR = plug("SpeechRecognition");
     const perm = await SR.checkPermissions().catch(() => ({}));
     if (perm.speechRecognition !== "granted") {
@@ -136,7 +137,7 @@
       handles.push(await on(SR, "partialResults", (d) => { const m = (d && d.matches) || []; if (m[0]) { last = m[0]; if (onPartial) onPartial(last); } }));
       handles.push(await on(SR, "listeningState", (d) => { if (d && d.status === "stopped") setTimeout(finish, 150); }));
       try {
-        const r = await SR.start({ language: LANG, maxResults: 1, partialResults: true, popup: false });
+        const r = await SR.start({ language: idioma || LANG, maxResults: 1, partialResults: true, popup: false });
         if (r && r.matches && r.matches[0]) { last = r.matches[0]; finish(); }
       } catch (e) { finish(); }
       setTimeout(() => { if (!done) nativeStop && nativeStop(); }, 20000);            // nunca se queda escuchando para siempre
@@ -163,17 +164,19 @@
     return vs.sort((a, b) => rank(a) - rank(b))[0] || null;
   }
   if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = () => { webVoice = pickWebVoice(); }; webVoice = pickWebVoice(); }
-  function speakOne(text) {
+  const esES = (l) => !l || /^es/i.test(l);
+  function speakOne(text, lang) {
     if (native() && plug("TextToSpeech")) {
-      const o = { text, lang: LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0, category: "playback" };
-      if (opts.voice != null && opts.voice >= 0) o.voice = opts.voice;                   // 3.4: la voz que escogiste en Ajustes
-      return plug("TextToSpeech").speak(o).catch(() => plug("TextToSpeech").speak({ text, lang: LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0 }).catch(() => {}));
+      const o = { text, lang: lang || LANG, rate: opts.rate, pitch: esES(lang) ? opts.pitch : 1, volume: 1.0, category: "playback" };
+      if (esES(lang) && opts.voice != null && opts.voice >= 0) o.voice = opts.voice;     // 3.4: la voz que escogiste en Ajustes (3.17: solo en español)
+      return plug("TextToSpeech").speak(o).catch(() => plug("TextToSpeech").speak({ text, lang: lang || LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0 }).catch(() => {}));
     }
     if (!window.speechSynthesis) return Promise.resolve();
     return new Promise((resolve) => {
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = LANG; u.rate = opts.rate; u.pitch = opts.pitch;
-      if (opts.webVoice && window.speechSynthesis) { const v = speechSynthesis.getVoices().find((x) => x.name === opts.webVoice); if (v) u.voice = v; else if (webVoice) u.voice = webVoice; }
+      u.lang = lang || LANG; u.rate = opts.rate; u.pitch = opts.pitch;
+      if (!esES(lang)) { const v = speechSynthesis.getVoices().find((x) => x.lang && x.lang.toLowerCase().startsWith(String(lang).slice(0, 2).toLowerCase())); if (v) u.voice = v; }
+      else if (opts.webVoice && window.speechSynthesis) { const v = speechSynthesis.getVoices().find((x) => x.name === opts.webVoice); if (v) u.voice = v; else if (webVoice) u.voice = webVoice; }
       else if (webVoice) u.voice = webVoice;
       let ok = false;
       const end = () => { if (!ok) { ok = true; resolve(); } };
@@ -193,13 +196,13 @@
         if (audio && speaker) { await speaker.play(audio); return; }
       } catch (e) { /* habla el celular */ }
     }
-    return speakOne(it.t);
+    return speakOne(it.t, it.lang);
   }
   /** 3.16: la voz del celular en fila (QUEUE_ADD): la frase siguiente ya está en Android mientras suena esta → sin pausas entre frases. */
-  function speakAdd(text) {
+  function speakAdd(text, lang) {
     const T = nativeTTS();
-    const o = { text, lang: LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0, category: "playback", queueStrategy: 1 };
-    if (opts.voice != null && opts.voice >= 0) o.voice = opts.voice;
+    const o = { text, lang: lang || LANG, rate: opts.rate, pitch: esES(lang) ? opts.pitch : 1, volume: 1.0, category: "playback", queueStrategy: 1 };
+    if (esES(lang) && opts.voice != null && opts.voice >= 0) o.voice = opts.voice;
     return T.speak(o).catch(() => {});
   }
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -209,7 +212,7 @@
   function takeNext(max) {
     const it = q.shift();
     if (it.pre) return it;
-    while (q.length && !q[0].pre && (it.t + " " + q[0].t).length <= max) it.t += " " + q.shift().t;
+    while (q.length && !q[0].pre && q[0].lang === it.lang && (it.t + " " + q[0].t).length <= max) it.t += " " + q.shift().t;
     return it;
   }
   async function pump(myGen) {
@@ -231,7 +234,7 @@
       if (nativeTTS() && !q[0].pre) {
         const it = takeNext(playing ? 400 : 240);
         const ms = 9000 + it.t.length * 120;
-        const nuevo = { p: speakAdd(it.t), ms, fin: 0 };
+        const nuevo = { p: speakAdd(it.t, it.lang), ms, fin: 0 };
         if (playing) await wait(playing.p, playing.ms);                             // la nueva ya quedó en fila detrás de esta
         if (myGen !== gen) break;
         nuevo.fin = Date.now() + ms; playing = nuevo;
@@ -257,17 +260,22 @@
     const t = acc.trim(); acc = "";
     if (t) push(t);
   }
-  function push(t) {
+  function push(t, lang) {
     let pre = null;
-    if (speaker) { try { pre = speaker.prepare(t); if (pre && pre.catch) pre.catch(() => null); } catch (e) { pre = null; } }   // se pide el audio de una vez: mientras dice una frase, ya viene la otra
-    q.push({ t, pre });
+    if (speaker && esES(lang)) { try { pre = speaker.prepare(t); if (pre && pre.catch) pre.catch(() => null); } catch (e) { pre = null; } }   // se pide el audio de una vez: mientras dice una frase, ya viene la otra
+    q.push({ t, pre, lang: lang || "" });
     wake();
     pump(gen);
   }
   /** Agrega una frase a la cola (la IA va mandando frases mientras piensa). */
-  function say(text) {
+  /** lang: 3.17, para decir algo en otro idioma con la voz de ese idioma (traductor). */
+  function say(text, lang) {
     const t0 = String(text || "").trim();
     if (!t0) return;
+    if (lang && !esES(lang)) {                                                         // otro idioma: va directo, sin juntarse con el español
+      if (t0.length > 320) { let ps = t0.match(/[^.!?。！？]+[.!?。！？]*\s*/g) || [t0]; if (ps.length < 2) ps = t0.match(/[\s\S]{1,280}/g); ps.forEach((x) => say(x, lang)); return; }
+      flushAcc(); push(t0, lang); return;
+    }
     // 3.15: un texto muy largo se parte (el motor de voz del celular se calla con textos de más de ~4.000 letras)
     if (t0.length > 320) { const ps = t0.match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [t0]; let cur = ""; ps.forEach((p) => { if ((cur + p).length > 300 && cur) { say(cur); cur = ""; } if (p.length > 300) { (p.match(/.{1,280}(\s|$)/g) || [p]).forEach((x) => say(x)); } else cur += p; }); if (cur.trim()) say(cur); return; }
     const conIA = speaker && speaker.activo && speaker.activo() && (speaking || q.length);

@@ -1,4 +1,16 @@
-# Jarvis para Android 3.16: personalidad de Jarvis, conversación fluida y apagar de verdad
+# Jarvis para Android 3.17: traductor de idiomas y reconocer canciones
+
+## 🌐 Traductor completo
+- «Traduce al inglés: …», «¿cómo se dice … en francés?», «qué significa "…"»: traduce natural (con IA), da la pronunciación y lo dice con la voz de ese idioma. Botones: otra vez, despacio, copiar, guardar.
+- Modo conversación: «abre el traductor» o «ayúdame a hablar con alguien en inglés». Cada uno toca su botón y habla; Jarvis traduce y lo dice en voz alta. Turnos automáticos y modo cara a cara (gira el lado de la otra persona). 26 idiomas.
+- Sin internet: paquetes de idiomas dentro del celular (ML Kit, unos 30 MB cada uno, en Ajustes › Traductor o «descarga el francés para traducir sin internet»).
+- «Traduce eso» (lo último), «traduce esta pantalla» y «traduce este menú» (foto: el texto se lee en el celular y se traduce).
+- Los nombres de tus estudiantes nunca van a la IA: ese texto se traduce dentro del celular.
+
+## 🎵 ¿Qué canción es esta?
+- Escucha 10 segundos y la reconoce con AudD (unas búsquedas gratis al día, o más con una clave de audd.io). Si no, Gemini escucha el audio, saca una pista y la busca en Google.
+- «Voy a tararear una canción»: reconoce lo que cantas o tarareas (con Gemini).
+- Botones para abrirla en YouTube, Spotify o Apple Music; «mis canciones» y «ponla». El audio se borra al terminar.
 
 ## 🎩 Jarvis, como el de las películas
 - Personalidad de mayordomo digital: elegante, sereno, eficiente y con humor seco. Le dice «señor» y no hace preguntas de más.

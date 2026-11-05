@@ -44,7 +44,7 @@ jobs:
         run: npm ci
 
       - name: Pruebas de la lógica
-        run: node --test pruebas/logica.test.js pruebas/logica2.test.js pruebas/logica3.test.js pruebas/logica4.test.js pruebas/logica5.test.js pruebas/logica6.test.js pruebas/logica7.test.js pruebas/logica8.test.js pruebas/logica9.test.js pruebas/logica10.test.js pruebas/logica11.test.js
+        run: node --test pruebas/logica.test.js pruebas/logica2.test.js pruebas/logica3.test.js pruebas/logica4.test.js pruebas/logica5.test.js pruebas/logica6.test.js pruebas/logica7.test.js pruebas/logica8.test.js pruebas/logica9.test.js pruebas/logica10.test.js pruebas/logica11.test.js pruebas/logica12.test.js
 
       - name: Prueba de punta a punta (celular simulado)
         run: |
@@ -62,6 +62,7 @@ jobs:
           python3 pruebas/e2e312.py
           python3 pruebas/e2e314.py
           python3 pruebas/e2e316.py
+          python3 pruebas/e2e317.py
 
       - uses: actions/upload-artifact@v5
         if: always()

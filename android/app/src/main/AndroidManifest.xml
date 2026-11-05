@@ -103,7 +103,7 @@
         <!-- 3.6: recordatorios por lugar -->
         <receiver android:name=".LugarReceiver" android:exported="false" />
         <!-- 3.14: Google Play baja los modelos de lectura de texto y de fotos al instalar -->
-        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="ocr,ica" />
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="ocr,ica,langid" />
         <!-- 3.12: Gemma 4 con la GPU (si el celular la tiene) -->
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
@@ -193,6 +193,8 @@
 
     <!-- Android 11+: para encontrar el reconocimiento de voz y la voz del teléfono -->
     <queries>
+        <package android:name="com.shazam.android" />
+        <package android:name="com.google.android.googlequicksearchbox" />
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>

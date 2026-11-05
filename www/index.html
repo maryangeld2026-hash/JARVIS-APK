@@ -254,11 +254,12 @@
 <script src="js/logica9.js"></script>
 <script src="js/logica10.js"></script>
 <script src="js/logica11.js"></script>
+<script src="js/logica12.js"></script>
 <script src="js/datos.js"></script>
 <script>
 /* 3.7: la app arranca cuando los datos están listos (en el celular se descifran primero). */
 (function () {
-  var files = ["js/voz.js", "js/ia.js", "js/pdf.js", "js/app2.js", "js/hud.js", "js/habilidades.js", "js/mas.js", "js/omr.js", "js/control.js", "js/extra.js", "js/live.js", "js/ahorro.js", "js/general.js", "js/vida.js", "js/casa.js", "js/agente.js", "js/mejoras.js", "js/app.js"];
+  var files = ["js/voz.js", "js/ia.js", "js/pdf.js", "js/app2.js", "js/hud.js", "js/habilidades.js", "js/mas.js", "js/omr.js", "js/control.js", "js/extra.js", "js/live.js", "js/ahorro.js", "js/general.js", "js/vida.js", "js/casa.js", "js/agente.js", "js/mejoras.js", "js/traductor.js", "js/app.js"];
   /* 3.10: se piden todos a la vez y el navegador los corre en orden (async = false): arranca más rápido */
   function cargar() { files.forEach(function (f) { var s = document.createElement("script"); s.src = f; s.async = false; s.onerror = function () { console.error("No cargó " + f); }; document.body.appendChild(s); }); }
   JD.ready().catch(function (e) { console.error(e); }).then(cargar);
