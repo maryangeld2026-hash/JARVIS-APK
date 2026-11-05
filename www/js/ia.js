@@ -208,9 +208,16 @@
     if (!P) throw Object.assign(new Error("La IA del celular funciona en la app instalada (el APK)."), { code: "sin_local" });
     const st = await P.estado().catch(() => ({}));
     if (!st.listo) throw Object.assign(new Error("La IA del celular no está descargada. Ve a Ajustes › IA de respaldo y toca «Descargar»."), { code: "sin_local" });
-    if (messages.some((m) => m.doc)) throw new Error("La IA del celular no lee PDF todavía. Mándalo como foto, o usa la IA con internet.");
-    if (!st.gemma && messages.some((m) => m.image)) throw new Error("Esta IA del celular no ve fotos. Descarga Gemma 4 en Ajustes › IA de respaldo para que vea fotos sin internet.");
+    if (!st.gemma && messages.some((m) => m.image || m.doc)) throw new Error("Esta IA del celular no ve fotos ni PDF. Descarga Gemma 4 en Ajustes › IA de respaldo para que los vea sin internet.");
     const imagenes = messages.filter((m) => m.image).slice(-4).map((m) => ({ data: m.image.data, mime: m.image.mime }));
+    // 3.14: un PDF sin internet: sus primeras páginas como imágenes para Gemma
+    let notaPdf = "";
+    const pdf = messages.filter((m) => m.doc && m.doc.data).slice(-1)[0];
+    if (pdf && P.pdfPaginas) {
+      const r = await P.pdfPaginas({ data: pdf.doc.data, max: Math.max(1, 4 - imagenes.length) });
+      (r.paginas || []).forEach((d) => imagenes.push({ data: d, mime: "image/jpeg" }));
+      if (r.total > (r.paginas || []).length) notaPdf = `\n\n(Del PDF de ${r.total} páginas solo pude ver las primeras ${(r.paginas || []).length}.)`;
+    }
     const gemma = /\.litertlm$/.test(st.nombre || "");           // 3.12: Gemma 4 entiende instrucciones largas y la conversación completa
     const sys = String(system || "").slice(0, gemma ? 6000 : 900) + " Responde en español" + (gemma ? "." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "");
     const prompt = L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
@@ -222,7 +229,7 @@
     try {
       const r = await P.generar({ prompt, sistema: sys, mensajes, imagenes, maxTokens: Math.min(Math.max(256, maxTokens), gemma ? 2048 : 1024), temperatura: json ? 0.3 : 0.7 });
       if (stopped) throw Object.assign(new Error("Detenido."), { code: "abort" });
-      const text = L.cleanLocal(r && r.texto);
+      const text = L.cleanLocal(r && r.texto) + (notaPdf || "");
       if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: (r && r.motor) || "IA del celular", prov: "local" };
       if (onDelta && text && text !== parcial) onDelta(text.slice(parcial.length), text);
       if (!text) throw new Error("La IA del celular no devolvió texto.");

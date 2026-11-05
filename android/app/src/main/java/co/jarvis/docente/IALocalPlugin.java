@@ -105,6 +105,33 @@ public class IALocalPlugin extends Plugin {
             finally { grabandoVoz = false; if (rec != null) { try { rec.stop(); } catch (Exception ignored) { } rec.release(); } }
         });
     }
+    /** 3.14: las primeras páginas de un PDF como imágenes, para que Gemma lo lea sin internet. {data (base64), max} → {paginas:[base64 jpg], total} */
+    @PluginMethod
+    public void pdfPaginas(PluginCall call) {
+        final String data = call.getString("data", ""); final int max = Math.max(1, Math.min(4, call.getInt("max", 4)));
+        grabadora.execute(() -> {
+            File f = new File(getContext().getCacheDir(), "gemma_doc.pdf");
+            try (FileOutputStream out = new FileOutputStream(f)) { out.write(android.util.Base64.decode(data, android.util.Base64.DEFAULT)); }
+            catch (Exception e) { call.reject("No pude leer el PDF."); return; }
+            try (android.os.ParcelFileDescriptor fd = android.os.ParcelFileDescriptor.open(f, android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+                 android.graphics.pdf.PdfRenderer pr = new android.graphics.pdf.PdfRenderer(fd)) {
+                com.getcapacitor.JSArray l = new com.getcapacitor.JSArray();
+                for (int i = 0; i < pr.getPageCount() && i < max; i++) {
+                    try (android.graphics.pdf.PdfRenderer.Page pg = pr.openPage(i)) {
+                        float k = 1400f / Math.max(pg.getWidth(), pg.getHeight());
+                        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(Math.round(pg.getWidth() * k), Math.round(pg.getHeight() * k), android.graphics.Bitmap.Config.ARGB_8888);
+                        b.eraseColor(android.graphics.Color.WHITE);
+                        pg.render(b, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+                        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); b.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, bo); b.recycle();
+                        l.put(android.util.Base64.encodeToString(bo.toByteArray(), android.util.Base64.NO_WRAP));
+                    }
+                }
+                JSObject r = new JSObject(); r.put("paginas", l); r.put("total", pr.getPageCount()); call.resolve(r);
+            } catch (Exception e) { call.reject("Ese PDF no se pudo abrir (¿tiene contraseña?)."); }
+            finally { f.delete(); }
+        });
+    }
+
     @PluginMethod
     public void pararGrabacion(PluginCall call) { grabandoVoz = false; call.resolve(); }
 

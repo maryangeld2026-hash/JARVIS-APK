@@ -40,7 +40,7 @@ def main():
         pg.goto(base); pg.wait_for_timeout(300)
         pg.evaluate("localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: {}, seguir: false, voz: false, proveedor: 'gemini', respaldo: 'local' } }))")
         pg.reload(); pg.wait_for_timeout(2500)
-        pg.click("#btn-ajustes"); pg.wait_for_timeout(400)
+        pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(400)
         opts = pg.evaluate("[...document.querySelectorAll('#a-local-modelo option')].map(o => o.value)")
         check(opts[:2] == ["gemma4e2b", "gemma4e4b"], "Gemma 4 E2B y E4B en la lista de la IA del celular")
         pg.select_option("#a-local-modelo", "gemma4e4b"); pg.click("#btn-local-bajar"); pg.wait_for_timeout(800)

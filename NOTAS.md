@@ -1,3 +1,23 @@
+# Jarvis para Android 3.14: más fácil, más listo y más liviano
+
+## 🧠 Te entiende mejor
+- **Sin internet, Gemma usa las habilidades de Jarvis:** la instrucción de Jarvis ahora trae ejemplos de cómo pedir órdenes, así Gemma 4 (y la IA de la nube) hace varias cosas de una frase dicha a tu manera.
+- **Pregunta cuando una frase puede ser dos cosas:** «la lista» (¿mercado o pasar lista?), «mis notas» (¿de los estudiantes o tus notas?), «prende la luz» (¿linterna o la casa?), «¿cuánto falta?» con varios temporizadores, «borra todo».
+- **«Deshaz eso» / «no, eso no»:** vuelve a como estaba antes de tu última orden (recordatorios, gastos, listas, pagos, hábitos, ajustes, temporizador…). Las llamadas, mensajes enviados y alarmas del reloj no se pueden deshacer.
+- **Modo «pensar»:** «piensa bien: …» para preguntas difíciles. Razona paso a paso y te da la respuesta corta; el razonamiento queda plegado por si lo quieres ver.
+
+## 🤖 Gemma 4 más completa
+- **Lee PDF sin internet:** las primeras 4 páginas del PDF pasan a imágenes y Gemma las lee.
+- **Búsqueda por significado en tus notas:** «según mis notas, ¿cuándo es la reunión con los papás?» encuentra «entrega de boletines con las familias» aunque no uses las mismas palabras (la IA propone palabras parecidas y se vuelve a buscar).
+
+## 🧭 Más fácil de usar
+- **Ajustes ordenados** en grupos plegables y con buscador («batería», «voz», «clave»…).
+- **«¿Qué puedes hacer?»:** catálogo con todo lo que hace Jarvis por categorías; tocas un ejemplo y lo hace.
+- **Bienvenida de 1 minuto** en instalaciones nuevas: tu nombre, si eres docente, qué IA usar y si quieres «Jarvis» con la voz.
+
+## 🪶 Más liviana
+- **APK más pequeño:** solo para celulares de 64 bits (Gemma solo corre en ellos) y los modelos de leer texto y fotos los pone Google Play.
+
 # Jarvis para Android 3.13: Gemma 4 ve y oye
 
 - **Gemma 4 ve fotos sin internet:** las fotos que mandas al chat (cámara, galería, «¿qué es esto?», recibos, tarjetas) las entiende Gemma dentro del celular cuando no hay internet o si la pusiste como IA principal. Hasta 4 fotos por pregunta.

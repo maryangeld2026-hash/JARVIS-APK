@@ -21,7 +21,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300); print("listo:", pg.inner_text("#live"))
     pg.wait_for_timeout(2500); print("respuesta:", pg.evaluate("LASTJ()")[:40])
     pg.evaluate("JD.load().ajustes.seguir=false"); pg.tap("#btn-mic"); pg.wait_for_timeout(1200); print("sin voz:", pg.inner_text("#live"))
-    pg.tap("#btn-ajustes"); pg.wait_for_timeout(300); pg.tap("#btn-mic-test"); pg.wait_for_timeout(2500)
+    pg.tap("#btn-ajustes"); pg.wait_for_timeout(300); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.tap("#btn-mic-test"); pg.wait_for_timeout(2500)
     txt = pg.inner_text("#mic-test"); print(txt); print("errores:", errs)
     assert "Funciona" in txt and "not a function" not in txt and not errs, "la prueba del micrófono falló"
     print("Todo bien (simulación nativa).")

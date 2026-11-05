@@ -140,7 +140,7 @@ def main():
         txt = pg.inner_text(".msg.jarvis:last-of-type")
         check("Informe listo" in txt and "falló algo con ‹correo› y ‹nombre›" in txt and "Pablo" not in txt, "reportar un problema (sin datos personales)")
         # ajustes
-        pg.click("#btn-ajustes"); pg.wait_for_timeout(300)
+        pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(300)
         check(pg.locator("#aj-310").count() == 1, "Ajustes › Más y Casa")
         pg.click("#aj-310 >> text=➕ Botón «Jarvis» en la cortina"); pg.wait_for_timeout(200); check("boton" in logs(), "pide poner el botón en la cortina")
         pg.click("#btn-ajustes-cerrar")

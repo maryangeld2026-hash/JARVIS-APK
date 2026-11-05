@@ -500,3 +500,15 @@ body.sin-docente .tabs, body.sin-docente .doc-only { display: none !important; }
 .foto-res { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 .foto-res img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; }
 .agente-paso { font-size: 13px; opacity: .85; }
+
+/* 3.14 */
+#ajustes details.aj-grupo { border: 1px solid var(--line, rgba(255,255,255,.1)); border-radius: 12px; margin: 8px 0; padding: 0 12px; background: rgba(255,255,255,.02); }
+#ajustes details.aj-grupo > summary { cursor: pointer; padding: 12px 0; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; color: var(--a); list-style: none; }
+#ajustes details.aj-grupo > summary::after { content: "▾"; float: right; opacity: .7; }
+#ajustes details.aj-grupo[open] > summary::after { content: "▴"; }
+#ajustes details.aj-grupo[open] { padding-bottom: 10px; }
+.aj-buscar { margin: 4px 0 8px; }
+.bienv { margin-top: 14px; padding: 12px; border: 1px solid rgba(var(--a-rgb), .35); border-radius: 14px; text-align: left; display: grid; gap: 10px; }
+.bienv-fila { display: grid; gap: 6px; } .bienv-fila > span { font-size: 14px; } .bienv-fila .chip { margin-right: 6px; }
+details.pensar { margin-top: 8px; font-size: 13px; opacity: .9; } details.pensar summary { cursor: pointer; color: var(--a); }
+.cat-sug { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }

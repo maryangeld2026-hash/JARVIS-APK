@@ -9,11 +9,11 @@ android {
         applicationId "co.jarvis.docente"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 24
-        versionName "3.13.0"
+        versionCode 25
+        versionName "3.14.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // solo los procesadores de los celulares Android (el motor de voz pesa ~10 MB por cada uno)
-        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
+        ndk { abiFilters 'arm64-v8a' }   // 3.14: solo celulares de 64 bits (Gemma solo corre en ellos): APK mucho más liviano
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -66,8 +66,8 @@ dependencies {
     // 3.4: huella o PIN, escáner de documentos y lectura de texto sin internet
     implementation 'androidx.biometric:biometric:1.1.0'
     implementation 'com.google.android.gms:play-services-mlkit-document-scanner:16.0.0'
-    implementation 'com.google.mlkit:text-recognition:16.0.1'
-    implementation 'com.google.mlkit:image-labeling:17.0.9'
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'   // 3.14: el modelo lo pone Google Play (APK más liviano)
+    implementation 'com.google.android.gms:play-services-mlkit-image-labeling:16.0.8'
     // 3.12: Gemma 4 en el celular (LiteRT-LM de Google)
     implementation 'com.google.ai.edge.litertlm:litertlm-android:latest.release'
     // 3.6: recordatorios por lugar

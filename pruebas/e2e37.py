@@ -177,7 +177,7 @@ def main():
         pg.evaluate("JD.load().ajustes.vozIA = ''")
         say("qué me está gastando la batería", 400)
         check("batería" in last().lower(), "qué gasta batería: responde")
-        pg.click("#btn-ajustes"); pg.wait_for_timeout(300)
+        pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(300)
         check(pg.locator("#aj-bat select").count() == 2 and "modo ahorro de Jarvis activo" in pg.inner_text("#aj-bat"), "Ajustes › Batería")
         pg.click("#btn-ajustes-cerrar")
         say("diagnóstico de batería", 600)

@@ -148,7 +148,7 @@ def main():
         check(pg.evaluate("window.__said.some(s => s.includes('3 minutos'))"), "lo dice en voz alta")
 
         # ajustes: clave de Gemini y prueba
-        pg.click("#btn-ajustes")
+        pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)")
         pg.fill("#a-clave", "AIzaPRUEBA")
         pg.click("#btn-probar")
         pg.wait_for_function("document.querySelector('#probar-res').textContent.startsWith('Funciona')")
@@ -321,7 +321,7 @@ def main():
             pg.click(".tabs button[data-tab=clase]"); pg.click("#btn-seg-exp")
         data = open(dl.value.path(), "rb").read()
         check(data[:2] == b"PK", "exporta el seguimiento a Excel")
-        pg.click("#btn-ajustes")
+        pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)")
         check(pg.locator("#aj2 .lista li").count() == 2, "ajustes: memoria y lecciones para borrar")
         pg.click("#btn-ajustes-cerrar")
 

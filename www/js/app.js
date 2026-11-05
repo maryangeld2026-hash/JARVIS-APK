@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.13";
+  const VERSION = "3.14";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -53,7 +53,7 @@
     e.append(mk("b", "", `Hola${D.ajustes.nombre ? ", " + D.ajustes.nombre : ""}. Soy Jarvis.`),
       mk("span", "", D.ajustes.claves[D.ajustes.proveedor] ? "Toca el micrófono y háblame, o escribe." : "Toca el micrófono y pídeme algo. Para conversar con la IA, pon tu clave en Ajustes (el engranaje)."));
     const s = mk("div", "sug");
-    const ej = ["¿Cómo estará el clima mañana?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos", "¿Qué tengo hoy?"];
+    const ej = ["¿Qué puedes hacer?", "¿Cómo estará el clima mañana?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos", "¿Qué tengo hoy?"];
     (D.ajustes.docente !== false ? ej.concat(["Escoge un estudiante", "Hazme un quiz de fracciones de 5 preguntas"]) : ej.concat(["Cuando diga modo enfoque, silencia el celular y pon 25 minutos", "Activa el modo docente"])).forEach((x) => {
       const c = mk("button", "chip", x); c.type = "button"; c.addEventListener("click", () => handle(x, false)); s.append(c);
     });
@@ -81,6 +81,7 @@
     if (byVoice && window.JX && window.JX.corregir) { try { text = window.JX.corregir(text) || text; } catch (e) { /* sin corrección */ } }   // 3.8: tus nombres y palabras, bien escritos
     lastByVoice = byVoice;
     add("user", text);
+    if (window.JX && window.JX.antes) { try { window.JX.antes(text); } catch (e) { /* nada */ } }   // 3.14: para «deshaz eso»
     if (pendingReminder) {                                    // «¿a qué hora te lo recuerdo?»
       const p = pendingReminder; pendingReminder = null;
       if (!/^(?:no|cancela|olvidalo|nada)$/.test(L.norm(text))) { addReminder(`recuérdame ${p} ${text}`, true); return afterTurn(); }
@@ -117,6 +118,7 @@
       (live ? `Esta app hace: ${hace}. ` :
         `Puedes hacer cosas en el celular con las órdenes de esta app: ${hace}. Cuando te pidan hacer algo de eso (aunque sean varias cosas en una frase), contesta en una frase y escribe AL FINAL cada orden en su propia línea, así: <<orden: pon 10 minutos>>. ` +
         "Escribe cada orden completa y como la diría la persona. Si solo te preguntan algo, no escribas órdenes. " +
+        "Ejemplos: «despiértame a las 6 y avísale a Ana que llego tarde» → «Listo.» y en líneas aparte <<orden: pon una alarma a las 6>> <<orden: mándale un whatsapp a Ana que llego tarde>>. «¿qué es la fotosíntesis?» → solo la explicación, sin órdenes. " +
         (a.memoriaAuto !== false ? "Si la persona te cuenta algo importante y duradero sobre ella (gustos, personas cercanas, fechas, rutinas, metas), escribe al final <<recordar: el dato en una frase corta>>. Nunca guardes claves, números de cuenta, datos de salud delicados ni datos de estudiantes. " : "")) +
       (window.JX ? window.JX.promptExtra(lastQuestion) : "");
   }

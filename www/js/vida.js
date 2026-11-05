@@ -19,6 +19,7 @@
   const uid = () => window.JD.uid();
   const hhmm = (h, m) => `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "a. m." : "p. m."}`;
   const docente = () => D.ajustes.docente !== false;
+  const hayIA = () => D.ajustes.proveedor === "local" || !!(((D.ajustes.claves || {})[D.ajustes.proveedor]) || "").trim();
   const estudiantes = () => [].concat(...D.cursos.map((c) => c.estudiantes || []));
   /** Pregunta con botones dentro de la conversación. */
   function pick(text, ops, spoken) {
@@ -391,6 +392,14 @@
   }
   async function notas(q) {
     let r = L8.rank(fuentes(), q, 8);
+    // 3.14: búsqueda por significado — si con tus palabras casi no aparece nada, la IA propone palabras parecidas y se busca otra vez
+    if (r.length < 3 && hayIA()) {
+      try {
+        const j = await IA.json({ system: "Ayudas a buscar en notas personales. Respondes solo JSON.", messages: [{ role: "user", content: `Para buscar en mis notas lo que responde «${q}», dame 10 palabras o frases cortas en español que podrían aparecer en esas notas (sinónimos, temas relacionados, nombres de cosas). JSON: {"palabras":["…"]}` }], maxTokens: 200, temperature: 0.2 });
+        const ps = ((j && j.palabras) || []).slice(0, 12).join(" ");
+        if (ps) { const r2 = L8.rank(fuentes(), q + " " + ps, 8); const vistos = new Set(r.map((x) => x.texto)); r = r.concat(r2.filter((x) => !vistos.has(x.texto))).slice(0, 8); }
+      } catch (e) { /* sigue con lo que hay */ }
+    }
     if (docente()) { const ns = estudiantes().filter((n) => n.length > 3).map((n) => L8.norm(n)); r = r.filter((x) => !ns.some((n) => L8.norm(x.texto).includes(n))); }   // los nombres de estudiantes no van a la IA
     if (!r.length) return R(`No encontré nada sobre «${q}» en tus notas, documentos ni conversaciones.`);
     const clave = (D.ajustes.claves || {})[D.ajustes.proveedor];

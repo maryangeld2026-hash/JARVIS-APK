@@ -163,7 +163,7 @@ def main():
         say("resumen de la mañana", 1500)
         check("cumple años Carolina" in last() and "Noticias" in last() and "gastos" in last(), "resumen de la mañana con cumpleaños, gastos y noticias")
         # ajustes
-        pg.click("#btn-ajustes"); pg.wait_for_timeout(300)
+        pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(300)
         check(pg.locator("#aj-vida").count() == 1 and "Mazda" in pg.inner_text("#aj-vida") and "pastilla" in pg.inner_text("#aj-vida"), "Ajustes › Vida diaria")
         pg.click("#btn-ajustes-cerrar")
         check(not errs, "sin errores de JavaScript " + str(errs[:3]))

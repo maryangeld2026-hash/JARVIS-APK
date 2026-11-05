@@ -93,7 +93,7 @@ def main():
         pg.fill("#in-texto", "agenda reunión de padres mañana a las 3 de la tarde"); pg.press("#in-texto", "Enter"); pg.wait_for_timeout(500)
         check("agendé" in e2e_last(pg) and any(x.startswith("evento") for x in pg.evaluate("window.__ventana")), "agendar en el calendario del celular")
         # ajustes 3.4
-        pg.click("#btn-ajustes"); pg.wait_for_timeout(400)
+        pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(400)
         check(pg.is_visible("#aj-34"), "ajustes: pantalla, voz, seguridad, en clase")
         pg.wait_for_timeout(300)
         check(pg.locator("#aj-34 select >> nth=1 >> option").count() >= 3, "lista de voces en español")
