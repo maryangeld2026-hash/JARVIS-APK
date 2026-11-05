@@ -23,6 +23,7 @@ const P = {
     borrar: async (o) => { log('borrar ' + (o && o.nombre)); window.__mods = window.__mods.filter((x) => x !== o.nombre); if (window.__act === o.nombre) window.__act = window.__mods[0] || ''; },
     precargar: async () => ({ listo: true }), grabar: async () => ({ ruta: '/c/v.wav', hablo: true }), pararGrabacion: async () => {}, detener: async () => {}, cancelar: async () => {},
     generar: async (o) => { log('generar ' + window.__act + ' ' + JSON.stringify({ s: (o.sistema || '').slice(-120), img: (o.imagenes || []).length }));
+      if (/12B/.test(window.__act)) throw new Error('La IA del celular falló: memoria:5200');
       if (/qwen/i.test(window.__act)) { fire('parcial', { texto: '<think>El usuario saluda' }); await new Promise((r) => setTimeout(r, 60)); return { texto: '<think>El usuario saluda, respondo.</think>\\n\\nBuenas noches, señor. ¿En qué le ayudo?', motor: 'Qwen 3.5 · CPU' }; }
       return { texto: 'Hola, señor.', motor: 'Gemma · CPU' }; } },
 };
@@ -52,7 +53,7 @@ def main():
         # descargar Qwen 3.5 4B sin borrar Gemma
         pg.click("#btn-ajustes"); pg.wait_for_timeout(500); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(300)
         opts = pg.evaluate("[...document.querySelectorAll('#a-local-modelo option')].map(o => o.value)")
-        check(all(k in opts for k in ["qwen35_4b", "qwen35_2b", "qwen35_08b", "gemma4e4b", "qwen05"]), "Qwen 3.5 (4B, 2B y 0,8B) junto a Gemma 4 y Qwen 2.5")
+        check(all(k in opts for k in ["gemma4_12b", "qwen35_4b", "qwen35_2b", "qwen35_08b", "gemma4e4b", "qwen05"]), "Qwen 3.5 (4B, 2B y 0,8B) junto a Gemma 4 y Qwen 2.5")
         pg.select_option("#a-local-modelo", "qwen35_4b"); pg.click("#btn-local-bajar"); pg.wait_for_timeout(900)
         check("descargar Qwen3.5-4B_mixed_int4.litertlm" in logs(), "descarga Qwen 3.5 4B")
         filas = pg.locator("#a-local-lista .local-fila")
@@ -76,6 +77,11 @@ def main():
         pg.click("#btn-ajustes-cerrar")
         say("usa gemma 4 e4b", 500)
         check("No tengo Gemma 4 E4B" in last() and "descarga Gemma 4 E4B" in last(), "si no está descargada, lo dice")
+        pg.evaluate("window.__mods.push('gemma-4-12B-it.litertlm')")
+        say("usa gemma 12b", 600)
+        check("usar gemma-4-12B-it.litertlm" in logs(), "«usa Gemma 12B» cambia a la 12B (experimental)")
+        say("hola otra vez", 1200)
+        check("necesita unos 7 GB de memoria libre" in pg.inner_text("#chat") and "5,1 GB" in pg.inner_text("#chat"), "12B sin memoria libre: lo explica en vez de cerrarse")
         check(not errs, "sin errores de JavaScript " + str(errs[:3]))
         b.close()
     srv.shutdown()

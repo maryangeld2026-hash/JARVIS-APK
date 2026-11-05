@@ -74,3 +74,12 @@ test("3.19: escoger la IA del celular", () => {
   assert.deepEqual(L.localIntent("¿qué IA del celular tengo?"), { lo: "lista" });
   assert.equal(L.localIntent("usa el temporizador"), null);
 });
+test("3.20: Gemma 4 12B por voz", () => {
+  const LOC = { gemma4e4b: { rango: 8, nombre: "Gemma 4 E4B", archivo: "gemma-4-E4B-it.litertlm", mb: 3700 }, gemma4_12b: { rango: 7.5, nombre: "Gemma 4 12B · EXPERIMENTAL", archivo: "gemma-4-12B-it.litertlm", mb: 6600 },
+    qwen35_2b: { rango: 5, nombre: "Qwen 3.5 2B con visión", archivo: "Qwen3.5-2B-VL_int8.litertlm", mb: 3200 } };
+  const pick = (t) => { const i = L.localIntent(t); return i && L.elegirLocal(i.q, LOC); };
+  assert.equal(pick("usa gemma 12b"), "gemma4_12b");
+  assert.equal(pick("usa Gemma 4 12B"), "gemma4_12b");
+  assert.equal(pick("usa gemma"), "gemma4e4b");
+  assert.equal(pick("usa qwen 3.5 2b"), "qwen35_2b");
+});

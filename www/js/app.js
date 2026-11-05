@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.19";
+  const VERSION = "3.20";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -699,6 +699,9 @@
       url: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm" },
     gemma4e4b: { rango: 8, nombre: "Gemma 4 E4B de Google (3,7 GB · la más inteligente, celulares con 12 GB de RAM)", archivo: "gemma-4-E4B-it.litertlm", ramMin: 10500, mb: 3700,
       url: "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm" },
+    // 3.20: Gemma 4 12B, la más inteligente, experimental en celulares (en el procesador, necesita ~7 GB libres)
+    gemma4_12b: { rango: 7.5, experimental: true, nombre: "Gemma 4 12B · EXPERIMENTAL (6,6 GB · la más inteligente; lenta, para celulares con 12 GB de RAM o más)", archivo: "gemma-4-12B-it.litertlm", ramMin: 11000, mb: 6600,
+      url: "https://huggingface.co/litert-community/gemma-4-12B-it-litert-lm/resolve/main/gemma-4-12B-it.litertlm" },
     // 3.19: Qwen 3.5 (Alibaba, Apache 2.0) en LiteRT-LM: rápida en el procesador; las «VL» también ven fotos
     qwen35_4b: { rango: 7, nombre: "Qwen 3.5 4B (2,8 GB · la más lista de Qwen, solo texto, 8 GB de RAM o más)", archivo: "Qwen3.5-4B_mixed_int4.litertlm", ramMin: 7500, mb: 2800,
       url: "https://huggingface.co/warped-community/Qwen3.5-4B-litert-lm/resolve/main/Qwen3.5-4B_mixed_int4.litertlm" },
@@ -767,6 +770,7 @@
         if (mem.discoMb < m.mb + 500) return toast(`Las IA que ya tienes se quedan. ` + `No hay espacio: se necesitan ${((m.mb + 500) / 1024).toFixed(1).replace(".", ",")} GB libres y tienes ${(mem.discoMb / 1024).toFixed(1).replace(".", ",")} GB.`, 7000);
         if (mem.totalMb < m.ramMin && !confirm(`Tu celular tiene ${(mem.totalMb / 1024).toFixed(0)} GB de RAM y este modelo pide ${Math.round(m.ramMin / 1024 + 0.5)} GB. Puede ir muy lento o cerrarse. ${A.localModelo === "gemma4e4b" ? "Te recomiendo Gemma 4 E2B. " : ""}¿Descargarlo igual?`)) return;
       } catch (e) { /* sigue */ }
+      if (m.experimental && !confirm("Gemma 4 12B es experimental en celulares: corre en el procesador, responde más lento que Gemma 4 E4B y necesita unos 7 GB de memoria libre (cierra otras apps). Si no alcanza la memoria, te aviso y puedes volver a otra IA. ¿Seguimos?")) return;
       if (!confirm(`Son ${(m.mb / 1024).toFixed(1).replace(".", ",")} GB: descárgalo con wifi y con Jarvis abierto. Si se corta, sigue donde iba. ¿Empiezo?`)) return;
     }
     bajando = true; $("#btn-local-bajar").textContent = "Cancelar";

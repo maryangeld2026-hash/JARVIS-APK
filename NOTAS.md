@@ -1,4 +1,8 @@
-# Jarvis para Android 3.19: Qwen 3.5 en el celular y varias IA locales a la vez
+# Jarvis para Android 3.20: Gemma 4 12B experimental
+
+## 🧪 Gemma 4 12B (experimental)
+- La IA más inteligente que corre en el celular: texto, fotos y voz. 6,6 GB; corre en el procesador, con una foto a la vez y menos memoria de conversación para que quepa en 12 GB.
+- Antes de cargarla revisa la memoria libre: si no hay unos 7 GB, lo dice («cierra otras apps o usa Gemma E4B») en vez de que se cierre la app. Por voz: «usa Gemma 12B».
 
 ## 🧠 Qwen 3.5 en el celular (junto a Gemma 4)
 - Nuevas IA sin internet: Qwen 3.5 4B (la más lista de Qwen, 2,8 GB), Qwen 3.5 2B con visión (3,2 GB, ve fotos) y Qwen 3.5 0,8B con visión (1,3 GB, muy rápida). Corren con LiteRT-LM en el procesador.

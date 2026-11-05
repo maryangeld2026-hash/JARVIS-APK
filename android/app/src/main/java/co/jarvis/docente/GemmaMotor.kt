@@ -32,7 +32,11 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
         private set
     /** 3.19: Qwen 3.5 (y otros modelos LiteRT-LM que no son Gemma): sin audio, sin MTP, procesador y una conversación nueva cada vez. */
     val qwen: Boolean = ruta.substringAfterLast('/').lowercase().let { it.contains("qwen") || !it.contains("gemma") }
-    val nombre: String = if (qwen) "Qwen 3.5" else "Gemma"
+    /** 3.20: Gemma 4 12B (experimental): procesador, menos memoria de conversación y una foto a la vez, para que quepa en 12 GB. */
+    val grande: Boolean = !qwen && ruta.substringAfterLast('/').lowercase().contains("12b")
+    private val tokens = if (grande) 4096 else TOKENS
+    private val fotos = if (grande) 1 else 4
+    val nombre: String = if (qwen) "Qwen 3.5" else if (grande) "Gemma 4 12B" else "Gemma"
     @Volatile private var conv: Conversation? = null
 
     init {
@@ -51,25 +55,25 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
             }
             if (e == null) { e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache)); e.initialize(); mm = false }
         }
-        val probarGpu = !qwen && gpu && !prefs.getBoolean("gpuMala", false)
+        val probarGpu = !qwen && !grande && gpu && !prefs.getBoolean("gpuMala", false)
         if (probarGpu) {
             // si la app se cierra aquí (falla nativa de la GPU), al volver se sabe y no se repite
             prefs.edit().putBoolean("cargandoGpu", true).commit()
             try {
-                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.GPU(), visionBackend = Backend.GPU(), audioBackend = Backend.CPU(), maxNumTokens = TOKENS, maxNumImages = 4, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
+                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.GPU(), visionBackend = Backend.GPU(), audioBackend = Backend.CPU(), maxNumTokens = tokens, maxNumImages = fotos, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
                 e.initialize(); b = "GPU"; mm = true; au = true
             } catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = null }
             prefs.edit().putBoolean("cargandoGpu", false).apply()
         }
         if (e == null) {
             try {
-                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), visionBackend = Backend.CPU(), audioBackend = Backend.CPU(), maxNumTokens = TOKENS, maxNumImages = 4, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
+                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), visionBackend = Backend.CPU(), audioBackend = Backend.CPU(), maxNumTokens = tokens, maxNumImages = fotos, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
                 e.initialize(); b = "CPU"; mm = true; au = true
             } catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = null }
         }
         if (e == null) {
-            try { e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache, speculativeDecodingConfig = RAPIDO)); e.initialize() }
-            catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache)); e.initialize() }
+            try { e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = tokens, cacheDir = cache, speculativeDecodingConfig = RAPIDO)); e.initialize() }
+            catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = tokens, cacheDir = cache)); e.initialize() }
             b = "CPU"; mm = false
         }
         engine = e!!
@@ -118,7 +122,7 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
         conv = c
         val partes = mutableListOf<Content>(Content.Text(ultimo))
         if (multimodal) {
-            imagenes.take(if (qwen) 1 else 4).forEach { partes.add(Content.ImageFile(it)) }
+            imagenes.take(if (qwen || grande) 1 else 4).forEach { partes.add(Content.ImageFile(it)) }
             if (oye) audios.take(1).forEach { partes.add(Content.AudioFile(it)) }
         }
         val sb = StringBuilder()

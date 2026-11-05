@@ -64,6 +64,7 @@ public class IALocalPlugin extends Plugin {
                 File f = modelo();
                 if (f != null && f.getName().endsWith(".litertlm") && (gemma == null || !gemma.getRuta().equals(f.getAbsolutePath()))) {
                     cerrarMotor();
+                    revisarMemoria(f);
                     gemma = new GemmaMotor(getContext(), f.getAbsolutePath(), totalMb() >= 10500);
                     motorRuta = f.getAbsolutePath();
                 }
@@ -159,6 +160,15 @@ public class IALocalPlugin extends Plugin {
     @PluginMethod
     public void detener(PluginCall call) { GemmaMotor g = gemma; if (g != null) g.detener(); call.resolve(); }
 
+    /** 3.20: antes de cargar Gemma 4 12B se revisa la memoria libre: si no alcanza, se avisa en vez de que Android cierre la app. */
+    private void revisarMemoria(File f) throws Exception {
+        if (!f.getName().toLowerCase().contains("12b")) return;
+        android.app.ActivityManager am = (android.app.ActivityManager) getContext().getSystemService(android.content.Context.ACTIVITY_SERVICE);
+        android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi);
+        long libre = mi.availMem / (1024 * 1024);
+        if (libre < 6800) throw new Exception("memoria:" + libre);
+    }
+
     private long totalMb() {
         android.app.ActivityManager am = (android.app.ActivityManager) getContext().getSystemService(android.content.Context.ACTIVITY_SERVICE);
         android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi); return mi.totalMem / (1024 * 1024);
@@ -167,6 +177,7 @@ public class IALocalPlugin extends Plugin {
     private void generarGemma(PluginCall call, File f) throws Exception {
         if (gemma == null || !gemma.getRuta().equals(f.getAbsolutePath())) {
             cerrarMotor();
+            revisarMemoria(f);
             JSObject ev = new JSObject(); ev.put("cargando", true); notifyListeners("estado", ev);
             gemma = new GemmaMotor(getContext(), f.getAbsolutePath(), totalMb() >= 10500 && call.getBoolean("gpu", true));
             motorRuta = f.getAbsolutePath();

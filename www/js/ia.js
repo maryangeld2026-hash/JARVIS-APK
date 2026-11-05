@@ -239,7 +239,13 @@
     let h = null, parcial = "";
     if (onDelta) h = await window.JON(P, "parcial", (d) => { if (stopped || !d || !d.texto) return; if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: "IA del celular", prov: "local" }; parcial = L.cleanLocal(d.texto); onDelta("", parcial); });
     try {
-      const r = await P.generar({ prompt, sistema: sys, mensajes, imagenes, maxTokens: Math.min(Math.max(256, maxTokens), gemma ? 2048 : 1024), temperatura: json ? 0.3 : 0.7 });
+      let r;
+      try { r = await P.generar({ prompt, sistema: sys, mensajes, imagenes, maxTokens: Math.min(Math.max(256, maxTokens), gemma ? 2048 : 1024), temperatura: json ? 0.3 : 0.7 }); }
+      catch (e) {                                                     // 3.20: Gemma 4 12B sin memoria libre suficiente
+        const mm = String((e && e.message) || "").match(/memoria:(\d+)/);
+        if (mm) throw Object.assign(new Error(`Gemma 4 12B necesita unos 7 GB de memoria libre y ahora hay ${(mm[1] / 1024).toFixed(1).replace(".", ",")} GB. Cierra otras apps o di «usa Gemma E4B».`), { code: "sin_local" });
+        throw e;
+      }
       if (stopped) throw Object.assign(new Error("Detenido."), { code: "abort" });
       const text = L.cleanLocal(r && r.texto) + (notaPdf || "");
       if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: (r && r.motor) || "IA del celular", prov: "local" };

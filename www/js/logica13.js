@@ -225,7 +225,7 @@
   /** «usa Qwen», «cambia a Gemma E4B», «qué IA del celular tengo», «descarga Qwen 3.5 4B» → {lo, q} o null */
   function localIntent(text) {
     const t = lead(norm(text)).replace(/(\d),(\d)/g, "$1.$2");
-    const MOD = "(qwen(?: ?\\d(?:\\.\\d)?)?(?: ?\\d(?:\\.\\d)?b)?(?: (?:vl|con vision))?|gemma(?: ?4)?(?: ?e[24]b)?)";
+    const MOD = "(qwen(?: ?\\d(?:\\.\\d)?)?(?: ?\\d(?:\\.\\d)?b)?(?: (?:vl|con vision))?|gemma(?: ?4)?(?: ?(?:e[24]b|12 ?b))?)";
     let m;
     if (/^(?:que|cuales) (?:ia|ias|modelos?|inteligencias?)(?: artificiales?)? (?:del celular|locales?|sin internet) (?:tengo|hay|estan descargad[oa]s)$|^(?:mis|las) ia(?:s)? (?:del celular|locales?)$/.test(t)) return { lo: "lista" };
     if ((m = t.match(new RegExp(`^(?:usa|cambia(?: la ia del celular)? a|pon|activa|quiero usar)\\s+(?:la ia\\s+|el modelo\\s+)?${MOD}(?:\\s+(?:sin internet|en el celular|como respaldo|como ia local))?$`)))) return { lo: "usar", q: m[1] };
@@ -236,7 +236,7 @@
   function elegirLocal(q, locales, soloArchivos) {
     const n = norm(q).replace(/\s+/g, " ");
     const fam = /gemma/.test(n) ? "gemma" : /qwen/.test(n) ? "qwen" : "";
-    const v35 = /3\.5|35/.test(n), v25 = /2\.5|25/.test(n), tam = (n.match(/(\d(?:\.\d)?) ?b\b/) || [])[1], e = (n.match(/e([24])b/) || [])[1], vl = /\b(?:vl|vision)\b/.test(n);
+    const v35 = /3\.5|35/.test(n), v25 = /2\.5|25/.test(n), tam = (n.match(/(?:^|\s)(\d{1,2}(?:\.\d)?) ?b\b/) || [])[1], e = (n.match(/e([24])b/) || [])[1], vl = /\b(?:vl|vision)\b/.test(n);
     const ks = Object.keys(locales).filter((k) => {
       const x = locales[k], nm = norm(x.nombre + " " + x.archivo);
       if (soloArchivos && !soloArchivos.includes(x.archivo)) return false;
