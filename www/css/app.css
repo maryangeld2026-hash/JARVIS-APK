@@ -538,3 +538,9 @@ details.pensar { margin-top: 8px; font-size: 13px; opacity: .9; } details.pensar
 .reu18 .row .btn { flex: 1; height: 50px; }
 .aj-perfil { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .aj-perfil .inp { min-width: 0; }
+/* 3.19: varias IA del celular */
+.local-lista { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+.local-fila { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; }
+.local-fila span { flex: 1; min-width: 0; font-size: 14px; }
+.local-fila.on { border-color: rgba(var(--a-rgb), .6); background: rgba(var(--a-rgb), .07); }
+.local-fila .chip { height: 32px; font-size: 13px; }

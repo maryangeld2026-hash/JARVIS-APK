@@ -308,6 +308,32 @@
     return relojOcupado;
   }
 
+  // ======================================================================== 3.19: ESCOGER LA IA DEL CELULAR
+  async function iaLocal(it) {
+    const P = plug("IALocal"), LOC = A.LOCALES || {};
+    if (!P || !P.modelos) return R("La IA del celular funciona en la app instalada.", "err");
+    const l = ((await P.modelos().catch(() => ({}))) || {}).lista || [];
+    const nom = (a) => (A.nombreLocal ? A.nombreLocal(a) : a);
+    if (it.lo === "lista") {
+      if (!l.length) return R("No tienes ninguna IA del celular descargada. Di, por ejemplo, «descarga Qwen 3.5 4B» o ve a Ajustes › IA de respaldo.");
+      return R("🧠 **IA del celular (sin internet)**\n" + l.map((x) => `- ${x.activo ? "✅ " : ""}${nom(x.nombre)} · ${(x.mb / 1024).toFixed(1).replace(".", ",")} GB${x.ve ? " · ve fotos" : ""}${x.oye ? " · entiende tu voz" : ""}`).join("\n") + "\n\nDime «usa …» para cambiar.", "tool", `Tienes ${l.length}. En uso: ${nom((l.find((x) => x.activo) || l[0]).nombre)}.`);
+    }
+    if (it.lo === "usar") {
+      const k = L13.elegirLocal(it.q, LOC, l.map((x) => x.nombre));
+      if (!k) { const k2 = L13.elegirLocal(it.q, LOC); return R(k2 ? `No tengo ${nom(LOC[k2].archivo)} descargada. Dime «descarga ${LOC[k2].nombre.split(" (")[0]}».` : "No tengo esa IA descargada. Pregúntame «¿qué IA del celular tengo?».", "err"); }
+      await P.usar({ nombre: LOC[k].archivo }).catch(() => {});
+      D.ajustes.localModelo = k; if (D.ajustes.proveedor !== "local" && !D.ajustes.respaldo) D.ajustes.respaldo = "local"; save();
+      if (window.__gemmaVoz) window.__gemmaVoz.refrescar();
+      return R(`Hecho. Sin internet ahora respondo con ${nom(LOC[k].archivo)}, ${A.trato()}.`);
+    }
+    const k = L13.elegirLocal(it.q, LOC);
+    if (!k) return R("No conozco esa IA. En Ajustes › IA de respaldo están las que puedo bajar.", "err");
+    D.ajustes.localModelo = k; save();
+    R(`Para bajar ${LOC[k].nombre.split(" (")[0]} (${(LOC[k].mb / 1024).toFixed(1).replace(".", ",")} GB) te abro Ajustes: toca «Descargar», mejor con wifi. Las que ya tienes se quedan.`);
+    const b = $("#btn-ajustes"); if (b) b.click();
+    setTimeout(() => { const s = $("#a-local-modelo"); if (s) { s.value = k; const d = s.closest("details"); if (d) d.open = true; s.scrollIntoView({ block: "center" }); } }, 500);
+  }
+
   // ======================================================================== AJUSTES
   function ajustes() {
     const box = $("#aj2"); if (!box || $("#aj-318")) return;
@@ -342,6 +368,7 @@
   // ======================================================================== ÓRDENES
   const base = { init: X.init, intent: X.intent, run: X.run, settings: X.settings, promptExtra: X.promptExtra };
   X.intent = function (text) {
+    const lo = L13.localIntent(text); if (lo) return Object.assign({ p318: "local" }, lo);
     const ac = L13.accIntent(text); if (ac) return Object.assign({ p318: "acc" }, ac);
     const su = L13.subIntent(text); if (su) return Object.assign({ p318: "sub" }, su);
     const re = L13.reuIntent(text); if (re) return Object.assign({ p318: "reu" }, re);
@@ -358,6 +385,7 @@
     if (!it.p318) return base.run(it, text);
     switch (it.p318) {
       case "pan": return verPantalla(it.q);
+      case "local": return iaLocal(it);
       case "reu":
         if (it.re === "grabar") return grabar();
         if (it.re === "parar") return parar(true);

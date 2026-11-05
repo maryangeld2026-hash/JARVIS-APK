@@ -61,3 +61,16 @@ test("subtítulos, reloj y audífonos", () => {
   assert.deepEqual(L.accIntent("modo audífonos"), { acc: "audifonos", on: true });
   assert.equal(L.paraReloj("**Hola** <small>x</small>\n\n- uno"), "Hola x\n- uno");
 });
+test("3.19: escoger la IA del celular", () => {
+  const LOC = { gemma4e2b: { rango: 6, nombre: "Gemma 4 E2B", archivo: "gemma-4-E2B-it.litertlm", mb: 2600 }, gemma4e4b: { rango: 8, nombre: "Gemma 4 E4B", archivo: "gemma-4-E4B-it.litertlm", mb: 3700 },
+    qwen35_4b: { rango: 7, nombre: "Qwen 3.5 4B", archivo: "Qwen3.5-4B_mixed_int4.litertlm", mb: 2800 }, qwen35_2b: { rango: 5, nombre: "Qwen 3.5 2B con visión", archivo: "Qwen3.5-2B-VL_int8.litertlm", mb: 3200 },
+    qwen35_08b: { rango: 3, nombre: "Qwen 3.5 0,8B con visión", archivo: "Qwen3.5-0.8B-VL_int8.litertlm", mb: 1300 }, qwen05: { rango: 1, nombre: "Qwen 2.5 0,5B", archivo: "q.task", mb: 550 } };
+  const pick = (t, solo) => { const i = L.localIntent(t); return i && L.elegirLocal(i.q, LOC, solo); };
+  assert.equal(pick("usa qwen"), "qwen35_4b");
+  assert.equal(pick("usa Qwen 3.5 con visión"), "qwen35_2b");
+  assert.equal(pick("descarga qwen 3.5 0,8b"), "qwen35_08b");
+  assert.equal(pick("cambia a gemma e2b"), "gemma4e2b");
+  assert.equal(pick("usa qwen", ["Qwen3.5-0.8B-VL_int8.litertlm", "gemma-4-E4B-it.litertlm"]), "qwen35_08b");
+  assert.deepEqual(L.localIntent("¿qué IA del celular tengo?"), { lo: "lista" });
+  assert.equal(L.localIntent("usa el temporizador"), null);
+});

@@ -212,7 +212,7 @@
     if (!P) throw Object.assign(new Error("La IA del celular funciona en la app instalada (el APK)."), { code: "sin_local" });
     const st = await P.estado().catch(() => ({}));
     if (!st.listo) throw Object.assign(new Error("La IA del celular no está descargada. Ve a Ajustes › IA de respaldo y toca «Descargar»."), { code: "sin_local" });
-    if (!st.gemma && messages.some((m) => m.image || m.doc)) throw new Error("Esta IA del celular no ve fotos ni PDF. Descarga Gemma 4 en Ajustes › IA de respaldo para que los vea sin internet.");
+    if ((!st.gemma || st.ve === false) && messages.some((m) => m.image || m.doc)) throw new Error("La IA del celular que estás usando no ve fotos ni PDF. Usa Gemma 4 o Qwen 3.5 con visión (Ajustes › IA de respaldo) para que los vea sin internet.");
     const imagenes = messages.filter((m) => m.image).slice(-4).map((m) => ({ data: m.image.data, mime: m.image.mime }));
     // 3.14: un PDF sin internet: sus primeras páginas como imágenes para Gemma
     let notaPdf = "";
@@ -229,7 +229,7 @@
     const k = fijo.indexOf("\u0001");
     if (k >= 0) { cambia = fijo.slice(k + 1).trim(); fijo = fijo.slice(0, k); }
     if (gemma) { const h = fijo.match(/\s*Hoy es [^.]+, son las [^.]+\.\s*/); if (h) { fijo = fijo.replace(h[0], " "); cambia = h[0].trim() + " " + cambia; } }
-    const sys = fijo.slice(0, gemma ? 5000 : 900) + " Responde en español" + (gemma ? ". Si te piden explicar algo, explícalo completo y en orden." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "") + (gemma ? "" : " " + cambia.slice(0, 400));
+    const sys = fijo.slice(0, gemma ? 5000 : 900) + (st.familia === "qwen35" ? " Responde directamente, sin mostrar tu razonamiento." : "") + " Responde en español" + (gemma ? ". Si te piden explicar algo, explícalo completo y en orden." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "") + (gemma ? "" : " " + cambia.slice(0, 400));
     const prompt = L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
     const mensajes = messages.slice(gemma ? -8 : -10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content || "").slice(0, gemma ? 1800 : 4000) }));
     if (gemma && cambia && mensajes.length && mensajes[mensajes.length - 1].role === "user") mensajes[mensajes.length - 1].content = `(${cambia.slice(0, 1200)})\n\n${mensajes[mensajes.length - 1].content}`;
@@ -258,7 +258,7 @@
     refrescar: gemmaEstado,
     usar() {
       const m = (window.JD.load().ajustes.vozGemma) || "sin_internet";
-      if (m === "nunca" || !gemmaSt || !gemmaSt.listo || !gemmaSt.gemma) return false;
+      if (m === "nunca" || !gemmaSt || !gemmaSt.listo || !gemmaSt.gemma || gemmaSt.oye === false) return false;   // 3.19: solo los modelos que oyen (Gemma 4)
       return m === "siempre" || !navigator.onLine;
     },
     async oir(onPartial, opts) {

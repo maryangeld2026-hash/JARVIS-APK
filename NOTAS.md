@@ -1,4 +1,9 @@
-# Jarvis para Android 3.18: pantalla, reuniones, memoria, compras, subtítulos, reloj y audífonos
+# Jarvis para Android 3.19: Qwen 3.5 en el celular y varias IA locales a la vez
+
+## 🧠 Qwen 3.5 en el celular (junto a Gemma 4)
+- Nuevas IA sin internet: Qwen 3.5 4B (la más lista de Qwen, 2,8 GB), Qwen 3.5 2B con visión (3,2 GB, ve fotos) y Qwen 3.5 0,8B con visión (1,3 GB, muy rápida). Corren con LiteRT-LM en el procesador.
+- Ahora puedes tener varias descargadas a la vez y escoger cuál uso: Ajustes › IA de respaldo (lista con Usar y Borrar) o por voz: «usa Qwen», «cambia a Gemma E4B», «¿qué IA del celular tengo?».
+- Qwen responde directo (sin mostrar su «razonamiento»). Para entender tu voz sin internet sigue haciendo falta Gemma 4 (Qwen 3.5 no oye audio).
 
 ## 📱 Jarvis ve tu pantalla
 - Desde cualquier app, llama a Jarvis (burbuja, botón de asistente o «Jarvis») y dile «mira mi pantalla» o pregunta directo «¿qué significa este error?». Ve la pantalla (Android 11+), te explica y te dice qué tocar. Nunca toma la foto en apps de bancos o de claves.

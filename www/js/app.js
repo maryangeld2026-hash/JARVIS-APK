@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.18";
+  const VERSION = "3.19";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -695,13 +695,20 @@
   }
   // ---------------------------------------------------------------- 3.2: IA de respaldo e IA del celular
   const LOCALES = {
-    gemma4e2b: { nombre: "Gemma 4 E2B de Google (2,6 GB · celulares con 8 GB de RAM o más) · recomendada", archivo: "gemma-4-E2B-it.litertlm", ramMin: 7000, mb: 2600,
+    gemma4e2b: { rango: 6, nombre: "Gemma 4 E2B de Google (2,6 GB · celulares con 8 GB de RAM o más) · recomendada", archivo: "gemma-4-E2B-it.litertlm", ramMin: 7000, mb: 2600,
       url: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm" },
-    gemma4e4b: { nombre: "Gemma 4 E4B de Google (3,7 GB · la más inteligente, celulares con 12 GB de RAM)", archivo: "gemma-4-E4B-it.litertlm", ramMin: 10500, mb: 3700,
+    gemma4e4b: { rango: 8, nombre: "Gemma 4 E4B de Google (3,7 GB · la más inteligente, celulares con 12 GB de RAM)", archivo: "gemma-4-E4B-it.litertlm", ramMin: 10500, mb: 3700,
       url: "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm" },
-    qwen05: { nombre: "Liviana · Qwen 2.5 0,5B (550 MB)", archivo: "Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
+    // 3.19: Qwen 3.5 (Alibaba, Apache 2.0) en LiteRT-LM: rápida en el procesador; las «VL» también ven fotos
+    qwen35_4b: { rango: 7, nombre: "Qwen 3.5 4B (2,8 GB · la más lista de Qwen, solo texto, 8 GB de RAM o más)", archivo: "Qwen3.5-4B_mixed_int4.litertlm", ramMin: 7500, mb: 2800,
+      url: "https://huggingface.co/warped-community/Qwen3.5-4B-litert-lm/resolve/main/Qwen3.5-4B_mixed_int4.litertlm" },
+    qwen35_2b: { rango: 5, nombre: "Qwen 3.5 2B con visión (3,2 GB · ve fotos, 6 GB de RAM o más)", archivo: "Qwen3.5-2B-VL_int8.litertlm", ramMin: 5500, mb: 3200,
+      url: "https://huggingface.co/warped-community/Qwen3.5-2B-litert-lm/resolve/main/Qwen3.5-2B-VL_int8.litertlm" },
+    qwen35_08b: { rango: 3, nombre: "Qwen 3.5 0,8B con visión (1,3 GB · muy rápida, ve fotos)", archivo: "Qwen3.5-0.8B-VL_int8.litertlm", ramMin: 3500, mb: 1300,
+      url: "https://huggingface.co/litert-community/Qwen3.5-0.8B/resolve/main/Qwen3.5-0.8B-VL_int8.litertlm" },
+    qwen05: { rango: 1, nombre: "Liviana · Qwen 2.5 0,5B (550 MB)", archivo: "Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
       url: "https://huggingface.co/litert-community/Qwen2.5-0.5B-Instruct/resolve/main/Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task" },
-    qwen15: { nombre: "Mejor · Qwen 2.5 1,5B (1,6 GB, celulares con 6 GB de RAM o más)", archivo: "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
+    qwen15: { rango: 2, nombre: "Mejor · Qwen 2.5 1,5B (1,6 GB, celulares con 6 GB de RAM o más)", archivo: "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
       url: "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv1280.task" },
   };
   const IAL = () => V.native() && window.Capacitor.Plugins && window.Capacitor.Plugins.IALocal;
@@ -727,10 +734,25 @@
     if (!P) { st.textContent = "La IA del celular funciona en la app instalada (el APK)."; return; }
     try {
       const e = await P.estado();
-      st.textContent = e.listo ? `Lista en este celular (${e.nombre.replace(/\.litertlm$/, "").replace(/-it$/, "").split("_")[0]}, ${(e.mb / 1024).toFixed(1).replace(".", ",")} GB). Funciona sin internet.` : `No está descargada. Espacio libre: ${(e.libreMb / 1024).toFixed(1).replace(".", ",")} GB.`;
-      $("#btn-local-borrar").hidden = !e.listo; $("#btn-local-probar").hidden = !e.listo;
-      $("#btn-local-bajar").textContent = e.listo ? "Cambiar modelo" : "Descargar";
+      st.textContent = e.listo ? `En uso: ${nombreLocal(e.nombre)} (${(e.mb / 1024).toFixed(1).replace(".", ",")} GB). Funciona sin internet.` : `No está descargada. Espacio libre: ${(e.libreMb / 1024).toFixed(1).replace(".", ",")} GB.`;
+      $("#btn-local-borrar").hidden = true; $("#btn-local-probar").hidden = !e.listo;
+      $("#btn-local-bajar").textContent = "Descargar";
+      // 3.19: todas las que tienes descargadas, para escoger cuál uso
+      const box = $("#a-local-lista"); box.textContent = "";
+      const l = P.modelos ? ((await P.modelos()) || {}).lista || [] : [];
+      l.forEach((x) => {
+        const f = mk("div", "local-fila" + (x.activo ? " on" : ""));
+        f.append(mk("span", "", `${x.activo ? "✅ " : ""}${nombreLocal(x.nombre)} · ${(x.mb / 1024).toFixed(1).replace(".", ",")} GB${x.ve ? " · 👁️" : ""}${x.oye ? " · 👂" : ""}`));
+        if (!x.activo) { const u = mk("button", "chip", "Usar"); u.type = "button"; u.addEventListener("click", async () => { await P.usar({ nombre: x.nombre }).catch(() => {}); if (window.__gemmaVoz) window.__gemmaVoz.refrescar(); localStatus(); toast("Ahora uso " + nombreLocal(x.nombre) + " sin internet."); }); f.append(u); }
+        const b = mk("button", "chip danger", "Borrar"); b.type = "button"; b.addEventListener("click", async () => { if (!confirm(`¿Borrar ${nombreLocal(x.nombre)}? Liberas ${(x.mb / 1024).toFixed(1).replace(".", ",")} GB.`)) return; await P.borrar({ nombre: x.nombre }).catch(() => {}); if (window.__gemmaVoz) window.__gemmaVoz.refrescar(); localStatus(); });
+        f.append(b); box.append(f);
+      });
     } catch (er) { st.textContent = er.message || String(er); }
+  }
+  /** 3.19: el nombre bonito de un modelo descargado («Qwen 3.5 4B», «Gemma 4 E4B»). */
+  function nombreLocal(archivo) {
+    const k = Object.keys(LOCALES).find((x) => LOCALES[x].archivo === archivo);
+    return k ? LOCALES[k].nombre.split(" (")[0].replace(/^(?:Liviana|Mejor) · /, "") : String(archivo || "").replace(/\.(?:litertlm|task)$/, "").replace(/[_-](?:it|int8|mixed_int4|multi-prefill.*)$/i, "");
   }
   let bajando = false;
   async function localDownload() {
@@ -742,7 +764,7 @@
     if (m.ramMin && P.memoria) {                                 // 3.12: Gemma 4 necesita memoria (RAM) y espacio
       try {
         const mem = await P.memoria();
-        if (mem.discoMb < m.mb + 500) return toast(`No hay espacio: se necesitan ${((m.mb + 500) / 1024).toFixed(1).replace(".", ",")} GB libres y tienes ${(mem.discoMb / 1024).toFixed(1).replace(".", ",")} GB.`, 7000);
+        if (mem.discoMb < m.mb + 500) return toast(`Las IA que ya tienes se quedan. ` + `No hay espacio: se necesitan ${((m.mb + 500) / 1024).toFixed(1).replace(".", ",")} GB libres y tienes ${(mem.discoMb / 1024).toFixed(1).replace(".", ",")} GB.`, 7000);
         if (mem.totalMb < m.ramMin && !confirm(`Tu celular tiene ${(mem.totalMb / 1024).toFixed(0)} GB de RAM y este modelo pide ${Math.round(m.ramMin / 1024 + 0.5)} GB. Puede ir muy lento o cerrarse. ${A.localModelo === "gemma4e4b" ? "Te recomiendo Gemma 4 E2B. " : ""}¿Descargarlo igual?`)) return;
       } catch (e) { /* sigue */ }
       if (!confirm(`Son ${(m.mb / 1024).toFixed(1).replace(".", ",")} GB: descárgalo con wifi y con Jarvis abierto. Si se corta, sigue donde iba. ¿Empiezo?`)) return;
@@ -852,6 +874,6 @@
   document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") (V.cancelListening || V.stopListening)(); if (!document.hidden && IA.warm) IA.warm(); });
   if (IA.warm) setTimeout(() => IA.warm(), 1500);
   window.__jarvis = { handle, dispatch, renderChat, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
-    getState: () => state, wake, trato, systemPrompt, applyVoice, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
+    getState: () => state, wake, trato, systemPrompt, applyVoice, LOCALES, nombreLocal, localStatus, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
   if (window.JX) window.JX.init(window.__jarvis);
 })();

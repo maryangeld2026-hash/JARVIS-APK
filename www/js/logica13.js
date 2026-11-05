@@ -221,7 +221,37 @@
   /** Lo que se dice en el reloj: corto y sin formato. */
   const paraReloj = (t) => String(t || "").replace(/```[\s\S]*?```/g, "").replace(/<[^>]+>/g, "").replace(/[*_#>`|]/g, "").replace(/\n{2,}/g, "\n").replace(/[ \t]+/g, " ").trim().slice(0, 600);
 
-  const API = { norm, pantallaIntent, pantallaPrompt, PANT_DEF, reuIntent, transcribePrompt, actaPrompt, actaLimpia, actaMd, tareaOrden, durTexto, fechaLarga,
+  // ======================================================================== 3.19: ESCOGER LA IA DEL CELULAR
+  /** «usa Qwen», «cambia a Gemma E4B», «qué IA del celular tengo», «descarga Qwen 3.5 4B» → {lo, q} o null */
+  function localIntent(text) {
+    const t = lead(norm(text)).replace(/(\d),(\d)/g, "$1.$2");
+    const MOD = "(qwen(?: ?\\d(?:\\.\\d)?)?(?: ?\\d(?:\\.\\d)?b)?(?: (?:vl|con vision))?|gemma(?: ?4)?(?: ?e[24]b)?)";
+    let m;
+    if (/^(?:que|cuales) (?:ia|ias|modelos?|inteligencias?)(?: artificiales?)? (?:del celular|locales?|sin internet) (?:tengo|hay|estan descargad[oa]s)$|^(?:mis|las) ia(?:s)? (?:del celular|locales?)$/.test(t)) return { lo: "lista" };
+    if ((m = t.match(new RegExp(`^(?:usa|cambia(?: la ia del celular)? a|pon|activa|quiero usar)\\s+(?:la ia\\s+|el modelo\\s+)?${MOD}(?:\\s+(?:sin internet|en el celular|como respaldo|como ia local))?$`)))) return { lo: "usar", q: m[1] };
+    if ((m = t.match(new RegExp(`^(?:descarga(?:r|me)?|baja(?:r|me)?|instala(?:r)?)\\s+(?:la ia\\s+|el modelo\\s+)?${MOD}(?:\\s+(?:sin internet|en el celular|como respaldo))?$`)))) return { lo: "bajar", q: m[1] };
+    return null;
+  }
+  /** Busca el modelo que nombró la persona entre {clave: {nombre, archivo}}. Sin tamaño: el más grande de esa familia. */
+  function elegirLocal(q, locales, soloArchivos) {
+    const n = norm(q).replace(/\s+/g, " ");
+    const fam = /gemma/.test(n) ? "gemma" : /qwen/.test(n) ? "qwen" : "";
+    const v35 = /3\.5|35/.test(n), v25 = /2\.5|25/.test(n), tam = (n.match(/(\d(?:\.\d)?) ?b\b/) || [])[1], e = (n.match(/e([24])b/) || [])[1], vl = /\b(?:vl|vision)\b/.test(n);
+    const ks = Object.keys(locales).filter((k) => {
+      const x = locales[k], nm = norm(x.nombre + " " + x.archivo);
+      if (soloArchivos && !soloArchivos.includes(x.archivo)) return false;
+      if (fam && !nm.includes(fam)) return false;
+      if (v35 && !/3\.5/.test(nm)) return false; if (v25 && !/2\.5/.test(nm)) return false;
+      if (e && !nm.includes("e" + e + "b")) return false;
+      if (tam && !new RegExp("(?:^|[^\\d.])" + tam.replace(".", "[.,]") + " ?b\\b").test(nm.replace(/0,8/g, "0.8"))) return false;
+      if (vl && !/vl|vision/.test(nm)) return false;
+      return true;
+    });
+    if (!ks.length) return null;
+    return ks.sort((a, b) => (locales[b].rango || 0) - (locales[a].rango || 0) || (locales[b].mb || 0) - (locales[a].mb || 0))[0];   // la más capaz
+  }
+
+  const API = { localIntent, elegirLocal, norm, pantallaIntent, pantallaPrompt, PANT_DEF, reuIntent, transcribePrompt, actaPrompt, actaLimpia, actaMd, tareaOrden, durTexto, fechaLarga,
     memIntent, personaDe, ventana, tokens, buscarMem, expandirPrompt, memPrompt, compraIntent, preciosPrompt, tramitePrompt, preciosTabla,
     campoDe, mapearCampos, PERFIL, subIntent, accIntent, AUDIFONOS, paraReloj };
   if (typeof module !== "undefined" && module.exports) module.exports = API;

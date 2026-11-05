@@ -46,7 +46,7 @@ def main():
         check(opts[:2] == ["gemma4e2b", "gemma4e4b"], "Gemma 4 E2B y E4B en la lista de la IA del celular")
         pg.select_option("#a-local-modelo", "gemma4e4b"); pg.click("#btn-local-bajar"); pg.wait_for_timeout(800)
         check(any("descargar gemma-4-E4B-it.litertlm https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm" in x for x in pg.evaluate("window.__log")), "descarga Gemma 4 E4B (avisa si la RAM es poca)")
-        check("Lista en este celular (gemma-4-E2B" in pg.inner_text("#a-local-st"), "estado: lista en el celular")
+        check("En uso: Gemma 4 E2B" in pg.inner_text("#a-local-st"), "estado: lista en el celular")
         pg.click("#btn-ajustes-cerrar")
         pg.evaluate("JD.load().ajustes.proveedor = 'local'")
         pg.fill("#in-texto", "¿cuál es la capital de Francia?"); pg.press("#in-texto", "Enter"); pg.wait_for_timeout(1500)

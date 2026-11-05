@@ -26,7 +26,13 @@ import java.util.concurrent.TimeUnit
 class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
     private val engine: Engine
     val backend: String
+    /** 3.19: ve fotos / oye audio (Gemma 4 hace las dos; Qwen 3.5 «VL» solo ve). */
     val multimodal: Boolean
+    var oye: Boolean = false
+        private set
+    /** 3.19: Qwen 3.5 (y otros modelos LiteRT-LM que no son Gemma): sin audio, sin MTP, procesador y una conversación nueva cada vez. */
+    val qwen: Boolean = ruta.substringAfterLast('/').lowercase().let { it.contains("qwen") || !it.contains("gemma") }
+    val nombre: String = if (qwen) "Qwen 3.5" else "Gemma"
     @Volatile private var conv: Conversation? = null
 
     init {
@@ -35,29 +41,41 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
         var e: Engine? = null
         var b = "CPU"
         var mm = false
-        val probarGpu = gpu && !prefs.getBoolean("gpuMala", false)
+        var au = false
+        val vl = ruta.lowercase().contains("-vl")
+        if (qwen) {
+            // Qwen 3.5: en Android va mejor con el procesador (la GPU tarda más de un minuto en cargar y gasta más memoria)
+            if (vl) {
+                try { e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), visionBackend = Backend.CPU(), maxNumTokens = TOKENS, maxNumImages = 1, cacheDir = cache)); e.initialize(); mm = true }
+                catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = null }
+            }
+            if (e == null) { e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache)); e.initialize(); mm = false }
+        }
+        val probarGpu = !qwen && gpu && !prefs.getBoolean("gpuMala", false)
         if (probarGpu) {
             // si la app se cierra aquí (falla nativa de la GPU), al volver se sabe y no se repite
             prefs.edit().putBoolean("cargandoGpu", true).commit()
             try {
                 e = Engine(EngineConfig(modelPath = ruta, backend = Backend.GPU(), visionBackend = Backend.GPU(), audioBackend = Backend.CPU(), maxNumTokens = TOKENS, maxNumImages = 4, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
-                e.initialize(); b = "GPU"; mm = true
+                e.initialize(); b = "GPU"; mm = true; au = true
             } catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = null }
             prefs.edit().putBoolean("cargandoGpu", false).apply()
         }
         if (e == null) {
             try {
                 e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), visionBackend = Backend.CPU(), audioBackend = Backend.CPU(), maxNumTokens = TOKENS, maxNumImages = 4, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
-                e.initialize(); b = "CPU"; mm = true
+                e.initialize(); b = "CPU"; mm = true; au = true
             } catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = null }
         }
         if (e == null) {
-            e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
-            e.initialize(); b = "CPU"; mm = false
+            try { e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache, speculativeDecodingConfig = RAPIDO)); e.initialize() }
+            catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache)); e.initialize() }
+            b = "CPU"; mm = false
         }
-        engine = e
+        engine = e!!
         backend = b
         multimodal = mm
+        oye = au && mm
     }
 
     companion object {
@@ -83,7 +101,7 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
         val f = sistema.hashCode().toString() + "|" + temperatura
         val media = multimodal && (imagenes.isNotEmpty() || audios.isNotEmpty())
         var c = abierta
-        if (c == null || f != firma || media || users != usuarios || usuarios.size >= 8) {
+        if (c == null || f != firma || media || users != usuarios || usuarios.size >= 8 || qwen) {
             try { abierta?.close() } catch (_: Throwable) { }
             abierta = null
             val ini = historial.map { if (it[0] == "user") Message.user(it[1]) else Message.model(it[1]) }
@@ -91,7 +109,7 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
                 ConversationConfig(
                     systemInstruction = if (sistema.isBlank()) null else Contents.of(sistema),
                     initialMessages = ini,
-                    samplerConfig = SamplerConfig(topK = 64, topP = 0.95, temperature = temperatura),
+                    samplerConfig = if (qwen) SamplerConfig(topK = 20, topP = 0.8, temperature = temperatura) else SamplerConfig(topK = 64, topP = 0.95, temperature = temperatura),
                     maxOutputToken = maxTokens,
                 )
             )
@@ -100,8 +118,8 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
         conv = c
         val partes = mutableListOf<Content>(Content.Text(ultimo))
         if (multimodal) {
-            imagenes.take(4).forEach { partes.add(Content.ImageFile(it)) }
-            audios.take(1).forEach { partes.add(Content.AudioFile(it)) }
+            imagenes.take(if (qwen) 1 else 4).forEach { partes.add(Content.ImageFile(it)) }
+            if (oye) audios.take(1).forEach { partes.add(Content.AudioFile(it)) }
         }
         val sb = StringBuilder()
         val fin = CountDownLatch(1)
@@ -117,7 +135,7 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
             ok = error == null
         } finally {
             conv = null
-            if (ok && !media) { abierta = c; usuarios.add(ultimo) }          // queda abierta para la próxima pregunta
+            if (ok && !media && !qwen) { abierta = c; usuarios.add(ultimo) }          // queda abierta para la próxima pregunta
             else { try { c.close() } catch (_: Throwable) { }; if (abierta === c) abierta = null; usuarios.clear(); firma = "" }
         }
         error?.let { if (sb.isEmpty()) throw it }

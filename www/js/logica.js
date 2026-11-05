@@ -397,7 +397,7 @@
     return `<|im_start|>system\n${String(system || "").slice(0, 1200)}<|im_end|>\n${turns.join("\n")}\n<|im_start|>assistant\n`;
   }
   /** Lo que devuelve el modelo local, sin marcas de chat. */
-  function cleanLocal(text) { return String(text || "").split(/<\|im_end\|>|<\|im_start\|>|<\|endoftext\|>/)[0].trim(); }
+  function cleanLocal(text) { return String(text || "").replace(/<think>[\s\S]*?<\/think>\s*/g, "").replace(/<think>[\s\S]*$/, "").split(/<\|im_end\|>|<\|im_start\|>|<\|endoftext\|>/)[0].trim(); }   // 3.19: sin el «razonamiento» de Qwen 3.5
   /** El primer objeto JSON de un texto (la IA a veces lo envuelve en ```json … ```). */
   function extractJSON(text) {
     const s = String(text || "").replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "");

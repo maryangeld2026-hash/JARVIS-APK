@@ -36,9 +36,13 @@ public class IALocalPlugin extends Plugin {
 
     private File carpeta() { File d = new File(getContext().getFilesDir(), "ia-local"); if (!d.exists()) d.mkdirs(); return d; }
 
+    /** 3.19: varios modelos descargados a la vez; se usa el que escogiste (o el último que bajaste). */
+    private static boolean esModelo(File f) { return (f.getName().endsWith(".task") || f.getName().endsWith(".litertlm")) && f.length() > 50L * 1024 * 1024; }
     private File modelo() {
         File[] fs = carpeta().listFiles();
         if (fs == null) return null;
+        String act = getContext().getSharedPreferences("jarvis_ia_local", 0).getString("activo", "");
+        if (!act.isEmpty()) for (File f : fs) if (f.getName().equals(act) && esModelo(f)) return f;
         File mejor = null;
         for (File f : fs) if ((f.getName().endsWith(".task") || f.getName().endsWith(".litertlm")) && f.length() > 50L * 1024 * 1024 && (mejor == null || f.lastModified() > mejor.lastModified())) mejor = f;
         return mejor;
@@ -65,7 +69,7 @@ public class IALocalPlugin extends Plugin {
                 }
                 usado();
                 JSObject r = new JSObject(); r.put("listo", gemma != null); call.resolve(r);
-            } catch (Throwable e) { cerrarMotor(); call.reject("No pude cargar Gemma: " + e.getMessage()); }
+            } catch (Throwable e) { cerrarMotor(); call.reject("No pude cargar la IA del celular: " + e.getMessage()); }
         });
     }
 
@@ -188,14 +192,15 @@ public class IALocalPlugin extends Plugin {
         }
         String au = call.getString("audio", "");
         if (au != null && !au.isEmpty() && new File(au).exists()) auds.add(au);
-        if ((!imgs.isEmpty() || !auds.isEmpty()) && !gemma.getMultimodal()) { call.reject("Este modelo no pudo arrancar con fotos ni audio en tu celular (solo texto)."); return; }
+        if (!imgs.isEmpty() && !gemma.getMultimodal()) { call.reject(gemma.getQwen() ? "Este Qwen no ve fotos: usa Qwen 3.5 con visión (VL) o Gemma 4." : "Este modelo no pudo arrancar con fotos en tu celular (solo texto)."); return; }
+        if (!auds.isEmpty() && !gemma.getOye()) { call.reject("Este modelo no entiende audio: para la voz sin internet usa Gemma 4."); return; }
         final long[] ultEv = { 0 };
         String t = gemma.generar(call.getString("sistema", ""), hist, ultimo, imgs, auds, call.getInt("maxTokens", 700), call.getDouble("temperatura", 0.7), (parcial) -> {
             long ahora = System.currentTimeMillis();
             if (ahora - ultEv[0] > 120) { ultEv[0] = ahora; JSObject e = new JSObject(); e.put("texto", parcial); notifyListeners("parcial", e); }
             return kotlin.Unit.INSTANCE;
         });
-        JSObject r = new JSObject(); r.put("texto", t == null ? "" : t); r.put("motor", "Gemma · " + gemma.getBackend()); r.put("ve", gemma.getMultimodal());
+        JSObject r = new JSObject(); r.put("texto", t == null ? "" : t); r.put("motor", gemma.getNombre() + " · " + gemma.getBackend()); r.put("ve", gemma.getMultimodal());
         call.resolve(r);
     }
 
@@ -208,7 +213,13 @@ public class IALocalPlugin extends Plugin {
         r.put("mb", f != null ? f.length() / (1024 * 1024) : 0);
         r.put("libreMb", carpeta().getUsableSpace() / (1024 * 1024));
         r.put("gemma", f != null && f.getName().endsWith(".litertlm"));
-        r.put("cargada", gemma != null); r.put("ve", gemma != null && gemma.getMultimodal());
+        r.put("cargada", gemma != null);
+        // 3.19: ve / oye: lo que el modelo activo puede hacer (si ya cargó, lo que de verdad pudo arrancar en este celular)
+        JSObject cp = f != null ? capacidades(f) : new JSObject();
+        boolean cargado = gemma != null && f != null && gemma.getRuta().equals(f.getAbsolutePath());
+        r.put("familia", f != null ? cp.getString("familia") : "");
+        r.put("ve", cargado ? gemma.getMultimodal() : cp.optBoolean("ve", false));
+        r.put("oye", cargado ? gemma.getOye() : cp.optBoolean("oye", false));
         call.resolve(r);
     }
 
@@ -248,10 +259,10 @@ public class IALocalPlugin extends Plugin {
                     }
                 }
                 cerrarMotor();
-                File[] viejos = carpeta().listFiles();
-                if (viejos != null) for (File v : viejos) if (v.getName().endsWith(".task") || v.getName().endsWith(".litertlm")) v.delete();
-                File fin = new File(carpeta(), nombre);
+                File fin = new File(carpeta(), nombre);                         // 3.19: los otros modelos se quedan (varias alternativas)
+                if (fin.exists()) fin.delete();
                 if (!parte.renameTo(fin)) throw new Exception("No pude guardar el modelo.");
+                getContext().getSharedPreferences("jarvis_ia_local", 0).edit().putString("activo", nombre).apply();
                 JSObject ok = new JSObject(); ok.put("ok", true); ok.put("mb", fin.length() / (1024 * 1024));
                 call.resolve(ok);
             } catch (Exception e) {
@@ -293,11 +304,47 @@ public class IALocalPlugin extends Plugin {
 
     @PluginMethod
     public void borrar(PluginCall call) {
+        final String solo = call.getString("nombre", "");
         hilo.execute(() -> {
             cerrarMotor();
             File[] fs = carpeta().listFiles();
-            if (fs != null) for (File f : fs) f.delete();
+            if (fs != null) for (File f : fs) if (solo == null || solo.isEmpty() || f.getName().equals(solo) || f.getName().equals(solo + ".part")) f.delete();
+            android.content.SharedPreferences p = getContext().getSharedPreferences("jarvis_ia_local", 0);
+            if (solo == null || solo.isEmpty() || solo.equals(p.getString("activo", ""))) p.edit().remove("activo").apply();
             call.resolve();
+        });
+    }
+
+    /** 3.19: qué puede hacer cada modelo según su archivo (antes de cargarlo). */
+    private static JSObject capacidades(File f) {
+        String n = f.getName().toLowerCase();
+        boolean lt = n.endsWith(".litertlm"), gem = lt && n.contains("gemma"), qw35 = lt && n.contains("qwen3.5");
+        JSObject o = new JSObject();
+        o.put("nombre", f.getName()); o.put("mb", f.length() / (1024 * 1024));
+        o.put("familia", gem ? "gemma" : qw35 ? "qwen35" : lt ? "litertlm" : "task");
+        o.put("ve", gem || (lt && n.contains("-vl"))); o.put("oye", gem);
+        return o;
+    }
+
+    @PluginMethod
+    public void modelos(PluginCall call) {
+        File act = modelo();
+        com.getcapacitor.JSArray l = new com.getcapacitor.JSArray();
+        File[] fs = carpeta().listFiles();
+        if (fs != null) for (File f : fs) if (esModelo(f)) { JSObject o = capacidades(f); o.put("activo", act != null && act.getName().equals(f.getName())); l.put(o); }
+        JSObject r = new JSObject(); r.put("lista", l); r.put("libreMb", carpeta().getUsableSpace() / (1024 * 1024));
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void usar(PluginCall call) {
+        final String n = call.getString("nombre", "");
+        hilo.execute(() -> {
+            File f = new File(carpeta(), n == null ? "" : n);
+            if (n == null || n.isEmpty() || !f.exists() || !esModelo(f)) { call.reject("Ese modelo no está descargado."); return; }
+            if (!f.getName().equals(motorRuta.isEmpty() ? "" : new File(motorRuta).getName())) cerrarMotor();
+            getContext().getSharedPreferences("jarvis_ia_local", 0).edit().putString("activo", f.getName()).apply();
+            call.resolve(capacidades(f));
         });
     }
 
