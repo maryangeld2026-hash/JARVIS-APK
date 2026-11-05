@@ -11,6 +11,8 @@ import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
+import com.google.ai.edge.litertlm.SpeculativeDecodingConfig
+import com.google.ai.edge.litertlm.SpeculativeDecodingMode
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -38,19 +40,19 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
             // si la app se cierra aquí (falla nativa de la GPU), al volver se sabe y no se repite
             prefs.edit().putBoolean("cargandoGpu", true).commit()
             try {
-                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.GPU(), visionBackend = Backend.GPU(), audioBackend = Backend.CPU(), maxNumTokens = 4096, maxNumImages = 4, cacheDir = cache))
+                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.GPU(), visionBackend = Backend.GPU(), audioBackend = Backend.CPU(), maxNumTokens = TOKENS, maxNumImages = 4, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
                 e.initialize(); b = "GPU"; mm = true
             } catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = null }
             prefs.edit().putBoolean("cargandoGpu", false).apply()
         }
         if (e == null) {
             try {
-                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), visionBackend = Backend.CPU(), audioBackend = Backend.CPU(), maxNumTokens = 4096, maxNumImages = 4, cacheDir = cache))
+                e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), visionBackend = Backend.CPU(), audioBackend = Backend.CPU(), maxNumTokens = TOKENS, maxNumImages = 4, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
                 e.initialize(); b = "CPU"; mm = true
             } catch (t: Throwable) { try { e?.close() } catch (_: Throwable) { }; e = null }
         }
         if (e == null) {
-            e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = 4096, cacheDir = cache))
+            e = Engine(EngineConfig(modelPath = ruta, backend = Backend.CPU(), maxNumTokens = TOKENS, cacheDir = cache, speculativeDecodingConfig = RAPIDO))
             e.initialize(); b = "CPU"; mm = false
         }
         engine = e
@@ -59,6 +61,10 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
     }
 
     companion object {
+        /** 3.15: memoria de la conversación (instrucción + historia + respuesta). Antes 4096: las respuestas largas se cortaban. */
+        const val TOKENS = 8192
+        /** 3.15: predicción de varias palabras a la vez (MTP), solo cuando de verdad acelera. */
+        val RAPIDO = SpeculativeDecodingConfig(mode = SpeculativeDecodingMode.ADAPTIVE)
         /** ¿La última vez la app se cerró cargando la GPU? Entonces la GPU queda marcada como mala en este celular. */
         @JvmStatic fun revisarCaida(ctx: Context) {
             val p = ctx.getSharedPreferences("jarvis_gemma", 0)
@@ -66,17 +72,31 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
         }
     }
 
+    // 3.15: la conversación abierta se reutiliza si sigue la misma charla: Gemma no vuelve a leer la instrucción ni la historia
+    private var abierta: Conversation? = null
+    private var firma = ""
+    private val usuarios = mutableListOf<String>()
+
     /** historial: pares (rol, texto) con rol «user» o «assistant». imagenes y audios: rutas de archivos (jpg / wav). */
     fun generar(sistema: String, historial: List<Array<String>>, ultimo: String, imagenes: List<String>, audios: List<String>, maxTokens: Int, temperatura: Double, parcial: (String) -> Unit): String {
-        val ini = historial.map { if (it[0] == "user") Message.user(it[1]) else Message.model(it[1]) }
-        val c = engine.createConversation(
-            ConversationConfig(
-                systemInstruction = if (sistema.isBlank()) null else Contents.of(sistema),
-                initialMessages = ini,
-                samplerConfig = SamplerConfig(topK = 64, topP = 0.95, temperature = temperatura),
-                maxOutputToken = maxTokens,
+        val users = historial.filter { it[0] == "user" }.map { it[1] }
+        val f = sistema.hashCode().toString() + "|" + temperatura
+        val media = multimodal && (imagenes.isNotEmpty() || audios.isNotEmpty())
+        var c = abierta
+        if (c == null || f != firma || media || users != usuarios || usuarios.size >= 8) {
+            try { abierta?.close() } catch (_: Throwable) { }
+            abierta = null
+            val ini = historial.map { if (it[0] == "user") Message.user(it[1]) else Message.model(it[1]) }
+            c = engine.createConversation(
+                ConversationConfig(
+                    systemInstruction = if (sistema.isBlank()) null else Contents.of(sistema),
+                    initialMessages = ini,
+                    samplerConfig = SamplerConfig(topK = 64, topP = 0.95, temperature = temperatura),
+                    maxOutputToken = maxTokens,
+                )
             )
-        )
+            usuarios.clear(); usuarios.addAll(users); firma = f
+        }
         conv = c
         val partes = mutableListOf<Content>(Content.Text(ultimo))
         if (multimodal) {
@@ -86,16 +106,19 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
         val sb = StringBuilder()
         val fin = CountDownLatch(1)
         var error: Throwable? = null
+        var ok = false
         try {
             c.sendMessageAsync(Message.user(Contents.of(partes)), object : MessageCallback {
                 override fun onMessage(message: Message) { sb.append(message.toString()); parcial(sb.toString()) }
                 override fun onDone() { fin.countDown() }
                 override fun onError(throwable: Throwable) { error = throwable; fin.countDown() }
             })
-            if (!fin.await(4, TimeUnit.MINUTES)) { try { c.cancelProcess() } catch (_: Throwable) { } }
+            if (!fin.await(5, TimeUnit.MINUTES)) { try { c.cancelProcess() } catch (_: Throwable) { } }
+            ok = error == null
         } finally {
             conv = null
-            try { c.close() } catch (_: Throwable) { }
+            if (ok && !media) { abierta = c; usuarios.add(ultimo) }          // queda abierta para la próxima pregunta
+            else { try { c.close() } catch (_: Throwable) { }; if (abierta === c) abierta = null; usuarios.clear(); firma = "" }
         }
         error?.let { if (sb.isEmpty()) throw it }
         return sb.toString()
@@ -103,5 +126,5 @@ class GemmaMotor(ctx: Context, val ruta: String, gpu: Boolean) {
 
     fun detener() { try { conv?.cancelProcess() } catch (_: Throwable) { } }
 
-    fun cerrar() { detener(); try { engine.close() } catch (_: Throwable) { } }
+    fun cerrar() { detener(); try { abierta?.close() } catch (_: Throwable) { }; abierta = null; try { engine.close() } catch (_: Throwable) { } }
 }

@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.14";
+  const VERSION = "3.15";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -120,7 +120,7 @@
         "Escribe cada orden completa y como la diría la persona. Si solo te preguntan algo, no escribas órdenes. " +
         "Ejemplos: «despiértame a las 6 y avísale a Ana que llego tarde» → «Listo.» y en líneas aparte <<orden: pon una alarma a las 6>> <<orden: mándale un whatsapp a Ana que llego tarde>>. «¿qué es la fotosíntesis?» → solo la explicación, sin órdenes. " +
         (a.memoriaAuto !== false ? "Si la persona te cuenta algo importante y duradero sobre ella (gustos, personas cercanas, fechas, rutinas, metas), escribe al final <<recordar: el dato en una frase corta>>. Nunca guardes claves, números de cuenta, datos de salud delicados ni datos de estudiantes. " : "")) +
-      (window.JX ? window.JX.promptExtra(lastQuestion) : "");
+      (live ? " " : "\u0001") + (window.JX ? window.JX.promptExtra(lastQuestion) : "");      // 3.15: \u0001 separa lo fijo de lo que cambia (Gemma reutiliza lo fijo)
   }
   let lastQuestion = "";
   async function askAI(text) {

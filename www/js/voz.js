@@ -200,7 +200,8 @@
     if (onState) onState(true);
     while (q.length && myGen === gen) {
       const it = q.shift();
-      await speakItem(it);
+      // 3.15: si el motor de voz nunca avisa que terminó, la cola no se queda trabada (antes la voz se cortaba ahí)
+      await Promise.race([speakItem(it), new Promise((r) => setTimeout(r, 8000 + it.t.length * 110))]);
     }
     speaking = false;
     if (onState && myGen === gen) onState(false);
@@ -209,8 +210,11 @@
   const waiters = [];
   /** Agrega una frase a la cola (la IA va mandando frases mientras piensa). */
   function say(text) {
-    const t = String(text || "").trim();
-    if (!t) return;
+    const t0 = String(text || "").trim();
+    if (!t0) return;
+    // 3.15: un texto muy largo se parte (el motor de voz del celular se calla con textos de más de ~4.000 letras)
+    if (t0.length > 320) { const ps = t0.match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [t0]; let cur = ""; ps.forEach((p) => { if ((cur + p).length > 300 && cur) { say(cur); cur = ""; } if (p.length > 300) { p.match(/.{1,280}(\s|$)/g).forEach((x) => say(x)); } else cur += p; }); if (cur.trim()) say(cur); return; }
+    const t = t0;
     let pre = null;
     if (speaker) { try { pre = speaker.prepare(t); if (pre && pre.catch) pre.catch(() => null); } catch (e) { pre = null; } }   // se pide el audio de una vez: mientras dice una frase, ya viene la otra
     q.push({ t, pre });

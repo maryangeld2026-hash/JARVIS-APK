@@ -70,7 +70,7 @@ def main():
         pg = ctx.new_page(); errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(base); pg.wait_for_timeout(300)
-        pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, nombre: 'María', google: { clienteWeb: 'cid.apps.googleusercontent.com' } },
+        pg.evaluate("window.JD ? JD.save(true) : 0"); pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, nombre: 'María', google: { clienteWeb: 'cid.apps.googleusercontent.com' } },
           cursos: [{ id: 'c1', nombre: '7A', estudiantes: ['Pablo Mora'] }] }))""")
         t0 = time.time(); pg.reload(); pg.wait_for_function("window.__jarvis && document.querySelector('#chat')"); arranque = time.time() - t0
         check(arranque < 4, f"arranque rápido ({arranque:.2f} s)")

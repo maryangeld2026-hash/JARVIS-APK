@@ -80,7 +80,7 @@ def main():
         pg.on("pageerror", lambda e: errs.append(str(e)))
         # datos de antes, sin cifrar: la 3.7 los cifra al abrir
         pg.goto(base); pg.wait_for_timeout(300)
-        pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, nombre: 'Profe María' },
+        pg.evaluate("window.JD ? JD.save(true) : 0"); pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, nombre: 'Profe María' },
           cursos: [{ id: 'c1', nombre: '7A', estudiantes: ['Ana Rojas', 'Beto Díaz', 'Pablo Mora'], notas: { actividades: [{ id: 'a1', nombre: 'Quiz 1', peso: 1 }], valores: { 'Pablo Mora': { a1: 2.4 }, 'Ana Rojas': { a1: 4.6 }, 'Beto Díaz': { a1: 3.5 } } } }], cursoActual: 'c1' }))""")
         pg.reload(); pg.wait_for_timeout(1600)
         st = pg.evaluate("({ plano: localStorage.getItem('jarvis.android.v1'), cif: localStorage.getItem('jarvis.android.v1.c'), cursos: JD.load().cursos.length, on: JD.cifrado() })")

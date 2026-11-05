@@ -71,7 +71,7 @@ def main():
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(base); pg.wait_for_timeout(300)
         dia = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"]
-        pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, nombre: 'María', horario: 'lunes 7:00-7:55 7A\\nmiércoles 8:00-8:55 8B',
+        pg.evaluate("window.JD ? JD.save(true) : 0"); pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, nombre: 'María', horario: 'lunes 7:00-7:55 7A\\nmiércoles 8:00-8:55 8B',
           confianza: 'Mamá: 3009998877' }, cursos: [{ id: 'c1', nombre: '7A', estudiantes: ['Pablo Mora', 'Ana Rojas'] }, { id: 'c2', nombre: '8B', estudiantes: ['Beto Díaz'] }],
           docs: [{ id: 'd1', titulo: 'Acta reunión de área', md: 'Acordamos la salida pedagógica para el viernes 20. Marta trae los permisos.', fecha: Date.now() - 864e5, tipo: 'acta' }, { id: 'd2', titulo: 'Nota: Pablo Mora', md: 'Pablo Mora debe la salida pedagógica', fecha: Date.now(), tipo: 'nota' }],
           lugares: { casa: { nombre: 'casa', lat: 4.7, lng: -74.05 } } }))""")

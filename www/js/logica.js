@@ -412,7 +412,7 @@
   function takeSentences(buf, first) {
     const frases = [];
     let rest = String(buf), m;
-    const re = /[.!?…:;](?=\s|$)\s*/g;
+    const re = /[.!?…:;](?=\s|$)\s*|\n+/g;                                     // 3.15: también cada renglón (listas sin punto)
     let last = 0;
     while ((m = re.exec(rest))) {
       if (/\d$/.test(rest.slice(0, m.index)) && /^\.\d/.test(rest.slice(m.index))) continue;   // 3.5
@@ -421,6 +421,8 @@
       last = re.lastIndex;
     }
     rest = rest.slice(last);
+    // 3.15: un pedazo larguísimo sin puntos (por ejemplo, una lista o una tabla) se dice por partes, en una coma o un espacio
+    while (rest.length > 260) { let k = rest.lastIndexOf(", ", 240); if (k < 60) k = rest.lastIndexOf(" ", 240); if (k < 60) k = 240; frases.push(rest.slice(0, k + 1).trim()); rest = rest.slice(k + 1); }
     if (first && !frases.length && rest.length > 40) {                        // la 1ª frase larga: se dice hasta la coma
       const c = rest.slice(35, 140).search(/,\s/);
       if (c >= 0 && !/\$/.test(rest.slice(0, 35 + c))) { frases.push(rest.slice(0, 35 + c + 1).trim()); rest = rest.slice(35 + c + 1); }

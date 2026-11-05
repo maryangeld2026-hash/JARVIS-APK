@@ -50,7 +50,24 @@ public class IALocalPlugin extends Plugin {
     private final Runnable liberar = () -> hilo.execute(this::cerrarMotor);
     @Override public void load() { GemmaMotor.revisarCaida(getContext()); }
 
-    private void usado() { main.removeCallbacks(liberar); main.postDelayed(liberar, 3 * 60 * 1000); }
+    private void usado() { main.removeCallbacks(liberar); main.postDelayed(liberar, 5 * 60 * 1000); }
+
+    /** 3.15: carga Gemma de una vez (al abrir el micrófono o el teclado), para que la respuesta no espere la carga. */
+    @PluginMethod
+    public void precargar(PluginCall call) {
+        hilo.execute(() -> {
+            try {
+                File f = modelo();
+                if (f != null && f.getName().endsWith(".litertlm") && (gemma == null || !gemma.getRuta().equals(f.getAbsolutePath()))) {
+                    cerrarMotor();
+                    gemma = new GemmaMotor(getContext(), f.getAbsolutePath(), totalMb() >= 10500);
+                    motorRuta = f.getAbsolutePath();
+                }
+                usado();
+                JSObject r = new JSObject(); r.put("listo", gemma != null); call.resolve(r);
+            } catch (Throwable e) { cerrarMotor(); call.reject("No pude cargar Gemma: " + e.getMessage()); }
+        });
+    }
 
     @PluginMethod
     public void memoria(PluginCall call) {

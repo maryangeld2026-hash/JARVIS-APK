@@ -17,6 +17,7 @@ const P = {
     descargar: async (o) => { log('descargar ' + o.nombre + ' ' + o.url); fire('progreso', { p: 50, mb: 1290 }); listo = true; return { ok: true, mb: 2580 }; },
     grabar: async (o) => { log('grabar'); return { ruta: '/cache/gemma_voz.wav', segundos: 2.1, hablo: true }; }, pararGrabacion: async () => {},
     generar: async (o) => { log('generar ' + JSON.stringify({ s: (o.sistema || '').slice(0, 40), n: (o.mensajes || []).length, ult: (o.mensajes || []).slice(-1)[0], max: o.maxTokens, img: (o.imagenes || []).length, audio: o.audio || '' }));
+      if ((o.mensajes || []).slice(-1)[0].content.includes('explícame los pasos')) { const t = 'Estos son los pasos:\\n' + Array.from({ length: 14 }, (_, i) => '- Paso ' + (i + 1) + ' de la receta con bastantes palabras para que el texto quede largo y sin ningún punto final').join('\\n') + '\\n- Y al final sirves caliente'; fire('parcial', { texto: t.slice(0, 300) }); return { texto: t, motor: 'Gemma · GPU' }; }
       if (o.audio) return { texto: 'pon cinco minutos', motor: 'Gemma · CPU' };
       if ((o.imagenes || []).length) return { texto: 'Veo un gato sobre una mesa.', motor: 'Gemma · CPU', ve: true }; fire('parcial', { texto: 'París es' }); await new Promise(r => setTimeout(r, 80)); return { texto: 'París es la capital de Francia.', motor: 'Gemma · CPU' }; },
     detener: async () => log('detener'), cancelar: async () => {}, borrar: async () => { listo = false; } },
@@ -38,7 +39,7 @@ def main():
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("dialog", lambda d: d.accept())
         pg.goto(base); pg.wait_for_timeout(300)
-        pg.evaluate("localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: {}, seguir: false, voz: false, proveedor: 'gemini', respaldo: 'local' } }))")
+        pg.evaluate("window.JD ? JD.save(true) : 0"); pg.evaluate("localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: {}, seguir: false, voz: false, proveedor: 'gemini', respaldo: 'local' } }))")
         pg.reload(); pg.wait_for_timeout(2500)
         pg.click("#btn-ajustes"); pg.wait_for_timeout(250); pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(400)
         opts = pg.evaluate("[...document.querySelectorAll('#a-local-modelo option')].map(o => o.value)")
@@ -51,7 +52,13 @@ def main():
         pg.fill("#in-texto", "¿cuál es la capital de Francia?"); pg.press("#in-texto", "Enter"); pg.wait_for_timeout(1500)
         gen = [x for x in pg.evaluate("window.__log") if x.startswith("generar ")]
         g = json.loads(gen[-1][8:]) if gen else {}
-        check("París es la capital de Francia." in pg.evaluate("LASTJ()") and g.get("ult", {}).get("content") == "¿cuál es la capital de Francia?" and g.get("s", "").startswith("Eres Jarvis"), "responde con Gemma (conversación con roles y sistema)")
+        check("París es la capital de Francia." in pg.evaluate("LASTJ()") and g.get("ult", {}).get("content", "").endswith("¿cuál es la capital de Francia?") and "son las" in g.get("ult", {}).get("content", "") and g.get("s", "").startswith("Eres Jarvis") and g.get("max") == 1800, "responde con Gemma (conversación con roles y sistema)")
+        # respuesta larga en lista: la voz la dice completa
+        pg.evaluate("JD.load().ajustes.voz = true; window.__said.length = 0")
+        pg.fill("#in-texto", "explícame los pasos para hacer arroz"); pg.press("#in-texto", "Enter"); pg.wait_for_timeout(2500)
+        said = " ".join(pg.evaluate("window.__said"))
+        check("Paso 14" in said and "sirves caliente" in said and max(len(x) for x in pg.evaluate("window.__said")) <= 330, "la voz dice la explicación completa (listas largas por partes)")
+        pg.evaluate("JD.load().ajustes.voz = false")
         # fotos con Gemma
         img = "/tmp/claude-0/gato.png"
         from PIL import Image; Image.new("RGB", (40, 40), "orange").save(img)

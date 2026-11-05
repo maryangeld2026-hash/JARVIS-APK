@@ -73,10 +73,10 @@
   }
   let timer = null;
   function save(now) {
-    clearTimeout(timer);
+    clearTimeout(timer); timer = null;
     const w = () => { if (llave) return escribir(); try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) { console.warn("No se pudo guardar", e); } return Promise.resolve(); };
     if (now) return w();
-    timer = setTimeout(w, 600);                                 // 3.10: varias escrituras seguidas → una sola (más rápido, menos batería)
+    timer = setTimeout(() => { timer = null; w(); }, 600);                                 // 3.10: varias escrituras seguidas → una sola (más rápido, menos batería)
   }
   // 3.10: al salir de la app o apagar la pantalla, se guarda de una vez
   if (typeof document !== "undefined") {

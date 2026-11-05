@@ -59,6 +59,9 @@
   let warmAt = 0;
   async function warm() {
     const c = cfg();
+    // 3.15: si va a responder Gemma (es la principal, o no hay internet y es la de respaldo), se carga de una vez
+    const bk = backupCfg();
+    if ((c.prov === "local" || (!navigator.onLine && bk && bk.prov === "local")) && gemmaSt && gemmaSt.gemma) { const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); }
     if (c.a.ahorroActivo) return;                               // 3.7.1: en modo ahorro no se calienta la conexión
     if (c.prov === "local" || (!c.key && !c.p.sinClave) || !navigator.onLine || Date.now() - warmAt < 45000) return;
     warmAt = Date.now();
@@ -92,6 +95,7 @@
   /** Con un proveedor: si no arranca, está saturado o se cae la red, reintenta (y si hace falta usa otro modelo de la cuenta). */
   async function via(c, opts, intentos) {
     if (c.prov === "local") return localChat(opts);
+    if (opts.system && opts.system.indexOf("\u0001") >= 0) opts = Object.assign({}, opts, { system: opts.system.replace("\u0001", " ") });
     let m = await model(c);
     const tried = [];
     for (let intento = 0; intento < intentos; intento++) {
@@ -219,9 +223,17 @@
       if (r.total > (r.paginas || []).length) notaPdf = `\n\n(Del PDF de ${r.total} páginas solo pude ver las primeras ${(r.paginas || []).length}.)`;
     }
     const gemma = /\.litertlm$/.test(st.nombre || "");           // 3.12: Gemma 4 entiende instrucciones largas y la conversación completa
-    const sys = String(system || "").slice(0, gemma ? 6000 : 900) + " Responde en español" + (gemma ? "." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "");
+    // 3.15: para Gemma, la instrucción fija va aparte (se reutiliza entre preguntas: responde más rápido) y lo que cambia
+    // (la hora, lo que recuerdo de ti para esta pregunta) va junto a tu mensaje
+    let fijo = String(system || ""), cambia = "";
+    const k = fijo.indexOf("\u0001");
+    if (k >= 0) { cambia = fijo.slice(k + 1).trim(); fijo = fijo.slice(0, k); }
+    if (gemma) { const h = fijo.match(/\s*Hoy es [^.]+, son las [^.]+\.\s*/); if (h) { fijo = fijo.replace(h[0], " "); cambia = h[0].trim() + " " + cambia; } }
+    const sys = fijo.slice(0, gemma ? 5000 : 900) + " Responde en español" + (gemma ? ". Si te piden explicar algo, explícalo completo y en orden." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "") + (gemma ? "" : " " + cambia.slice(0, 400));
     const prompt = L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
-    const mensajes = messages.slice(-10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content || "").slice(0, 4000) }));
+    const mensajes = messages.slice(gemma ? -8 : -10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content || "").slice(0, gemma ? 1800 : 4000) }));
+    if (gemma && cambia && mensajes.length && mensajes[mensajes.length - 1].role === "user") mensajes[mensajes.length - 1].content = `(${cambia.slice(0, 1200)})\n\n${mensajes[mensajes.length - 1].content}`;
+    if (gemma && maxTokens === 700) maxTokens = 1800;                // las explicaciones largas ya no se cortan
     const t0 = performance.now();
     stopped = false;
     let h = null, parcial = "";

@@ -68,7 +68,7 @@ def main():
         pg.goto(base); pg.wait_for_timeout(300)
         now_ms = int(time.time() * 1000)
         log = [{"k": "como esta el clima", "texto": "¿cómo está el clima?", "t": now_ms - d * 864e5 - 5 * 60000} for d in (1, 2, 3, 4)]
-        pg.evaluate("""(log) => localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, nombre: 'María' },
+        pg.evaluate("window.JD ? JD.save(true) : 0"); pg.evaluate("""(log) => localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, nombre: 'María' },
           cursos: [{ id: 'c1', nombre: '7A', estudiantes: ['Pablo Mora'] }], usoLog: log, pagos: [{ id: 'p1', nombre: 'luz', dia: 15, monto: 120000, pagos: [] }],
           gastos: [{ id: 'g1', monto: 25000, desc: 'almuerzo', cat: 'comida', tipo: 'gasto', t: Date.now() - 864e5 }] }))""", log)
         pg.reload(); pg.wait_for_timeout(5000)

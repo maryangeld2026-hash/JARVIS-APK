@@ -1,3 +1,16 @@
+# Jarvis para Android 3.15: Gemma más rápida y la voz ya no se corta
+
+## 🔊 La voz ya no se corta
+- **Listas y explicaciones largas se dicen completas:** antes, si la respuesta era una lista (renglones sin punto) o un párrafo muy largo, se juntaba todo en un solo pedazo enorme y el motor de voz del celular se callaba. Ahora se dice renglón por renglón y en pedazos cortos.
+- Si el motor de voz no avisa que terminó una frase, Jarvis ya no se queda trabado: sigue con la siguiente.
+- **Las respuestas de Gemma ya no se cortan a la mitad:** antes tenía espacio para unas 4.000 «palabras» entre instrucción, conversación y respuesta, y las explicaciones largas se quedaban sin espacio. Ahora el doble, y la respuesta puede ser más del doble de larga.
+
+## ⚡ Gemma responde más rápido
+- **Predicción de varias palabras a la vez** (Multi-Token Prediction de Google): hasta 2 veces más rápido en la GPU, se activa solo cuando de verdad acelera.
+- **No vuelve a leer todo en cada pregunta:** la conversación con Gemma queda abierta; en la siguiente pregunta solo lee lo nuevo. Para eso, lo que cambia (la hora, lo que recuerdo de ti) va con tu mensaje y no en la instrucción.
+- **Se carga antes de que preguntes:** al tocar el micrófono o el teclado (si va a responder Gemma), ya empieza a cargar. Y queda lista 5 minutos (antes 3).
+- Con la GPU en tu celular de 12 GB, la primera palabra sale en menos de un segundo después de cargada.
+
 # Jarvis para Android 3.14: más fácil, más listo y más liviano
 
 ## 🧠 Te entiende mejor
