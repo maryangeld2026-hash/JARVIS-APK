@@ -25,6 +25,8 @@ public final class Apagado {
         marcar(c, true);
         try { c.stopService(new Intent(c, EscuchaService.class)); } catch (Exception ignored) { }
         try { c.stopService(new Intent(c, BurbujaService.class)); } catch (Exception ignored) { }
+        try { c.stopService(new Intent(c, SubtitulosService.class)); } catch (Exception ignored) { }
+        try { c.stopService(new Intent(c, GrabadoraService.class)); } catch (Exception ignored) { }   // la grabación queda guardada para resumirla
         try { android.app.job.JobScheduler js = (android.app.job.JobScheduler) c.getSystemService(Context.JOB_SCHEDULER_SERVICE); if (js != null) js.cancel(FotosJob.ID); } catch (Exception ignored) { }
         try { android.app.NotificationManager nm = (android.app.NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE); if (nm != null) nm.cancel(72); } catch (Exception ignored) { }
     }

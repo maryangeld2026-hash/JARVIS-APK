@@ -532,3 +532,9 @@ details.pensar { margin-top: 8px; font-size: 13px; opacity: .9; } details.pensar
 .mus-barra { position: relative; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 10px; }
 .mus-barra i { position: absolute; inset: 0 auto 0 0; width: 0; background: rgb(var(--a-rgb)); opacity: calc(.45 + var(--v, 0) * .55); transition: width .2s linear; }
 .mus-portada { float: right; width: 72px; height: 72px; border-radius: 10px; margin: 0 0 6px 10px; object-fit: cover; }
+/* 3.18: grabadora de reuniones y datos para formularios */
+.reu18-in { padding: 6px 18px 18px; }
+.reu18 .reu-t { font: 600 44px/1.1 var(--mono); text-align: center; margin: 8px 0; color: var(--err); }
+.reu18 .row .btn { flex: 1; height: 50px; }
+.aj-perfil { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.aj-perfil .inp { min-width: 0; }

@@ -47,7 +47,7 @@ public class EscuchaService extends Service {
         String a = intent != null ? intent.getAction() : null;
         aviso(ACCION_PAUSAR.equals(a) ? "En pausa mientras conversamos" : "Di «Jarvis» cuando me necesites");
         if (intent == null && Apagado.es(this)) { stopSelf(); return START_NOT_STICKY; }   // 3.16: apagado, Android no lo revive
-        if (ACCION_PAUSAR.equals(a)) { pausado = true; parar(); return START_STICKY; }
+        if (ACCION_PAUSAR.equals(a) || Microfono.ocupado()) { pausado = true; parar(); if (Microfono.ocupado()) aviso("En pausa: el micrófono lo usa " + Microfono.ocupadoPor); return START_STICKY; }   // 3.18
         pausado = false;
         activo = true;
         arrancar();
@@ -105,6 +105,7 @@ public class EscuchaService extends Service {
 
     private synchronized void arrancar() {
         vigilarPantalla();
+        if (Microfono.ocupado()) return;                                // 3.18: graba una reunión o hace subtítulos
         if (correr) return;
         correr = true;
         hilo = new Thread(this::bucle, "jarvis-escucha");
@@ -283,8 +284,7 @@ public class EscuchaService extends Service {
 
     private void despertar(String resto) {
         pausado = true;
-        ControlServicio.capturar();                                   // 3.10: lo que estabas viendo, por si preguntas «¿qué dice esta pantalla?»
-        main.post(() -> {
+        ControlServicio.capturarY(() -> {                              // 3.10/3.18: lo que estabas viendo (texto y foto)
             aviso("En pausa mientras conversamos");
             boolean puede = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this);
             if (puede) {

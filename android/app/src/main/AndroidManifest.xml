@@ -100,6 +100,10 @@
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
         </service>
+        <!-- 3.18: grabar reuniones, subtítulos en vivo y Jarvis en el reloj -->
+        <service android:name=".GrabadoraService" android:exported="false" android:foregroundServiceType="microphone" />
+        <service android:name=".SubtitulosService" android:exported="false" android:foregroundServiceType="microphone" />
+        <receiver android:name=".RelojReceiver" android:exported="false" />
         <!-- 3.6: recordatorios por lugar -->
         <receiver android:name=".LugarReceiver" android:exported="false" />
         <!-- 3.14: Google Play baja los modelos de lectura de texto y de fotos al instalar -->

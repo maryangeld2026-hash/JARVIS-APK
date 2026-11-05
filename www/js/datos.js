@@ -87,6 +87,7 @@
   function backup() {
     const d = JSON.parse(JSON.stringify(load()));
     Object.keys(d.ajustes.claves || {}).forEach((k) => { d.ajustes.claves[k] = ""; });   // la copia nunca lleva las claves
+    delete d.perfil;                                                                    // 3.18: ni tus datos personales para formularios
     return { app: "jarvis-android", version: 1, fecha: new Date().toISOString(), datos: d };
   }
   function restore(obj) {

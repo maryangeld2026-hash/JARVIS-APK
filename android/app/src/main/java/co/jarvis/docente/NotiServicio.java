@@ -183,6 +183,7 @@ public class NotiServicio extends NotificationListenerService {
                 recientes.put(m.clave, m);
             }
             try { revisar(m); } catch (Exception ignored) { }          // 3.11: estafas y respuestas automáticas
+            if (prefs().getBoolean("archivar", false)) Archivo.guardar(this, m.app, m.de, m.texto, m.t);   // 3.18: memoria de tus mensajes (opcional, solo en el celular)
             // 3.9: modo conducción — si Jarvis está en pantalla, él te lo lee y te pregunta si respondes; si no, lo lee Android
             if (prefs().getBoolean("conduccion", false)) {
                 if (MainActivity.visible && MensajesPlugin.llego(m)) { /* lo maneja Jarvis */ }

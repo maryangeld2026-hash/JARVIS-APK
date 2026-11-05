@@ -1,4 +1,26 @@
-# Jarvis para Android 3.17: traductor de idiomas y reconocer canciones
+# Jarvis para Android 3.18: pantalla, reuniones, memoria, compras, subtítulos, reloj y audífonos
+
+## 📱 Jarvis ve tu pantalla
+- Desde cualquier app, llama a Jarvis (burbuja, botón de asistente o «Jarvis») y dile «mira mi pantalla» o pregunta directo «¿qué significa este error?». Ve la pantalla (Android 11+), te explica y te dice qué tocar. Nunca toma la foto en apps de bancos o de claves.
+
+## 🎙️ Reuniones
+- «Graba la reunión»: graba con la pantalla apagada (aviso fijo con Pausa y Terminar), en partes livianas. «Termina la grabación»: transcribe con Gemini y hace el acta (resumen, temas, acuerdos, tareas, pendientes), la guarda en Material y crea los recordatorios de las tareas con un toque.
+- Android no deja que las apps graben llamadas: ponla en altavoz y grábala como reunión (con permiso de la otra persona).
+
+## 🧠 Memoria de largo plazo
+- «¿Qué me dijo Carlos del contrato hace dos semanas?»: busca en tus chats con Jarvis, notas, documentos, actas, diario y (si lo activas) tus mensajes de los últimos 30 días, y responde citando la fuente y la fecha.
+
+## 🛒 Compras y trámites
+- «Compara precios de …»: tiendas de Colombia con fuentes; botón para abrir la más barata y revisar cada lunes. Nunca compra ni paga.
+- «¿Cómo saco el pasaporte?»: requisitos, costo y pasos con la página oficial.
+- «Llena este formulario»: escribe tus datos (Ajustes › Mis datos para formularios) en la app o página que tienes abierta. Tus datos no van a la IA; nunca escribe contraseñas ni tarjetas, y nunca envía.
+
+## 💬 Subtítulos en vivo
+- «Pon subtítulos del inglés»: una franja encima de cualquier app con lo que se oye, traducido al español en el celular. Se arrastra y se cierra con ✕.
+
+## ⌚ Reloj y 🎧 audífonos
+- «Activa Jarvis en el reloj»: aviso con «Preguntar»; le hablas al reloj y la respuesta llega al reloj (Wear OS, Galaxy Watch y otros que dejan responder avisos).
+- Al conectar audífonos, Jarvis responde corto y todo en voz; al quitarlos vuelve como estaba.
 
 ## 🌐 Traductor completo
 - «Traduce al inglés: …», «¿cómo se dice … en francés?», «qué significa "…"»: traduce natural (con IA), da la pronunciación y lo dice con la voz de ese idioma. Botones: otra vez, despacio, copiar, guardar.

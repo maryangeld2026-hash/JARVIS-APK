@@ -17,11 +17,13 @@ public class AsistenteSesiones extends VoiceInteractionSessionService {
         @Override
         public void onShow(Bundle args, int flags) {
             super.onShow(args, flags);
-            ControlServicio.capturar();                               // 3.10: para «¿qué dice esta pantalla?»
-            Intent i = new Intent(getContext(), MainActivity.class).putExtra("atajo", "hablar")
+            final Intent i = new Intent(getContext(), MainActivity.class).putExtra("atajo", "hablar")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            try { startAssistantActivity(i); } catch (Exception e) { try { getContext().startActivity(i); } catch (Exception ignored) { } }
-            hide();
+            // 3.10/3.18: lo que estabas viendo (texto y foto), para «¿qué dice esta pantalla?» y «mira mi pantalla»
+            ControlServicio.capturarY(() -> {
+                try { startAssistantActivity(i); } catch (Exception e) { try { getContext().startActivity(i); } catch (Exception ignored) { } }
+                hide();
+            });
         }
     }
 }

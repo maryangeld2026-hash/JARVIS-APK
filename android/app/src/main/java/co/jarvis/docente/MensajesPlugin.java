@@ -40,10 +40,25 @@ public class MensajesPlugin extends Plugin {
         if (call.hasOption("gastosAuto")) e.putBoolean("gastosAuto", call.getBoolean("gastosAuto", false));
         if (call.hasOption("estafas")) e.putBoolean("estafas", call.getBoolean("estafas", true));
         if (call.hasOption("autoResp")) e.putBoolean("autoResp", call.getBoolean("autoResp", false));
+        if (call.hasOption("archivar")) { boolean on = call.getBoolean("archivar", false); e.putBoolean("archivar", on); if (!on) Archivo.borrar(getContext()); }   // 3.18
         if (call.hasOption("autoTexto")) e.putString("autoTexto", call.getString("autoTexto", ""));
         if (call.hasOption("autoHasta")) e.putLong("autoHasta", (long) (double) call.getDouble("autoHasta", 0d));
         e.apply(); call.resolve();
     }
+
+    /** 3.18: la memoria de tus mensajes: {dias} → {lista:[{a: app, d: de, x: texto, t}]} */
+    @PluginMethod
+    public void archivo(PluginCall call) {
+        long dias = Math.max(1, Math.min(30, call.getInt("dias", 30)));
+        new Thread(() -> {
+            JSObject r = new JSObject();
+            try { r.put("lista", Archivo.json(getContext(), System.currentTimeMillis() - dias * 24L * 3600 * 1000)); } catch (Exception e) { r.put("lista", new com.getcapacitor.JSArray()); }
+            r.put("activo", getContext().getSharedPreferences("jarvis_noti", 0).getBoolean("archivar", false));
+            call.resolve(r);
+        }).start();
+    }
+    @PluginMethod
+    public void borrarArchivo(PluginCall call) { Archivo.borrar(getContext()); call.resolve(); }
 
     /** 3.11: ¿parece estafa? (las mismas reglas que revisan los mensajes que llegan) {texto} → {puntaje} */
     @PluginMethod

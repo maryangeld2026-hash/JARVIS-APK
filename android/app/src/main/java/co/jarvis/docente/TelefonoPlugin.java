@@ -165,8 +165,18 @@ public class TelefonoPlugin extends Plugin {
         JSObject r = new JSObject();
         r.put("activo", ControlServicio.instancia != null);
         r.put("app", ControlServicio.capApp); r.put("texto", ControlServicio.capTexto); r.put("t", ControlServicio.capT);
-        if (call.getBoolean("borrar", false)) { ControlServicio.capTexto = ""; ControlServicio.capApp = ""; ControlServicio.capT = 0; }
+        // 3.18: la foto de la pantalla (solo si la pides y es de hace menos de 5 minutos)
+        if (call.getBoolean("imagen", false) && System.currentTimeMillis() - ControlServicio.capImgT < 5 * 60000) { r.put("img", ControlServicio.capImg); r.put("imgT", ControlServicio.capImgT); }
+        r.put("conFoto", android.os.Build.VERSION.SDK_INT >= 30);
+        if (call.getBoolean("borrar", false)) { ControlServicio.capTexto = ""; ControlServicio.capApp = ""; ControlServicio.capT = 0; ControlServicio.capImg = ""; ControlServicio.capImgT = 0; }
         call.resolve(r);
+    }
+
+    /** 3.18: tomar (o no) la foto de la pantalla al llamar a Jarvis. */
+    @PluginMethod
+    public void pantallaFoto(PluginCall call) {
+        getContext().getSharedPreferences("jarvis_pantalla", 0).edit().putBoolean("noFoto", !Boolean.TRUE.equals(call.getBoolean("on", true))).apply();
+        call.resolve();
     }
 
     /** 3.9: los cumpleaños guardados en tus contactos: {lista:[{nombre, fecha}]} (fecha «--MM-DD» o «AAAA-MM-DD»). */

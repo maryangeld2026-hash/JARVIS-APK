@@ -122,7 +122,7 @@ public class BurbujaService extends Service {
                         wm.updateViewLayout(burbuja, lp);
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if (!movio) { ControlServicio.capturar(); startActivity(abrirJarvis()); }
+                        if (!movio) { ControlServicio.capturarY(() -> startActivity(abrirJarvis())); }
                         return true;
                 }
                 return false;
@@ -145,7 +145,7 @@ public class BurbujaService extends Service {
         gf.setStroke((int) (1 * d), 0xFF2EE6FF);
         globo.setBackground(gf);
         globo.setVisibility(View.GONE);
-        globo.setOnClickListener(v -> { ControlServicio.capturar(); startActivity(abrirJarvis()); });
+        globo.setOnClickListener(v -> ControlServicio.capturarY(() -> startActivity(abrirJarvis())));
         int ancho = (int) (getResources().getDisplayMetrics().widthPixels * 0.7);
         lpG = new WindowManager.LayoutParams(ancho, WindowManager.LayoutParams.WRAP_CONTENT, tipo,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);

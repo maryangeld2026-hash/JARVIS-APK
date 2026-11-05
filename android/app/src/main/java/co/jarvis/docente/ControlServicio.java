@@ -40,6 +40,53 @@ public class ControlServicio extends AccessibilityService {
             capApp = app; capT = System.currentTimeMillis();
         } catch (Exception ignored) { }
     }
+    // ======================================================================== 3.18: Jarvis ve tu pantalla
+    static volatile String capImg = "";
+    static volatile long capImgT = 0;
+    private static final java.util.regex.Pattern PRIVADAS = java.util.regex.Pattern.compile("(?i)(bancolombia|davivienda|bbva|nequi|daviplata|bancodebogota|bancodeoccidente|avvillas|scotiabank|colpatria|itau|nubank|lulo|movii|paypal|binance|coinbase|wallet|bank|banco|1password|bitwarden|lastpass|keepass|authenticator|authy)");
+    /** Copia el texto y, desde Android 11, una foto de la pantalla que estabas viendo; luego abre Jarvis (luego.run). Nunca de apps de bancos o claves. */
+    static void capturarY(Runnable luego) {
+        capturar();
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        ControlServicio s = instancia;
+        String pkg = "";
+        try { AccessibilityNodeInfo r = s == null ? null : s.getRootInActiveWindow(); if (r != null && r.getPackageName() != null) pkg = r.getPackageName().toString(); } catch (Exception ignored) { }
+        if (s == null || Build.VERSION.SDK_INT < 30 || pkg.isEmpty() || pkg.equals(s.getPackageName()) || PRIVADAS.matcher(pkg).find()
+            || s.getSharedPreferences("jarvis_pantalla", 0).getBoolean("noFoto", false)) { h.post(luego); return; }
+        final java.util.concurrent.atomic.AtomicBoolean hecho = new java.util.concurrent.atomic.AtomicBoolean(false);
+        final Runnable una = () -> { if (hecho.compareAndSet(false, true)) luego.run(); };
+        h.postDelayed(una, 600);
+        foto30(s, una);
+    }
+    @android.annotation.TargetApi(30)
+    private static void foto30(ControlServicio s, Runnable una) {
+        try {
+            s.takeScreenshot(android.view.Display.DEFAULT_DISPLAY, s.getMainExecutor(), new TakeScreenshotCallback() {
+                @Override public void onSuccess(ScreenshotResult r) {
+                    android.graphics.Bitmap sw = null;
+                    try {
+                        android.hardware.HardwareBuffer hb = r.getHardwareBuffer();
+                        android.graphics.Bitmap hw = android.graphics.Bitmap.wrapHardwareBuffer(hb, r.getColorSpace());
+                        if (hw != null) { sw = hw.copy(android.graphics.Bitmap.Config.ARGB_8888, false); hw.recycle(); }
+                        hb.close();
+                    } catch (Exception ignored) { }
+                    una.run();
+                    final android.graphics.Bitmap bm = sw;
+                    if (bm != null) new Thread(() -> {
+                        try {
+                            float k = Math.min(1f, 1280f / Math.max(bm.getWidth(), bm.getHeight()));
+                            android.graphics.Bitmap sc = k < 1f ? android.graphics.Bitmap.createScaledBitmap(bm, Math.round(bm.getWidth() * k), Math.round(bm.getHeight() * k), true) : bm;
+                            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                            sc.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out);
+                            capImg = android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP); capImgT = System.currentTimeMillis();
+                            if (sc != bm) sc.recycle(); bm.recycle();
+                        } catch (Exception ignored) { }
+                    }).start();
+                }
+                @Override public void onFailure(int code) { una.run(); }
+            });
+        } catch (Exception e) { una.run(); }
+    }
     private static void recorrer(AccessibilityNodeInfo n, StringBuilder b, int d) {
         if (n == null || d > 45 || b.length() > 15000) return;
         if (!n.isPassword()) {
