@@ -41,6 +41,7 @@ public class BurbujaService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         aviso();
+        if (intent == null && Apagado.es(this)) { stopSelf(); return START_NOT_STICKY; }   // 3.16
         if (burbuja == null) crear();
         vivo = true;
         if (intent != null && ACCION_ESTADO.equals(intent.getAction())) estado(intent.getStringExtra("modo"), intent.getStringExtra("texto"));

@@ -17,7 +17,7 @@
   const R = (t, cls, spoken) => A.reply(t, cls || "tool", spoken);
   const pick = (t, ops, sp) => X._vida.pick(t, ops, sp);
   const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-  const docente = () => D.ajustes.docente !== false;
+  const docente = () => D.ajustes.docente === true;
   const sinNombres = (t) => { if (!docente()) return t; const ns = [].concat(...D.cursos.map((c) => c.estudiantes || [])).filter((n) => n.length > 3).map((n) => L10.norm(n)); return String(t).split("\n").filter((l) => !ns.some((n) => L10.norm(l).includes(n))).join("\n"); };
   const hayIA = () => D.ajustes.proveedor === "local" || !!((D.ajustes.claves || {})[D.ajustes.proveedor] || "").trim();
 

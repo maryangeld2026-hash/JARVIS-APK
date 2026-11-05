@@ -124,6 +124,17 @@ public class VentanaPlugin extends Plugin {
         call.resolve();
     }
 
+    /** 3.16: apagar de verdad: se detiene todo lo de segundo plano y se cierra el proceso (la IA del celular suelta la memoria). */
+    @PluginMethod
+    public void apagar(PluginCall call) {
+        Apagado.detenerTodo(getContext());
+        call.resolve();
+        getActivity().runOnUiThread(() -> {
+            getActivity().finishAndRemoveTask();
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> android.os.Process.killProcess(android.os.Process.myPid()), 600);
+        });
+    }
+
     @PluginMethod
     public void salir(PluginCall call) {
         call.resolve();

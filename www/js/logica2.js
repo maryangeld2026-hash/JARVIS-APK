@@ -129,9 +129,9 @@
     const q = new Set(norm(question).split(" ").filter((w) => w.length >= 4));
     const rel = (mem || []).map((m) => ({ m, sc: norm(m.texto).split(" ").filter((w) => q.has(w)).length })).sort((a, b) => b.sc - a.sc || b.m.t - a.m.t);
     let out = "";
-    if ((lecciones || []).length) out += " Lecciones que la profe te enseñó (síguelas siempre): " + lecciones.slice(-15).map((l, i) => `(${i + 1}) ${l.texto}`).join(" ") + ".";
+    if ((lecciones || []).length) out += " Lecciones que la persona te enseñó (síguelas siempre): " + lecciones.slice(-15).map((l, i) => `(${i + 1}) ${l.texto}`).join(" ") + ".";
     const facts = rel.filter((x, i) => x.sc > 0 || i < 8).map((x) => x.m.texto);
-    if (facts.length) out += " Lo que sabes de la profe: " + facts.join("; ") + ".";
+    if (facts.length) out += " Lo que sabes de la persona: " + facts.join("; ") + ".";
     return out.slice(0, max);
   }
 

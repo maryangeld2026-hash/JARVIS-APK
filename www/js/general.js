@@ -20,7 +20,7 @@
   const R = (t, cls, spoken) => A.reply(t, cls || "tool", spoken);
 
   // ======================================================================== MODO DOCENTE
-  function docente() { return D.ajustes.docente !== false; }
+  function docente() { return D.ajustes.docente === true; }
   function applyDocente() {
     document.body.classList.toggle("sin-docente", !docente());
     if (!docente() && /^(?:clase|quices)$/.test(document.body.dataset.tab || "")) A.tab("hablar");
@@ -259,7 +259,7 @@
     const st = D.ajustes.estilo = D.ajustes.estilo || {};
     sec.append(mk("label", "lbl", "Cómo te habla Jarvis"));
     const row = mk("div", "row wrap");
-    const s1 = mk("select", "inp half"); [["cercano", "Cálido y cercano"], ["formal", "Formal (de usted)"], ["amigo", "Como un amigo"]].forEach(([k, t]) => s1.append(new Option(t, k))); s1.value = st.estilo || "cercano";
+    const s1 = mk("select", "inp half"); [["jarvis", "Jarvis (mayordomo elegante, humor seco)"], ["cercano", "Cálido y cercano"], ["formal", "Formal (de usted)"], ["amigo", "Como un amigo"]].forEach(([k, t]) => s1.append(new Option(t, k))); s1.value = st.estilo || "jarvis";
     const s2 = mk("select", "inp half"); [["normal", "Respuestas normales"], ["corto", "Muy cortas"], ["detallado", "Con detalles"]].forEach(([k, t]) => s2.append(new Option(t, k))); s2.value = st.largo || "normal";
     s1.addEventListener("change", () => { st.estilo = s1.value; save(); }); s2.addEventListener("change", () => { st.largo = s2.value; save(); });
     row.append(s1, s2); sec.append(row);
@@ -360,6 +360,7 @@
   X.init = function (api) {
     A = api; D = api.D;
     if (D.ajustes.docente == null) { D.ajustes.docente = D.cursos.length > 0 || !!(D.quices && D.quices.length); save(); }
+    if (!D.ajustes.v316) { D.ajustes.v316 = 1; (D.ajustes.estilo = D.ajustes.estilo || {}).estilo = "jarvis"; save(); }   // 3.16: la personalidad de Jarvis
     D.misHab = D.misHab || []; D.programadas = D.programadas || []; D.convs = D.convs || []; convAct();
     try { base.init(api); } catch (e) { console.error("init", e); }
     envolverIA();

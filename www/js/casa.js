@@ -19,7 +19,7 @@
   const VD = () => X._vida;
   const pick = (t, ops, sp) => VD().pick(t, ops, sp);
   const abrirUrl = (u) => { const W = plug("Ventana"); if (W && W.abrir) return W.abrir({ url: u }).catch(() => window.open(u, "_blank")); window.open(u, "_blank"); };
-  const docente = () => D.ajustes.docente !== false;
+  const docente = () => D.ajustes.docente === true;
   const sinNombres = (t) => { if (!docente()) return t; const ns = [].concat(...D.cursos.map((c) => c.estudiantes || [])).filter((n) => n.length > 3); return String(t).split("\n").filter((l) => !ns.some((n) => L9.norm(l).includes(L9.norm(n)))).join("\n"); };
 
   // ======================================================================== ¿DÓNDE DEJÉ EL CARRO?
@@ -316,7 +316,7 @@
     const nombres = [].concat(...D.cursos.map((c) => c.estudiantes || [])).concat(D.ajustes.nombre ? [D.ajustes.nombre] : []);
     const errs = ((window.__jerr && window.__jerr.lista()) || []).map((e) => ({ t: e.t, m: L9.limpiar(e.m, nombres) }));
     const a = D.ajustes, lt = IA.last ? IA.last() : null;
-    const prendido = [a.fondo && "escucha de fondo" + (a.fondoCuando ? " (" + a.fondoCuando + ")" : ""), a.manosLibres && "manos libres", a.burbuja && "burbuja", a.vozIA && "voz IA", a.conduccion && "conducción", a.ahorroActivo && "modo ahorro", a.docente !== false && "modo docente", a.gastosAuto && "gastos del banco", (a.buscar || {}).on && "encontrar celular", ha() && "Home Assistant"].filter(Boolean);
+    const prendido = [a.fondo && "escucha de fondo" + (a.fondoCuando ? " (" + a.fondoCuando + ")" : ""), a.manosLibres && "manos libres", a.burbuja && "burbuja", a.vozIA && "voz IA", a.conduccion && "conducción", a.ahorroActivo && "modo ahorro", a.docente === true && "modo docente", a.gastosAuto && "gastos del banco", (a.buscar || {}).on && "encontrar celular", ha() && "Home Assistant"].filter(Boolean);
     let bat = ""; const E = plug("Escucha"); if (E && E.bateriaEstado) { try { const b = await E.bateriaEstado(); bat = `${b.nivel} %${b.ahorro ? " (ahorro)" : ""}${b.sinRestriccion ? " · sin restricción" : ""}`; } catch (e) { /* nada */ } }
     const txt = L9.reporte({ version: A.VERSION, fecha: new Date().toISOString().slice(0, 16), ua: navigator.userAgent.replace(/\s*\(KHTML.*$/, "").slice(0, 160), proveedor: a.proveedor, respaldo: a.respaldo, ms: lt && lt.ms, prendido, bateria: bat, red: navigator.onLine ? (navigator.connection && navigator.connection.effectiveType) || "sí" : "sin internet", errores: errs, nota: nota ? L9.limpiar(nota, nombres) : "" });
     pick("🛠️ **Informe listo** (sin tus datos: ni nombres, ni claves, ni números).\n\n```\n" + txt.slice(0, 1500) + (txt.length > 1500 ? "\n…" : "") + "\n```", [

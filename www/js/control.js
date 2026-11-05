@@ -203,8 +203,8 @@
     const now = new Date(), s = L3.parseSchedule(D.ajustes.horario || ""), c = L3.classNow(s, now);
     const p = [];
     const h = now.getHours();
-    p.push(`${h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches"}, ${A.trato ? A.trato() : "profe"}. Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}.`);
-    const doc = D.ajustes.docente !== false;
+    p.push(`${h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches"}, ${A.trato ? A.trato() : "señor"}. Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}.`);
+    const doc = D.ajustes.docente === true;
     if (window.JX && window.JX.climaHoy) { try { const cl = await Promise.race([window.JX.climaHoy(), new Promise((r) => setTimeout(() => r(""), 4000))]); if (cl) p.push(cl); } catch (e) { /* sin clima */ } }
     if (!doc) { /* sin clases */ } else if (c.hoy.length) p.push(`Tienes ${c.hoy.length} clase${c.hoy.length > 1 ? "s" : ""}: ${c.hoy.map((x) => `${x.que} a las ${L3.hhmm(x.ini)}`).join(", ")}.`);
     else if (s.length) p.push("Hoy no tienes clases en tu horario.");

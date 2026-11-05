@@ -423,7 +423,7 @@
   };
   X.promptExtra = function (q) {
     const p = L3.PERSONAS[D.ajustes.persona] || "";
-    return base.promptExtra(q) + (p ? " " + p : "") + (D.ajustes.asignatura ? ` La clase actual es de ${D.ajustes.asignatura}.` : "");
+    return base.promptExtra(q) + (p ? " " + p : "") + (D.ajustes.docente === true && D.ajustes.asignatura ? ` La clase actual es de ${D.ajustes.asignatura}.` : "");   // 3.16: sin modo docente, nada de clases
   };
   X.quizButtons = function (btn, it) { base.quizButtons(btn, it); btn("Kahoot", "", () => kahoot(it).catch((e) => A.toast("No pude hacer el archivo de Kahoot: " + e.message, 6000))); };
   X.afterGrade = function (box, rev, whoName, c) {

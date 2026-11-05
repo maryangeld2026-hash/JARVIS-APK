@@ -38,6 +38,7 @@ public class CargaJob extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters p) {
+        if (Apagado.es(this)) return false;
         boolean antes = getSharedPreferences("jarvis_disparadores", 0).getBoolean("cargaba", false), ahora = cargando(this);
         if (ahora && !antes) Disparo.evento(this, "carga_on", "");
         else if (!ahora && antes) Disparo.evento(this, "carga_off", "");

@@ -139,7 +139,7 @@
     if (L11.esDeshacer(text)) return { mj: "deshacer" };
     if (L11.ayudaIntent(text)) return { mj: "ayuda" };
     const pe = L11.pensarIntent(text); if (pe) return { mj: "pensar", q: pe.q };
-    const am = L11.ambigua(text, { docente: D.ajustes.docente !== false, casa: !!((D.ajustes.ha || {}).url), timer: !!(A.timer && A.timer.end), timers: (D.timers || []).filter((t) => t.fin > Date.now()).map((t) => t.nombre) });
+    const am = L11.ambigua(text, { docente: D.ajustes.docente === true, casa: !!((D.ajustes.ha || {}).url), timer: !!(A.timer && A.timer.end), timers: (D.timers || []).filter((t) => t.fin > Date.now()).map((t) => t.nombre) });
     if (am) return { mj: "ambigua", am };
     return base.intent(text);
   };

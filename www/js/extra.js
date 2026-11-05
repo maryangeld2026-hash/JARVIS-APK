@@ -292,14 +292,20 @@
     const t = L4.norm(text);
     return (D.cursos || []).some((c) => (c.estudiantes || []).some((n) => { const p = L4.norm(n).split(" ").filter((w) => w.length > 2); return p.length >= 2 ? p.filter((w) => t.includes(w)).length >= 2 : false; }));
   }
+  /** 3.16: con la personalidad de Jarvis, la voz natural suena como un mayordomo elegante (no imita a ningún actor). */
+  function estiloVoz() {
+    const e = ((D.ajustes.estilo || {}).estilo) || "jarvis";
+    return e === "jarvis" ? "Lee en español latino neutro, como un mayordomo digital elegante y sereno: voz grave y pausada pero ágil, dicción precisa, seguro de sí mismo, con un leve toque de humor seco y sin exagerar"
+      : "Dilo en español de Colombia, con voz cálida y natural";
+  }
   async function geminiTTS(text, key) {
     if (!ttsModel.gemini) {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(key)}`);
       const ids = ((await r.json()).models || []).map((m) => String(m.name).replace(/^models\//, "")).filter((x) => /tts/i.test(x));
       ttsModel.gemini = ids.sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || b.localeCompare(a))[0] || "gemini-2.5-flash-preview-tts";
     }
-    const body = { contents: [{ role: "user", parts: [{ text: "Dilo en español de Colombia, con voz cálida y natural: " + text }] }],
-      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre || "Kore" } } } } };
+    const body = { contents: [{ role: "user", parts: [{ text: estiloVoz() + ": " + text }] }],
+      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre || "Charon" } } } } };
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel.gemini}:generateContent?key=${encodeURIComponent(key)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error("tts " + r.status);
     const j = await r.json(), p = (((j.candidates || [])[0] || {}).content || {}).parts || [], a = p.find((x) => x.inlineData || x.inline_data);
@@ -312,11 +318,12 @@
   }
   async function openaiTTS(text, key) {
     const r = await fetch("https://api.openai.com/v1/audio/speech", { method: "POST", headers: { Authorization: "Bearer " + key, "content-type": "application/json" },
-      body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: D.ajustes.vozIAnombre || "nova", input: text, response_format: "mp3", instructions: "Habla en español de Colombia, con calidez y naturalidad." }) });
+      body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: D.ajustes.vozIAnombre || "onyx", input: text, response_format: "mp3", instructions: estiloVoz() + "." }) });
     if (!r.ok) throw new Error("tts " + r.status);
     return ctx().decodeAudioData(await r.arrayBuffer());
   }
   const speaker = {
+    activo() { const p = D.ajustes.vozIA; return !!(p && (D.ajustes.claves[p] || "").trim() && navigator.onLine && !D.ajustes.ahorroActivo); },
     prepare(text) {
       const p = D.ajustes.vozIA, key = p && (D.ajustes.claves[p] || "").trim();
       if (!p || !key || !navigator.onLine || D.ajustes.ahorroActivo || text.length > 600 || namesIn(text)) return null;      // los nombres de estudiantes nunca van a la IA
@@ -376,7 +383,7 @@
     const vs = mk("select", "inp"); [["", "No: la voz del celular"], ["gemini", "Sí, con Gemini"], ["openai", "Sí, con ChatGPT"]].forEach(([k, t]) => vs.append(new Option(t, k)));
     vs.value = D.ajustes.vozIA || "";
     const vn = mk("select", "inp");
-    const fillNames = () => { vn.textContent = ""; (vs.value === "openai" ? ["nova", "shimmer", "alloy", "coral", "sage", "echo", "onyx"] : ["Kore", "Aoede", "Leda", "Callirrhoe", "Puck", "Charon", "Fenrir", "Orus"]).forEach((k) => vn.append(new Option("Voz: " + k, k))); vn.value = D.ajustes.vozIAnombre && [...vn.options].some((o) => o.value === D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : vn.options[0].value; vn.hidden = !vs.value; };
+    const fillNames = () => { vn.textContent = ""; (vs.value === "openai" ? ["onyx", "ash", "echo", "nova", "shimmer", "alloy", "coral", "sage"] : ["Charon", "Iapetus", "Algieba", "Rasalgethi", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Callirrhoe", "Puck"]).forEach((k) => vn.append(new Option("Voz: " + k, k))); vn.value = D.ajustes.vozIAnombre && [...vn.options].some((o) => o.value === D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : vn.options[0].value; vn.hidden = !vs.value; };
     fillNames();
     vs.addEventListener("change", () => { D.ajustes.vozIA = vs.value; fillNames(); D.ajustes.vozIAnombre = vn.value; save(); cache.clear(); if (vs.value && !(D.ajustes.claves[vs.value] || "").trim()) A.toast("Pon arriba la clave de " + (vs.value === "openai" ? "ChatGPT" : "Gemini") + ".", 5000); V.hush(); V.say("Hola, así sueno con la voz natural."); });
     vn.addEventListener("change", () => { D.ajustes.vozIAnombre = vn.value; save(); cache.clear(); V.hush(); V.say("Hola, así sueno ahora."); });

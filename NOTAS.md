@@ -1,6 +1,19 @@
-# Jarvis para Android 3.15: Gemma más rápida y la voz ya no se corta
+# Jarvis para Android 3.16: personalidad de Jarvis, conversación fluida y apagar de verdad
 
-## 🔊 La voz ya no se corta
+## 🎩 Jarvis, como el de las películas
+- Personalidad de mayordomo digital: elegante, sereno, eficiente y con humor seco. Le dice «señor» y no hace preguntas de más.
+- Voz masculina más grave: escoge sola la voz de hombre del celular (la que funciona sin internet) y baja un poco el tono. Con la voz natural con IA usa una voz grave (Charon u Onyx) con estilo de mayordomo. Se vuelve a poner con «pon la voz de Jarvis» o en Ajustes › La voz de Jarvis.
+- Sin el modo docente ya no habla de clases, asignaturas ni «profesor».
+
+## 💬 Conversación más fluida
+- Las frases van en fila dentro de Android: la siguiente ya está lista mientras suena la anterior, sin pausas entre frases.
+- Las frases cortas se juntan y ya no se corta en «:» ni «;» (mejor entonación).
+- Con la voz natural con IA, las frases se juntan en menos pedidos: menos esperas y menos cambios a la voz del celular.
+
+## ⏻ Apagar Jarvis de verdad
+- «Apágate», «apaga Jarvis» o el botón ⏻ › Apagar Jarvis: deja de escuchar «Jarvis», quita la burbuja, deja de leer mensajes y de hacer disparadores, suelta la IA del celular y se cierra del todo. Tus recordatorios y alarmas siguen sonando. Al abrir Jarvis, todo vuelve.
+
+## 🔊 (3.15) La voz ya no se corta
 - **Listas y explicaciones largas se dicen completas:** antes, si la respuesta era una lista (renglones sin punto) o un párrafo muy largo, se juntaba todo en un solo pedazo enorme y el motor de voz del celular se callaba. Ahora se dice renglón por renglón y en pedazos cortos.
 - Si el motor de voz no avisa que terminó una frase, Jarvis ya no se queda trabado: sigue con la siguiente.
 - **Las respuestas de Gemma ya no se cortan a la mitad:** antes tenía espacio para unas 4.000 «palabras» entre instrucción, conversación y respuesta, y las explicaciones largas se quedaban sin espacio. Ahora el doble, y la respuesta puede ser más del doble de larga.

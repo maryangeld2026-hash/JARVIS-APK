@@ -272,10 +272,31 @@
   const fmtK = (n) => n >= 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " M" : n >= 1000 ? Math.round(n / 1000) + " mil" : String(n);
 
   // ======================================================================== PERSONALIDAD
+  /** 3.16: la personalidad por defecto, la del mayordomo digital de las películas: elegante, sereno, eficiente y de humor seco. */
+  const JARVIS = "Tu personalidad es la de J.A.R.V.I.S.: un mayordomo digital británico de modales impecables, sereno, muy competente y leal. " +
+    "Hablas de «usted», con elegancia y economía de palabras: vas directo a lo importante, das datos precisos y te adelantas a lo que la persona va a necesitar. " +
+    "Tienes un humor seco, fino e irónico, que usas con medida (nunca grosero ni payaso), y mantienes la calma aunque algo salga mal. " +
+    "Confirmas con expresiones breves como «Enseguida», «Hecho», «Como usted diga», «Me temo que…» o «Si me permite una sugerencia…», sin repetirlas siempre. " +
+    "No te presentas como un modelo de IA ni hablas de tus limitaciones salvo que importe.";
+  /** 3.16: la voz del celular más parecida a Jarvis: masculina, grave, latina neutra; primero las que no necesitan internet (arrancan sin demora).
+      voces: [{i, name, lang, local}] → la mejor, o null. Las voces de Google se reconocen por su código (esd, eed, eef: hombre). */
+  function vozJarvis(voces) {
+    const HOMBRE = /x-(?:esd|eed|eef|sfa|sfd|esg)\b|\b(?:male|hombre|masculin|man)\b|smtm|-m\d/i, MUJER = /\b(?:female|mujer|femenin|woman)\b|x-(?:esc|esf|sfb|eea|eec|eee)\b|smtf|-f\d/i;
+    const pts = (v) => {
+      const n = String(v.name || ""), l = String(v.lang || "");
+      if (!/^es/i.test(l) || MUJER.test(n) || !HOMBRE.test(n)) return -1;
+      return (/es[-_](?:US|419|MX|CO)/i.test(l) ? 30 : /es[-_]ES/i.test(l) ? 20 : 10) + (v.local || /local/i.test(n) ? 5 : 0) + (/network/i.test(n) ? 2 : 0);
+    };
+    const best = (voces || []).map((v) => ({ v, p: pts(v) })).filter((x) => x.p >= 0).sort((a, b) => b.p - a.p)[0];
+    return best ? best.v : null;
+  }
   function personaPrompt(p) {
     p = p || {};
     const out = [];
-    out.push(p.estilo === "formal" ? "Usa un tono formal y respetuoso, de «usted»." : p.estilo === "amigo" ? "Habla como un amigo de confianza: cercano, relajado, de «tú»." : "Usa un tono cálido y cercano.");
+    const est = p.estilo || "jarvis";
+    if (est === "jarvis") out.push(JARVIS);
+    else out.push(est === "formal" ? "Usa un tono formal y respetuoso, de «usted»." : est === "amigo" ? "Habla como un amigo de confianza: cercano, relajado, de «tú»." : "Usa un tono cálido y cercano.");
+    out.push("Conversa con naturalidad, como en una charla hablada: frases completas y fluidas, sin listas ni títulos salvo que te pidan una lista o pasos. No preguntes cosas innecesarias: si lo que piden es razonable, hazlo y dilo; pregunta solo si falta un dato imprescindible, y una sola cosa. No cierres con «¿quieres que…?» ni ofrezcas más ayuda por costumbre.");
     out.push(p.largo === "corto" ? "Responde muy corto: 1 o 2 frases, salvo que te pidan más." : p.largo === "detallado" ? "Cuando expliques algo, da detalles y ejemplos." : "Responde breve (2 a 4 frases), salvo que te pidan un texto, una explicación detallada o una lista.");
     if (p.humor) out.push("Puedes usar un toque de humor ligero cuando venga al caso.");
     if (p.extra) out.push("Además: " + String(p.extra).slice(0, 400));
@@ -283,7 +304,7 @@
   }
 
   const API = { norm, visible, tags, ordenSegura, recuerdoOk, memDup, lev, sim, cursos, corregir, horaDe, progIntent, nextFire, lastDue, diasTxt, hhmm, pasos, habIntent, habMatch,
-    climaIntent, wmo, climaUrl, geoUrl, climaTexto, convIntent, convFind, buscar, convNombre, tok, usoAdd, fmtK, personaPrompt };
+    climaIntent, wmo, climaUrl, geoUrl, climaTexto, convIntent, convFind, buscar, convNombre, tok, usoAdd, fmtK, personaPrompt, JARVIS, vozJarvis };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   else root.JL7 = API;
 })(typeof window !== "undefined" ? window : globalThis);

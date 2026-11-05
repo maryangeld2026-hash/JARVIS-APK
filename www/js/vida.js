@@ -18,7 +18,7 @@
   const R = (t, cls, spoken) => A.reply(t, cls || "tool", spoken);
   const uid = () => window.JD.uid();
   const hhmm = (h, m) => `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "a. m." : "p. m."}`;
-  const docente = () => D.ajustes.docente !== false;
+  const docente = () => D.ajustes.docente === true;
   const hayIA = () => D.ajustes.proveedor === "local" || !!(((D.ajustes.claves || {})[D.ajustes.proveedor]) || "").trim();
   const estudiantes = () => [].concat(...D.cursos.map((c) => c.estudiantes || []));
   /** Pregunta con botones dentro de la conversación. */

@@ -190,7 +190,7 @@
     if (/\b(?:que hora es|dime la hora)\b/.test(t)) return { kind: "hora" };
     if (/^(?:(?:abre|abrir|muestrame|ve a|ir a|entra a)\s+(?:los\s+|la\s+)?)?(?:ajustes|configuracion|opciones)$/.test(t)) return { kind: "ajustes" };
     if (/^(?:minimizate|minimiza(?:te)?(?: jarvis| la app)?|vete al fondo|escondete)$/.test(t)) return { kind: "minimizar" };
-    if (/^(?:sal(?:ir)?(?: de (?:jarvis|la app))?|cierra(?:te)?(?: jarvis| la app)?|apagate|chao jarvis)$/.test(t)) return { kind: "salir" };
+    if (/^(?:sal(?:ir)?(?: de (?:jarvis|la app))?|cierra(?:te)?(?: jarvis| la app)?|apagate(?: jarvis)?|apaga(?:r)? (?:a )?jarvis|apaga(?:te)? (?:todo|del todo|por completo)|desconectate|chao jarvis|adios jarvis)$/.test(t)) return { kind: "salir" };
     if (/\b(?:que (?:dia|fecha) es hoy|que fecha es|a como estamos)\b/.test(t)) return { kind: "fecha" };
     if (/\b(?:(?:para|deten|cancela|quita|apaga)\s+(?:el\s+)?(?:temporizador|cronometro|tiempo|alarma)|ya (?:termino|paso) el tiempo)\b/.test(t)) return { kind: "tiempo_parar" };
     if (/\b(?:cuanto (?:tiempo )?(?:falta|queda)|cuanto le queda)\b/.test(t)) return { kind: "tiempo_falta" };
@@ -412,7 +412,7 @@
   function takeSentences(buf, first) {
     const frases = [];
     let rest = String(buf), m;
-    const re = /[.!?…:;](?=\s|$)\s*|\n+/g;                                     // 3.15: también cada renglón (listas sin punto)
+    const re = /[.!?…](?=\s|$)\s*|\n+/g;                                       // 3.15: también cada renglón (listas sin punto); 3.16: ya no en «:» ni «;» (cortaba la entonación)
     let last = 0;
     while ((m = re.exec(rest))) {
       if (/\d$/.test(rest.slice(0, m.index)) && /^\.\d/.test(rest.slice(m.index))) continue;   // 3.5
@@ -541,7 +541,7 @@
   }
 
   /** Lo que dice mientras la IA arranca (como el «A ver…» del computador), según lo que preguntaste. */
-  const ACKS = { pregunta: ["A ver…", "Déjame ver…", "Buena pregunta…"], pedido: ["Voy con eso…", "Ya te lo preparo…", "Listo, un momento…"], otro: ["Mmm…", "A ver…"] };
+  const ACKS = { pregunta: ["Veamos…", "Permítame un momento…", "Un instante…"], pedido: ["Enseguida…", "En ello…", "Un momento, por favor…"], otro: ["Mmm…", "Veamos…"] };   // 3.16: al estilo de Jarvis
   function ackFor(text, rnd = Math.random) {
     const t = norm(text);
     const k = /^(?:que|como|cual|cuales|cuando|donde|quien|por que|cuanto|explica|explicame|dime)\b/.test(t) || /\?$/.test(String(text).trim()) ? "pregunta"

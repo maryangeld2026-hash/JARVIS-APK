@@ -46,6 +46,7 @@ public class EscuchaService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String a = intent != null ? intent.getAction() : null;
         aviso(ACCION_PAUSAR.equals(a) ? "En pausa mientras conversamos" : "Di «Jarvis» cuando me necesites");
+        if (intent == null && Apagado.es(this)) { stopSelf(); return START_NOT_STICKY; }   // 3.16: apagado, Android no lo revive
         if (ACCION_PAUSAR.equals(a)) { pausado = true; parar(); return START_STICKY; }
         pausado = false;
         activo = true;

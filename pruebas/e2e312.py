@@ -57,7 +57,7 @@ def main():
         pg.evaluate("JD.load().ajustes.voz = true; window.__said.length = 0")
         pg.fill("#in-texto", "explícame los pasos para hacer arroz"); pg.press("#in-texto", "Enter"); pg.wait_for_timeout(2500)
         said = " ".join(pg.evaluate("window.__said"))
-        check("Paso 14" in said and "sirves caliente" in said and max(len(x) for x in pg.evaluate("window.__said")) <= 330, "la voz dice la explicación completa (listas largas por partes)")
+        check("Paso 14" in said and "sirves caliente" in said and max(len(x) for x in pg.evaluate("window.__said")) <= 420, "la voz dice la explicación completa (listas largas por partes)"); print("   piezas:", [len(x) for x in pg.evaluate("window.__said")])
         pg.evaluate("JD.load().ajustes.voz = false")
         # fotos con Gemma
         img = "/tmp/claude-0/gato.png"

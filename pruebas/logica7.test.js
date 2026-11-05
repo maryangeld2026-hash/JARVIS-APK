@@ -102,3 +102,19 @@ test("uso de la IA y personalidad", () => {
   assert.equal(L.fmtK(1234), "1 mil"); assert.equal(L.fmtK(2500000), "2,5 M");
   assert.match(L.personaPrompt({ estilo: "formal", largo: "corto", humor: true }), /usted.*1 o 2 frases.*humor/);
 });
+
+test("3.16: personalidad de Jarvis por defecto y la voz masculina más parecida", () => {
+  assert.match(L.personaPrompt({}), /J\.A\.R\.V\.I\.S\..*humor seco/);
+  assert.match(L.personaPrompt({}), /No preguntes cosas innecesarias/);
+  assert.doesNotMatch(L.personaPrompt({ estilo: "amigo" }), /J\.A\.R\.V\.I\.S/);
+  const voces = [
+    { i: 0, name: "es-us-x-esf-local", lang: "es-US", local: true },
+    { i: 1, name: "es-es-x-eed-network", lang: "es-ES", local: false },
+    { i: 2, name: "es-us-x-esd-local", lang: "es-US", local: true },
+    { i: 3, name: "es-us-x-esd-network", lang: "es-US", local: false },
+    { i: 4, name: "en-gb-x-rjs-local", lang: "en-GB", local: true },
+  ];
+  assert.equal(L.vozJarvis(voces).i, 2);
+  assert.equal(L.vozJarvis(voces.filter((v) => v.i !== 2 && v.i !== 3)).i, 1);
+  assert.equal(L.vozJarvis([{ i: 0, name: "es-us-x-esf-local", lang: "es-US" }]), null);
+});

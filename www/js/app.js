@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.15";
+  const VERSION = "3.16";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -54,7 +54,7 @@
       mk("span", "", D.ajustes.claves[D.ajustes.proveedor] ? "Toca el micrófono y háblame, o escribe." : "Toca el micrófono y pídeme algo. Para conversar con la IA, pon tu clave en Ajustes (el engranaje)."));
     const s = mk("div", "sug");
     const ej = ["¿Qué puedes hacer?", "¿Cómo estará el clima mañana?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos", "¿Qué tengo hoy?"];
-    (D.ajustes.docente !== false ? ej.concat(["Escoge un estudiante", "Hazme un quiz de fracciones de 5 preguntas"]) : ej.concat(["Cuando diga modo enfoque, silencia el celular y pon 25 minutos", "Activa el modo docente"])).forEach((x) => {
+    (D.ajustes.docente === true ? ej.concat(["Escoge un estudiante", "Hazme un quiz de fracciones de 5 preguntas"]) : ej.concat(["Cuando diga modo enfoque, silencia el celular y pon 25 minutos", "Activa el modo docente"])).forEach((x) => {
       const c = mk("button", "chip", x); c.type = "button"; c.addEventListener("click", () => handle(x, false)); s.append(c);
     });
     e.append(s);
@@ -108,7 +108,7 @@
 
   /** 3.8: Jarvis es un asistente personal; lo de la clase entra solo con el modo docente. live: la conversación en vivo (sin etiquetas). */
   function systemPrompt(live) {
-    const a = D.ajustes, now = new Date(), doc = a.docente !== false;
+    const a = D.ajustes, now = new Date(), doc = a.docente === true;
     const hace = "recordatorios y alarmas («recuérdame a las 3 llamar a mamá», «pon una alarma a las 6»), temporizador («pon 10 minutos»), llamar y mandar WhatsApp o SMS a tus contactos (la app pide confirmar), abrir apps, linterna, volumen, clima («dime el clima de mañana»), notas de voz, el calendario del celular, mapas, música en YouTube, modo ahorro" +
       (doc ? "; y de la clase: escoger un estudiante, hacer grupos, pasar lista, quices, notas y ticket de salida" : "");
     return `Eres Jarvis, el asistente personal de voz de ${a.nombre ? "«" + a.nombre + "»" : "la persona"}, en Colombia. Dirígete a la persona como «${trato()}». ` +
@@ -230,14 +230,16 @@
   $("#btn-mic").addEventListener("click", () => listen(false));
   // 3.5: al activarse (por «Jarvis», el asistente o la burbuja) saluda —«¿Sí, profesor?»— y espera a que termine de hablar para escuchar
   function trato() {
-    const t = D.ajustes.trato || "profesor";
-    return t === "nombre" ? (D.ajustes.nombre || "profe") : t;
+    const doc = D.ajustes.docente === true;
+    let t = D.ajustes.trato || (doc ? "profesor" : "señor");
+    if (!doc && /^profe/.test(t)) t = t === "profesora" ? "señora" : "señor";       // 3.16: sin el modo docente, nada de «profesor»
+    return t === "nombre" ? (D.ajustes.nombre || (doc ? "profe" : "señor")) : t;
   }
   let saludo = 0;
   async function wake() {
     if (state === "listening") return;
     V.hush();
-    const tr = trato(), f = ["¿Sí, " + tr + "?", "Dígame, " + tr + ".", "A la orden, " + tr + "."];
+    const tr = trato(), f = ["¿Sí, " + tr + "?", "A su servicio, " + tr + ".", "Dígame, " + tr + ".", "Le escucho, " + tr + "."];
     if (D.ajustes.voz) {
       V.say(f[saludo++ % f.length]);
       await Promise.race([V.idle(), new Promise((r) => setTimeout(r, 2500))]);
@@ -270,7 +272,7 @@
       case "callar": V.hush(); IA.stop(); return;
       case "ajustes": openSettings(); return reply("Abrí los Ajustes.");
       case "minimizar": reply("Listo, me minimizo. Aquí sigo."); await V.idle(); return appWindow("minimizar");
-      case "salir": reply("Hasta luego."); await V.idle(); return appWindow("salir");
+      case "salir": reply(["Apagando sistemas. Hasta pronto, " + trato() + ".", "Me desconecto. Aquí estaré cuando me necesite, " + trato() + "."][Date.now() % 2]); await Promise.race([V.idle(), new Promise((r) => setTimeout(r, 4000))]); return appWindow("salir");
       case "hora": return reply(`Son las ${hora(now).replace(/\.$/, "")}.`);
       case "fecha": return reply(`Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`);
       case "tiempo": { const s = it.segundos || D.ultimoTiempo || 300; startTimer(s); return reply(`Listo: ${L.spokenDuration(s)}. Te aviso cuando termine.`); }
@@ -796,7 +798,13 @@
     $("#salir-menu").hidden = true;
     if (!W) { toast(how === "salir" ? "En el navegador, cierra la pestaña." : "En el navegador no se puede minimizar."); return; }
     V.hush(); IA.stop(); (V.cancelListening || V.stopListening)(); setState("idle"); window.JD.save(true);
-    return (how === "salir" ? W.salir() : W.minimizar()).catch(() => {});
+    if (how === "salir") {
+      // 3.16: apagar de verdad: se suelta la escucha de «Jarvis», la burbuja, la IA del celular y se cierra el proceso
+      const P = window.Capacitor.Plugins;
+      ["Escucha", "Burbuja"].forEach((n) => { try { const x = P[n]; if (x) (x.desactivar || x.ocultar || (() => Promise.resolve())).call(x).catch(() => {}); } catch (e) { /* nada */ } });
+      return (W.apagar ? W.apagar() : W.salir()).catch(() => W.salir().catch(() => {}));
+    }
+    return W.minimizar().catch(() => {});
   }
   $("#btn-salir").addEventListener("click", (e) => { e.stopPropagation(); $("#salir-menu").hidden = !$("#salir-menu").hidden; });
   document.addEventListener("click", (e) => { const m = $("#salir-menu"); if (!m.hidden && !m.contains(e.target)) m.hidden = true; });
@@ -844,6 +852,6 @@
   document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") (V.cancelListening || V.stopListening)(); if (!document.hidden && IA.warm) IA.warm(); });
   if (IA.warm) setTimeout(() => IA.warm(), 1500);
   window.__jarvis = { handle, dispatch, renderChat, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
-    getState: () => state, wake, trato, systemPrompt, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
+    getState: () => state, wake, trato, systemPrompt, applyVoice, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
   if (window.JX) window.JX.init(window.__jarvis);
 })();

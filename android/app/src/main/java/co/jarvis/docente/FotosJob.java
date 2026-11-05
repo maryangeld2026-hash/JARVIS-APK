@@ -54,6 +54,7 @@ public class FotosJob extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters p) {
+        if (Apagado.es(this)) return false;
         parar = false;
         new Thread(() -> {
             boolean mas = false;

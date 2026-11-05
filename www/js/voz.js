@@ -185,47 +185,106 @@
   /** 3.7: voz con IA. speaker = {prepare(texto) → promesa de audio, play(audio) → promesa, stop()}; si falla, habla el celular. */
   let speaker = null;
   function setSpeaker(sp) { speaker = sp; }
+  const nativeTTS = () => native() && plug("TextToSpeech");
   async function speakItem(it) {
     if (it.pre) {
       try {
-        const audio = await Promise.race([it.pre, new Promise((r) => setTimeout(() => r(null), 8000))]);
+        const audio = await Promise.race([it.pre, new Promise((r) => setTimeout(() => r(null), 12000))]);
         if (audio && speaker) { await speaker.play(audio); return; }
       } catch (e) { /* habla el celular */ }
     }
     return speakOne(it.t);
   }
+  /** 3.16: la voz del celular en fila (QUEUE_ADD): la frase siguiente ya está en Android mientras suena esta → sin pausas entre frases. */
+  function speakAdd(text) {
+    const T = nativeTTS();
+    const o = { text, lang: LANG, rate: opts.rate, pitch: opts.pitch, volume: 1.0, category: "playback", queueStrategy: 1 };
+    if (opts.voice != null && opts.voice >= 0) o.voice = opts.voice;
+    return T.speak(o).catch(() => {});
+  }
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let kick = null, abort = null;
+  const wake = () => { if (kick) { const k = kick; kick = null; k(); } };
+  /** Toma de la cola una frase, o varias seguidas si son cortas (menos cortes y mejor entonación). */
+  function takeNext(max) {
+    const it = q.shift();
+    if (it.pre) return it;
+    while (q.length && !q[0].pre && (it.t + " " + q[0].t).length <= max) it.t += " " + q.shift().t;
+    return it;
+  }
   async function pump(myGen) {
     if (speaking) return;
     speaking = true;
     if (onState) onState(true);
-    while (q.length && myGen === gen) {
-      const it = q.shift();
-      // 3.15: si el motor de voz nunca avisa que terminó, la cola no se queda trabada (antes la voz se cortaba ahí)
-      await Promise.race([speakItem(it), new Promise((r) => setTimeout(r, 8000 + it.t.length * 110))]);
+    const aborted = new Promise((r) => { abort = r; });
+    let playing = null;                                                               // la frase del celular que está sonando
+    const wait = (p, ms) => Promise.race([p, sleep(ms), aborted]);
+    while (myGen === gen) {
+      if (!q.length && acc) flushAcc();
+      if (!q.length) {
+        if (!playing) break;
+        const cur = playing;                                                         // mientras suena, puede llegar la frase siguiente
+        await Promise.race([cur.p.then(() => { if (playing === cur) playing = null; }), new Promise((r) => { kick = r; }), sleep(cur.ms), aborted]);
+        if (playing === cur && Date.now() > cur.fin) playing = null;
+        continue;
+      }
+      if (nativeTTS() && !q[0].pre) {
+        const it = takeNext(playing ? 400 : 240);
+        const ms = 9000 + it.t.length * 120;
+        const nuevo = { p: speakAdd(it.t), ms, fin: 0 };
+        if (playing) await wait(playing.p, playing.ms);                             // la nueva ya quedó en fila detrás de esta
+        if (myGen !== gen) break;
+        nuevo.fin = Date.now() + ms; playing = nuevo;
+        continue;
+      }
+      if (playing) { await wait(playing.p, playing.ms); playing = null; }
+      if (myGen !== gen) break;
+      const it = takeNext(300);
+      // 3.15: si el motor de voz nunca avisa que terminó, la cola no se queda trabada
+      await wait(speakItem(it), (it.pre ? 12000 : 8000) + it.t.length * 120);
     }
+    if (playing && myGen === gen) await wait(playing.p, Math.max(0, playing.fin - Date.now()));
+    if (myGen !== gen) return;                                                        // hush ya dejó todo en silencio
     speaking = false;
-    if (onState && myGen === gen) onState(false);
+    if (onState) onState(false);
     waiters.splice(0).forEach((w) => w());
   }
   const waiters = [];
+  // 3.16: con la voz natural (IA), las frases que llegan mientras Jarvis habla se juntan (menos pedidos a la IA y menos cortes)
+  let acc = "", accT = null;
+  function flushAcc() {
+    clearTimeout(accT); accT = null;
+    const t = acc.trim(); acc = "";
+    if (t) push(t);
+  }
+  function push(t) {
+    let pre = null;
+    if (speaker) { try { pre = speaker.prepare(t); if (pre && pre.catch) pre.catch(() => null); } catch (e) { pre = null; } }   // se pide el audio de una vez: mientras dice una frase, ya viene la otra
+    q.push({ t, pre });
+    wake();
+    pump(gen);
+  }
   /** Agrega una frase a la cola (la IA va mandando frases mientras piensa). */
   function say(text) {
     const t0 = String(text || "").trim();
     if (!t0) return;
     // 3.15: un texto muy largo se parte (el motor de voz del celular se calla con textos de más de ~4.000 letras)
-    if (t0.length > 320) { const ps = t0.match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [t0]; let cur = ""; ps.forEach((p) => { if ((cur + p).length > 300 && cur) { say(cur); cur = ""; } if (p.length > 300) { p.match(/.{1,280}(\s|$)/g).forEach((x) => say(x)); } else cur += p; }); if (cur.trim()) say(cur); return; }
-    const t = t0;
-    let pre = null;
-    if (speaker) { try { pre = speaker.prepare(t); if (pre && pre.catch) pre.catch(() => null); } catch (e) { pre = null; } }   // se pide el audio de una vez: mientras dice una frase, ya viene la otra
-    q.push({ t, pre });
-    pump(gen);
+    if (t0.length > 320) { const ps = t0.match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [t0]; let cur = ""; ps.forEach((p) => { if ((cur + p).length > 300 && cur) { say(cur); cur = ""; } if (p.length > 300) { (p.match(/.{1,280}(\s|$)/g) || [p]).forEach((x) => say(x)); } else cur += p; }); if (cur.trim()) say(cur); return; }
+    const conIA = speaker && speaker.activo && speaker.activo() && (speaking || q.length);
+    if (conIA) {                                                                      // ya está hablando: se junta con lo que sigue
+      acc += (acc ? " " : "") + t0;
+      if (acc.length >= 220) flushAcc(); else { clearTimeout(accT); accT = setTimeout(flushAcc, 450); }
+      return;
+    }
+    push(t0);
   }
   /** → promesa que se cumple cuando terminó de decir todo lo que tenía en la cola. */
-  function idle() { return !speaking && !q.length ? Promise.resolve() : new Promise((r) => waiters.push(r)); }
+  function idle() { return !speaking && !q.length && !acc ? Promise.resolve() : new Promise((r) => waiters.push(r)); }
   function hush() {
-    gen++; q.length = 0;
+    gen++; q.length = 0; acc = ""; clearTimeout(accT); accT = null;
+    if (abort) { const a = abort; abort = null; a(); }
     if (speaker && speaker.stop) { try { speaker.stop(); } catch (e) { /* nada */ } }
-    if (native() && plug("TextToSpeech")) plug("TextToSpeech").stop().catch(() => {});
+    if (nativeTTS()) plug("TextToSpeech").stop().catch(() => {});
     if (window.speechSynthesis) speechSynthesis.cancel();
     speaking = false;
     if (onState) onState(false);
@@ -300,6 +359,6 @@
     } catch (e) { /* no es grave */ }
   }
 
-  window.JV = { setSpeaker, micTest, onListenState: (f) => { onListenState = f; }, lastListen: () => lastListen, native, canListen, listen, stopListening, cancelListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 };
+  window.JV = { setSpeaker, micTest, onListenState: (f) => { onListenState = f; }, lastListen: () => lastListen, native, canListen, listen, stopListening, cancelListening, say, idle, hush, setOptions, onSpeaking: (f) => { onState = f; }, isSpeaking: () => speaking || q.length > 0 || !!acc };
   window.JN = { notifyAt, cancelNotify, showNow, share, keepAwake };
 })();

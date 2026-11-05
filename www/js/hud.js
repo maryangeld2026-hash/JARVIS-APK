@@ -77,7 +77,7 @@
     if (items.childElementCount) box.append(items);
     // sugerencias según el momento del día (como los botones del HUD)
     // 3.8: Jarvis es un asistente general; las sugerencias de clase salen solo con el modo docente y en horas de clase
-    const doc = D.ajustes.docente !== false, L3x = window.JL3;
+    const doc = D.ajustes.docente === true, L3x = window.JL3;
     let enClase = false;
     if (doc) { const sch = L3x && D.ajustes.horario ? L3x.parseSchedule(D.ajustes.horario) : []; const cn = sch.length ? L3x.classNow(sch, now) : null; enClase = sch.length ? !!(cn.ahora || (cn.siguiente && cn.siguiente.en <= 20)) : now.getDay() >= 1 && now.getDay() <= 5 && h >= 7 && h < 13; }
     const sug = enClase ? [c ? `Escoge un estudiante de ${c.nombre}` : "Escoge un estudiante", "Pon 5 minutos", "Haz 4 grupos", "Modo proyector"]

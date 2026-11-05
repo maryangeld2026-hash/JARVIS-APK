@@ -332,11 +332,13 @@
     ls.value = D.ajustes.letra || "normal"; ls.addEventListener("change", () => { D.ajustes.letra = ls.value; save(); applyLetra(); }); sec.append(ls);
     h3("Cómo te llama Jarvis");
     const tr = mk("select", "inp"); [["profesor", "Profesor («¿Sí, profesor?»)"], ["profesora", "Profesora"], ["señor", "Señor"], ["señora", "Señora"], ["profe", "Profe"], ["nombre", "Por mi nombre (el de «¿Cómo te llamo?»)"]].forEach(([k, t]) => tr.append(new Option(t, k)));
-    tr.value = D.ajustes.trato || "profesor"; tr.addEventListener("change", () => { D.ajustes.trato = tr.value; save(); V.hush(); V.say("¿Sí, " + A.trato() + "?"); }); sec.append(tr);
+    tr.value = D.ajustes.trato || (D.ajustes.docente === true ? "profesor" : "señor"); tr.addEventListener("change", () => { D.ajustes.trato = tr.value; save(); V.hush(); V.say("¿Sí, " + A.trato() + "?"); }); sec.append(tr);
     h3("La voz de Jarvis");
     const vs = mk("select", "inp"); vs.append(new Option("La voz del celular (automática)", "")); sec.append(vs);
     voices().then((l) => { l.forEach((v) => vs.append(new Option(`${v.name} · ${v.lang}${v.local ? " · sin internet" : ""}`, v.web ? "w:" + v.name : String(v.i)))); vs.value = D.ajustes.vozWeb ? "w:" + D.ajustes.vozWeb : D.ajustes.vozIdx != null ? String(D.ajustes.vozIdx) : ""; });
     vs.addEventListener("change", () => { const v = vs.value; D.ajustes.vozWeb = v.startsWith("w:") ? v.slice(2) : ""; D.ajustes.vozIdx = v && !v.startsWith("w:") ? +v : null; save(); V.setOptions({ voice: D.ajustes.vozIdx == null ? -1 : D.ajustes.vozIdx, webVoice: D.ajustes.vozWeb }); V.hush(); V.say("Hola, así sueno ahora."); });
+    sec.append(button("🎩 Voz y estilo de Jarvis (masculina, grave y serena)", () => vozJarvis(false)));
+    sec.append(mk("p", "hint", "Escoge la voz masculina del celular más parecida, baja un poco el tono y pone la personalidad de mayordomo elegante. Si usas la voz natural con IA, cambia a una voz grave."));
     h3("Seguridad");
     chk("Pedir huella, rostro o PIN para abrir Jarvis", D.ajustes.bloqueo, async (v, i) => {
       if (v && W()) { const r = await W().verificar({ titulo: "Activar el bloqueo" }).catch(() => ({ ok: false })); if (!r.ok) { i.checked = false; return; } if (r.sinBloqueo) { A.toast("Tu celular no tiene huella ni PIN configurados.", 6000); i.checked = false; return; } }
@@ -356,11 +358,27 @@
     box.prepend(sec);
   }
 
+  // ======================================================================== 3.16: VOZ DE JARVIS
+  async function vozJarvis(silencioso) {
+    const l = await voices(), v = window.JL7.vozJarvis(l);
+    const a = D.ajustes;
+    if (v) { if (v.web) { a.vozWeb = v.name; a.vozIdx = null; } else { a.vozIdx = v.i; a.vozWeb = ""; } }
+    a.tono = v ? 0.9 : 0.8; a.velocidad = 1.05;                                      // sin voz de hombre, se baja más el tono de la que haya
+    (a.estilo = a.estilo || {}).estilo = "jarvis";
+    if (a.vozIA === "gemini") a.vozIAnombre = "Charon"; else if (a.vozIA === "openai") a.vozIAnombre = "onyx";
+    save();
+    if (A.applyVoice) A.applyVoice();
+    if (silencioso) return;
+    V.hush();
+    A.reply(v ? `Hecho. A partir de ahora sueno así, ${A.trato()}. Espero estar a la altura.` : `Hecho, ${A.trato()}. Su celular no tiene una voz masculina en español, así que bajé el tono de la actual. Puede instalar más voces en Ajustes del teléfono › Salida de texto a voz › Google › Instalar datos de voz.`);
+  }
+
   // ======================================================================== ENGANCHES
   const base = { init: X.init, intent: X.intent, run: X.run, settings: X.settings, hoyExtra: X.hoyExtra };
   X.intent = function (text) {
     const a = L4.asisIntent(text); if (a) return Object.assign({ m34: true }, a);
     const t = L4.norm(text).replace(/^jarvis\s+/, "");
+    if (/^(?:pon(?:te)?|usa|cambia a|activa)\s+(?:la\s+)?voz (?:de|como|tipo|estilo)\s+jarvis(?: de iron ?man)?$|^(?:habla|suena)\s+como\s+(?:el\s+)?jarvis(?: de iron ?man)?$/.test(t)) return { m34: true, kind: "voz_jarvis" };
     if (/^(?:mandalo|envialo|compartelo|pasalo)\s+(?:por|a)\s+whatsapp$|^(?:por\s+)?whatsapp$/.test(t)) return { m34: true, kind: "wa_ultimo" };
     if (/^(?:escanea(?:r|me)?|escanear)\s+(?:un\s+|el\s+|este\s+)?(?:documento|hoja|pagina|papel)$/.test(t)) return { m34: true, kind: "escanear" };
     if (/^(?:lee|leeme)\s+(?:el\s+)?texto\s+de\s+(?:una|la|esta)\s+(?:hoja|pagina|foto)$/.test(t)) return { m34: true, kind: "ocr" };
@@ -371,6 +389,7 @@
     if (!it.m34) return base.run(it, text);
     if (/^(?:lista_abrir|faltas_)/.test(it.kind)) return attendance(it);
     if (it.kind === "wa_ultimo") { const m = (D.chat || []).filter((x) => x.role === "assistant" && !x.cls).pop(); return m ? openUrl(L4.waLink(m.content)) : A.reply("Todavía no hay una respuesta para mandar.", "err"); }
+    if (it.kind === "voz_jarvis") return vozJarvis(false);
     if (it.kind === "escanear") return scan(false);
     if (it.kind === "ocr") return scan(true);
     if (it.kind === "letra") { D.ajustes.letra = it.v; save(); applyLetra(); return A.reply(`Listo: letra ${it.v === "enorme" ? "muy grande" : it.v}.`); }
@@ -399,6 +418,7 @@
     if (P) window.JON(P, "entrada", () => entradas());
     setTimeout(entradas, 400);
     if (D.ajustes.bloqueo) lock();
+    if (!D.ajustes.vozJarvis316) { D.ajustes.vozJarvis316 = 1; save(); if (native()) setTimeout(() => vozJarvis(true).catch(() => {}), 1200); }   // 3.16: una vez, la voz de Jarvis
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) { hiddenAt = Date.now(); return; }
       entradas(); widget(); applySilencio();

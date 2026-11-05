@@ -61,7 +61,7 @@
       ws.onopen = () => {
         const sys = S.opts.sys ? S.opts.sys : (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto, natural y cálido, en español de Colombia. Si te piden algo que hace la app (temporizador, escoger un estudiante, grupos, recordatorios, pasar lista, abrir una app, llamar), usa la herramienta jarvis_orden con la orden en palabras.";
         send({ setup: { model: "models/" + model,
-          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre && !/^[a-z]/.test(D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : "Kore" } } } },
+          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre && !/^[a-z]/.test(D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : "Charon" } } } },
           systemInstruction: { parts: [{ text: sys }] },
           inputAudioTranscription: {}, outputAudioTranscription: {},
           tools: [{ functionDeclarations: [{ name: "jarvis_orden", description: "Hace una orden de la app Jarvis del celular (recordatorios, alarmas, temporizador, clima, abrir una app, llamar o escribir a un contacto, linterna, volumen; y de clase: escoger estudiante, grupos, pasar lista, quiz…). Devuelve lo que respondió la app.",

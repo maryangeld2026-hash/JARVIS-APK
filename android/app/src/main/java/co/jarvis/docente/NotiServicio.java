@@ -151,6 +151,7 @@ public class NotiServicio extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        if (Apagado.es(this)) return;                                          // 3.16: Jarvis apagado no lee ni responde nada
         try {
             try { extras(sbn, sbn.getNotification()); } catch (Exception ignored) { }
             if (!APPS.contains(sbn.getPackageName())) return;
