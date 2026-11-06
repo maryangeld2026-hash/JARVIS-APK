@@ -1,4 +1,14 @@
-# Jarvis para Android 3.20: Gemma 4 12B experimental
+# Jarvis para Android 3.21: diseño Cristal, nube ⇄ celular automático y más rápido
+
+## ✨ Diseño «Cristal»
+- Paneles de vidrio esmerilado (blur) sobre un fondo de aurora cian y violeta, barras flotantes con bordes de luz, mensajes acrílicos y un orbe de cristal que cambia de color según escucha, piensa o habla.
+- El desenfoque va solo en las barras y hojas grandes (no en cada mensaje), para que siga fluido. Ajustes › Diseño y rapidez: Cristal, Cristal ligero (sin desenfoque, gasta menos; se pone solo en modo ahorro) o Clásico.
+
+## ⚡ Nube ⇄ celular automático y más rápido
+- Una etiqueta arriba dice quién responde: NUBE o LOCAL. Si no hay internet, la conexión está muy lenta, la nube falla o se acaba el cupo, responde sola la IA del celular (aunque no la hayas puesto de respaldo) y avisa. Cuando la nube vuelve, regresa sola.
+- Mientras la nube está caída va directo al celular (no espera a que falle otra vez), y la revisa en silencio cada 30 segundos. Con cupo agotado, 10 minutos con el celular.
+- Si la nube no arranca, pasa al celular en 7 segundos (antes 9–15). La IA del celular se precarga sola cuando se va el internet.
+- La fecha y la hora van al final de las instrucciones: el comienzo es siempre igual y la nube lo reutiliza (responde antes y gasta menos).
 
 ## 🧪 Gemma 4 12B (experimental)
 - La IA más inteligente que corre en el celular: texto, fotos y voz. 6,6 GB; corre en el procesador, con una foto a la vez y menos memoria de conversación para que quepa en 12 GB.

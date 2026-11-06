@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.20";
+  const VERSION = "3.21";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -113,13 +113,14 @@
       (doc ? "; y de la clase: escoger un estudiante, hacer grupos, pasar lista, quices, notas y ticket de salida" : "");
     return `Eres Jarvis, el asistente personal de voz de ${a.nombre ? "«" + a.nombre + "»" : "la persona"}, en Colombia. Dirígete a la persona como «${trato()}». ` +
       "Hablas en español de Colombia, de forma directa. " + L7.personaPrompt(a.estilo) + " Tu respuesta se lee en voz alta. Las fórmulas, en LaTeX entre $…$. " +
-      `Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, son las ${hora(now)}. ` +
       (doc ? `La persona también es docente${a.asignatura ? " de " + a.asignatura : ""}; sus cursos: ${D.cursos.map((c) => c.nombre).join(", ") || "ninguno todavía"}. No inventes datos de estudiantes. ` : "") +
       (live ? `Esta app hace: ${hace}. ` :
         `Puedes hacer cosas en el celular con las órdenes de esta app: ${hace}. Cuando te pidan hacer algo de eso (aunque sean varias cosas en una frase), contesta en una frase y escribe AL FINAL cada orden en su propia línea, así: <<orden: pon 10 minutos>>. ` +
         "Escribe cada orden completa y como la diría la persona. Si solo te preguntan algo, no escribas órdenes. " +
         "Ejemplos: «despiértame a las 6 y avísale a Ana que llego tarde» → «Listo.» y en líneas aparte <<orden: pon una alarma a las 6>> <<orden: mándale un whatsapp a Ana que llego tarde>>. «¿qué es la fotosíntesis?» → solo la explicación, sin órdenes. " +
         (a.memoriaAuto !== false ? "Si la persona te cuenta algo importante y duradero sobre ella (gustos, personas cercanas, fechas, rutinas, metas), escribe al final <<recordar: el dato en una frase corta>>. Nunca guardes claves, números de cuenta, datos de salud delicados ni datos de estudiantes. " : "")) +
+      // 3.21: la fecha y la hora van al final de lo fijo: así el comienzo del mensaje es siempre igual y la nube lo reutiliza (responde antes)
+      `Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, son las ${hora(now).replace(/\.$/, "")}.` +
       (live ? " " : "\u0001") + (window.JX ? window.JX.promptExtra(lastQuestion) : "");      // 3.15: \u0001 separa lo fijo de lo que cambia (Gemma reutiliza lo fijo)
   }
   let lastQuestion = "";

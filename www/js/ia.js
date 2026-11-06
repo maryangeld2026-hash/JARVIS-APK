@@ -58,10 +58,9 @@
   /** Abre la conexión con la IA antes de preguntar (al tocar el micrófono): ahorra el saludo inicial con el servidor. */
   let warmAt = 0;
   async function warm() {
-    const c = cfg();
-    // 3.15: si va a responder Gemma (es la principal, o no hay internet y es la de respaldo), se carga de una vez
-    const bk = backupCfg();
-    if ((c.prov === "local" || (!navigator.onLine && bk && bk.prov === "local")) && gemmaSt && gemmaSt.gemma) { const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); }
+    const c = plan({})[0];
+    // 3.15/3.21: si va a responder la IA del celular (por el plan automático), se carga de una vez
+    if (c.prov === "local" && gemmaSt && gemmaSt.gemma) { const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); }
     if (c.a.ahorroActivo) return;                               // 3.7.1: en modo ahorro no se calienta la conexión
     if (c.prov === "local" || (!c.key && !c.p.sinClave) || !navigator.onLine || Date.now() - warmAt < 45000) return;
     warmAt = Date.now();
@@ -74,23 +73,70 @@
 
   /** Habla con la IA. onDelta(trozo, todo) va llegando en streaming. → texto completo.
       Si la principal no puede (sin internet, lenta, saturada) y hay IA de respaldo, responde la de respaldo. */
+  // ======================================================================== 3.21: CAMBIO AUTOMÁTICO NUBE ⇄ CELULAR
+  // Jarvis escoge solo quién responde: la nube cuando hay buena conexión; el celular (Gemma o Qwen) cuando no hay internet,
+  // la conexión está muy lenta, la nube acaba de fallar o se acabó el cupo. Cuando la nube vuelve, regresa solo.
+  const ruta = { caida: 0, agotado: {}, modo: "" };
+  const nube = (x) => x.prov !== "local" && x.prov !== "propio";
+  const localListo = () => !!(gemmaSt && gemmaSt.listo);
+  function conexion() {
+    const nc = navigator.connection || {};
+    return { online: navigator.onLine !== false, lenta: !!nc.effectiveType && /(?:^|-)2g$/.test(nc.effectiveType) || (nc.rtt > 1800), ahorroDatos: !!nc.saveData };
+  }
+  /** El orden en que se prueba: → [cfg]. */
+  function plan(opts) {
+    const a = window.JD.load().ajustes, c = cfg(), b = opts && opts.sinRespaldo ? null : backupCfg();
+    const lista = [c];
+    if (b) lista.push(b);
+    const auto = a.iaAuto !== false && !(opts && opts.sinRespaldo);
+    if (auto && localListo() && !lista.some((x) => x.prov === "local")) lista.push(cfgFor("local", false));   // aunque no la pusieras de respaldo
+    const hoy = Date.now(), k = conexion();
+    const vale = (x) => x.prov === "local" || x.prov === "propio" || !!x.key;
+    const mal = (x) => nube(x) && (!k.online || (ruta.agotado[x.prov] || 0) > hoy || (auto && (ruta.caida > hoy || k.lenta)));
+    const buenas = lista.filter((x) => vale(x) && !mal(x)), malas = lista.filter((x) => vale(x) && mal(x));
+    const out = buenas.concat(malas);
+    return out.length ? out : [c];
+  }
+  function anunciar(modo, cual) {
+    if (ruta.modo === modo) return;
+    ruta.modo = modo;
+    try { window.dispatchEvent(new CustomEvent("jarvis-ia", { detail: { modo, cual } })); } catch (e) { /* nada */ }
+  }
   async function chat(opts) {
-    const c = cfg(), b = opts.sinRespaldo ? null : backupCfg();
-    const nube = (x) => x.prov !== "local" && x.prov !== "propio";
-    if (!navigator.onLine && nube(c) && b && !nube(b)) {
-      if (opts.onAviso) opts.onAviso(`Sin internet: respondo con ${nombre(b)}…`);
-      return via(b, opts, 3);
-    }
-    let got = false;
-    const o = Object.assign({}, opts, { onDelta: (d, all) => { got = true; if (opts.onDelta) opts.onDelta(d, all); }, rapidoFalla: !!b });
-    try { return await via(c, o, b ? 1 : 3); }
-    catch (e) {
-      if (!b || got || e.code === "abort" || !(L.retryable(e) || e.code === "sin_internet" || e.code === "sin_clave" || e.code === "sin_local")) throw e;
-      if (opts.onAviso) opts.onAviso(e.code === "sin_internet" ? `Sin internet: respondo con ${nombre(b)}…` : `La IA principal está lenta; respondo con ${nombre(b)}…`);
-      return via(b, opts, 2);
+    const p = plan(opts);
+    for (let i = 0; i < p.length; i++) {
+      const c = p[i], hay = i < p.length - 1;
+      let got = false;
+      const o = Object.assign({}, opts, { onDelta: (d, all) => { got = true; if (opts.onDelta) opts.onDelta(d, all); }, rapidoFalla: hay });
+      try {
+        const t = await via(c, o, hay ? 1 : 3);
+        if (nube(c)) { ruta.caida = 0; anunciar("nube", c.p.nombre); } else if (c.prov === "local") anunciar("local", "");
+        return t;
+      } catch (e) {
+        if (!hay || got || e.code === "abort" || !(L.retryable(e) || e.code === "sin_internet" || e.code === "sin_clave" || e.code === "sin_local" || e.status === 429 || e.status === 403)) throw e;
+        if (nube(c)) {
+          if (e.status === 429) ruta.agotado[c.prov] = Date.now() + 10 * 60000;          // se acabó el cupo: 10 minutos con otra
+          else if (e.code !== "sin_clave") ruta.caida = Date.now() + 90000;            // falló la red o está lenta: 1,5 minutos con el celular
+          if (p[i + 1].prov === "local") { const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); }
+        }
+        const sig = p[i + 1];
+        if (opts.onAviso) opts.onAviso(e.code === "sin_internet" ? `Sin internet: respondo con ${nombre(sig)}…` : e.status === 429 ? `Se acabó el cupo de ${nombre(c)} por ahora; respondo con ${nombre(sig)}…` : `${nombre(c)} está lenta; respondo con ${nombre(sig)}…`);
+      }
     }
   }
-  const nombre = (c) => c.prov === "local" ? "la IA del celular" : c.p.nombre;
+  /** Con la nube caída, se revisa en silencio cada tanto si ya volvió (sin gastar una pregunta). */
+  async function probarNube() {
+    const c = cfg(); if (!nube(c) || !c.key || !navigator.onLine) return;
+    try {
+      const url = c.prov === "gemini" ? `${c.base}/models?pageSize=1&key=${encodeURIComponent(c.key)}` : L.modelsRequest(c.prov, c.key, c.base).url;
+      const r = await fetchT(url, { headers: c.prov === "gemini" ? {} : L.modelsRequest(c.prov, c.key, c.base).headers, cache: "no-store" }, 5000);
+      if (r.ok) { ruta.caida = 0; anunciar("nube", c.p.nombre); }
+    } catch (e) { /* sigue caída */ }
+  }
+  setInterval(() => { if (ruta.caida > Date.now() && !document.hidden) probarNube(); }, 30000);
+  window.addEventListener("online", () => { ruta.caida = 0; setTimeout(probarNube, 1500); });
+  window.addEventListener("offline", () => { if (localListo()) { anunciar("local", ""); const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); } else anunciar("sin", ""); });
+  const nombre = (c) => c.prov === "local" ? (gemmaSt && /qwen/i.test(gemmaSt.nombre || "") ? "Qwen en el celular" : gemmaSt && /gemma/i.test(gemmaSt.nombre || "") ? "Gemma en el celular" : "la IA del celular") : c.p.nombre;
 
   /** Con un proveedor: si no arranca, está saturado o se cae la red, reintenta (y si hace falta usa otro modelo de la cuenta). */
   async function via(c, opts, intentos) {
@@ -139,7 +185,7 @@
     // vigilante: si no llega nada a tiempo, o la respuesta se queda quieta 20 s, se corta (y se reintenta o pasa a la de respaldo)
     let wd = null;
     const watch = (ms) => { clearTimeout(wd); wd = setTimeout(() => my.abort("lento"), ms); };
-    const first = c.prov === "propio" ? 60000 : buscar ? 25000 : stream ? (rapidoFalla ? 9000 : 15000) : Math.max(25000, maxTokens * 12);
+    const first = c.prov === "propio" ? 60000 : buscar ? 25000 : stream ? (rapidoFalla ? 7000 : 15000) : Math.max(25000, maxTokens * 12);   // 3.21: con el celular de respaldo, se espera menos
     watch(first);
     const tmo = setTimeout(() => my.abort("tiempo"), 120000);
     let res;
@@ -228,7 +274,7 @@
     let fijo = String(system || ""), cambia = "";
     const k = fijo.indexOf("\u0001");
     if (k >= 0) { cambia = fijo.slice(k + 1).trim(); fijo = fijo.slice(0, k); }
-    if (gemma) { const h = fijo.match(/\s*Hoy es [^.]+, son las [^.]+\.\s*/); if (h) { fijo = fijo.replace(h[0], " "); cambia = h[0].trim() + " " + cambia; } }
+    if (gemma) { const h = fijo.match(/\s*Hoy es [^\n]*?son las \d{1,2}:\d{2}(?:\s*[ap]\.\s?m\.)?\.*\s*/); if (h) { fijo = fijo.replace(h[0], " "); cambia = h[0].trim() + " " + cambia; } }
     const sys = fijo.slice(0, gemma ? 5000 : 900) + (st.familia === "qwen35" ? " Responde directamente, sin mostrar tu razonamiento." : "") + " Responde en español" + (gemma ? ". Si te piden explicar algo, explícalo completo y en orden." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "") + (gemma ? "" : " " + cambia.slice(0, 400));
     const prompt = L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
     const mensajes = messages.slice(gemma ? -8 : -10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content || "").slice(0, gemma ? 1800 : 4000) }));
@@ -293,5 +339,5 @@
     const t = await via(c, { system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: c.prov === "local" ? 256 : 20 }, 1);
     return { ok: true, texto: t.trim(), ms: Math.round(performance.now() - t0), modelo: await model(c) };
   }
-  window.JIA = { chat, json, test, stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor };
+  window.JIA = { chat, json, test, stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor, plan: (o) => plan(o || {}).map((x) => x.prov), ruta: () => Object.assign({}, ruta) };
 })();

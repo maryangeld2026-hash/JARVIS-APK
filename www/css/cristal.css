@@ -1,0 +1,119 @@
+/* Jarvis 3.21 · diseño «Cristal»: paneles de vidrio esmerilado sobre un fondo de aurora, brillos cian-violeta y bordes de luz.
+   Se carga después de app.css y solo cambia el aspecto (los botones, ids y comportamiento son los mismos).
+   El desenfoque (blur) va solo en las barras y hojas grandes, no en cada mensaje: así no se pone lento ni gasta batería.
+   Con «efectos ligeros» (o en modo ahorro) se quita el desenfoque y queda el vidrio plano. */
+:root {
+  --bg: #04050d; --bg2: rgba(20, 30, 52, .55); --card: rgba(16, 26, 46, .52); --line: rgba(160, 200, 255, .13); --text: #eef6ff; --muted: #93a8c4;
+  --a: #3ee8ff; --a-rgb: 62, 232, 255; --v: #8b6cff; --v-rgb: 139, 108, 255; --a2: #ffbf5e; --ok: #45ffa8; --err: #ff5d78;
+  --glass: rgba(14, 22, 40, .48); --glass-2: rgba(22, 34, 60, .42); --glass-brd: rgba(170, 210, 255, .16); --glass-hi: rgba(255, 255, 255, .07);
+  --blur: 18px; --r: 18px;
+  --grad: linear-gradient(135deg, var(--a), var(--v));
+}
+html, body { background: var(--bg); }
+body {
+  background:
+    radial-gradient(60% 40% at 12% 8%, rgba(var(--a-rgb), .16), transparent 70%),
+    radial-gradient(55% 45% at 92% 22%, rgba(var(--v-rgb), .20), transparent 70%),
+    radial-gradient(70% 50% at 50% 108%, rgba(var(--a-rgb), .12), transparent 70%),
+    radial-gradient(40% 30% at 78% 78%, rgba(255, 92, 180, .07), transparent 70%),
+    linear-gradient(180deg, #05060f, #070a18 55%, #04050c);
+  background-attachment: fixed;
+}
+/* una retícula muy suave, como de visor */
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .5;
+  background-image: linear-gradient(rgba(var(--a-rgb), .035) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--a-rgb), .035) 1px, transparent 1px);
+  background-size: 32px 32px; -webkit-mask-image: radial-gradient(80% 60% at 50% 40%, #000, transparent 85%); mask-image: radial-gradient(80% 60% at 50% 40%, #000, transparent 85%); }
+.top, main, .tabs { position: relative; z-index: 1; }
+
+/* ---------------------------------------------------------------- vidrio */
+.top, .dock, .tabs, .sheet-in, .salir-menu, .toast, .hoy {
+  background: var(--glass); border-color: var(--glass-brd);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(150%); backdrop-filter: blur(var(--blur)) saturate(150%);
+  box-shadow: inset 0 1px 0 var(--glass-hi);
+}
+.top { margin: calc(6px + var(--safe-t)) 10px 0; padding: 8px 10px 8px 14px; border: 1px solid var(--glass-brd); border-radius: 20px; }
+.brand { font-weight: 800; letter-spacing: .34em; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand .dot { background: var(--a); box-shadow: 0 0 12px var(--a), 0 0 22px rgba(var(--v-rgb), .8); }
+.icon-btn { background: var(--glass-2); border: 1px solid var(--glass-brd); border-radius: 14px; box-shadow: inset 0 1px 0 var(--glass-hi); transition: background .15s, transform .1s; }
+.icon-btn:active { transform: scale(.94); background: rgba(var(--a-rgb), .18); }
+.hoy { margin: 8px 10px 0; border: 1px solid var(--glass-brd); border-radius: 18px; }
+.hoy-top b { background: linear-gradient(90deg, #fff, #bfeeff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.convbar { padding: 6px 14px 0; }
+
+/* motor de la IA: nube o celular (lo pone nucleo.js) */
+.motor { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 12px; font: 700 10.5px/1 var(--mono); letter-spacing: .1em;
+  color: var(--a); border: 1px solid rgba(var(--a-rgb), .35); background: rgba(var(--a-rgb), .08); white-space: nowrap; }
+.motor[data-m="local"] { color: var(--v); border-color: rgba(var(--v-rgb), .45); background: rgba(var(--v-rgb), .12); }
+.motor[data-m="sin"] { color: var(--err); border-color: rgba(255, 93, 120, .45); background: rgba(255, 93, 120, .1); }
+
+/* ---------------------------------------------------------------- conversación (acrílico sin desenfoque: rápido) */
+.chat { padding: 14px 12px 10px; gap: 12px; }
+.msg { border-radius: 18px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25), inset 0 1px 0 var(--glass-hi); }
+.msg.user { background: linear-gradient(135deg, rgba(var(--a-rgb), .24), rgba(var(--v-rgb), .26)); border: 1px solid rgba(var(--a-rgb), .35); border-bottom-right-radius: 6px; }
+.msg.jarvis { background: linear-gradient(160deg, rgba(24, 36, 64, .72), rgba(12, 18, 34, .62)); border: 1px solid var(--glass-brd); border-left: 1px solid var(--glass-brd); border-bottom-left-radius: 6px; position: relative; }
+.msg.jarvis::before { content: ""; position: absolute; left: -1px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--grad); box-shadow: 0 0 10px rgba(var(--a-rgb), .6); }
+.msg.tool::before { background: linear-gradient(180deg, var(--ok), var(--a)); }
+.msg.err::before { background: var(--err); box-shadow: 0 0 10px rgba(255, 93, 120, .6); }
+.msg .mdh { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.msg .t { opacity: .75; }
+.msg.typing::after { color: var(--v); }
+.empty b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 20px; }
+
+/* ---------------------------------------------------------------- barra de abajo y orbe */
+.dock { margin: 0 10px calc(8px + var(--safe-b)); border: 1px solid var(--glass-brd); border-radius: 26px; padding: 8px 12px 10px; }
+body:not(.sin-docente) .dock { margin-bottom: 8px; }
+.live { color: var(--ok); text-shadow: 0 0 12px rgba(69, 255, 168, .5); }
+.pill { background: var(--glass-2); border: 1px solid var(--glass-brd); box-shadow: inset 0 1px 0 var(--glass-hi); color: #b9cbe2; }
+.pill[aria-pressed="true"] { color: #fff; border-color: rgba(var(--a-rgb), .6); background: linear-gradient(135deg, rgba(var(--a-rgb), .25), rgba(var(--v-rgb), .22)); box-shadow: 0 0 16px rgba(var(--a-rgb), .25); }
+.mic.reactor { background: radial-gradient(circle at 50% 38%, rgba(255, 255, 255, .16), rgba(var(--a-rgb), .14) 38%, rgba(var(--v-rgb), .12) 62%, rgba(8, 12, 26, .9) 72%);
+  border: 1px solid rgba(var(--a-rgb), .45); box-shadow: 0 0 28px rgba(var(--a-rgb), .28), 0 0 60px rgba(var(--v-rgb), .18), inset 0 2px 8px rgba(255, 255, 255, .12); }
+[data-state="listening"] .mic.reactor { color: var(--ok); border-color: rgba(69, 255, 168, .7); box-shadow: 0 0 34px rgba(69, 255, 168, .45), inset 0 2px 8px rgba(255, 255, 255, .12); }
+[data-state="thinking"] .mic.reactor { color: var(--v); border-color: rgba(var(--v-rgb), .75); box-shadow: 0 0 34px rgba(var(--v-rgb), .45), inset 0 2px 8px rgba(255, 255, 255, .12); }
+[data-state="speaking"] .mic.reactor { color: var(--a); box-shadow: 0 0 40px rgba(var(--a-rgb), .5), 0 0 80px rgba(var(--v-rgb), .25), inset 0 2px 8px rgba(255, 255, 255, .12); }
+.write input { background: rgba(6, 10, 22, .55); border: 1px solid var(--glass-brd); box-shadow: inset 0 2px 6px rgba(0, 0, 0, .35); }
+.write input:focus { border-color: rgba(var(--a-rgb), .65); box-shadow: 0 0 0 3px rgba(var(--a-rgb), .12), inset 0 2px 6px rgba(0, 0, 0, .35); }
+.send { color: #fff; background: var(--grad); border: 0; box-shadow: 0 0 16px rgba(var(--a-rgb), .35); }
+.tabs { margin: 0 10px calc(6px + var(--safe-b)); padding-bottom: 0; border: 1px solid var(--glass-brd); border-radius: 22px; }
+.tabs button.on { color: #fff; }
+.tabs button.on svg { color: var(--a); }
+
+/* ---------------------------------------------------------------- tarjetas, botones, campos */
+.card { background: var(--card); border: 1px solid var(--glass-brd); border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, .25), inset 0 1px 0 var(--glass-hi); }
+.card h2, .sub { color: var(--a); }
+.btn { background: var(--glass-2); border: 1px solid var(--glass-brd); border-radius: 14px; box-shadow: inset 0 1px 0 var(--glass-hi); transition: transform .1s, background .15s; }
+.btn.primary { background: linear-gradient(135deg, rgba(var(--a-rgb), .42), rgba(var(--v-rgb), .42)); border-color: rgba(var(--a-rgb), .55); box-shadow: 0 4px 18px rgba(var(--a-rgb), .2), inset 0 1px 0 rgba(255, 255, 255, .18); }
+.chip { background: var(--glass-2); border: 1px solid var(--glass-brd); box-shadow: inset 0 1px 0 var(--glass-hi); }
+.chip.on, .chip:active { color: #fff; background: linear-gradient(135deg, rgba(var(--a-rgb), .28), rgba(var(--v-rgb), .25)); border-color: rgba(var(--a-rgb), .55); }
+.inp { background: rgba(6, 10, 22, .55); border: 1px solid var(--glass-brd); border-radius: 14px; }
+.inp:focus { border-color: rgba(var(--a-rgb), .6); box-shadow: 0 0 0 3px rgba(var(--a-rgb), .12); }
+
+/* ---------------------------------------------------------------- hojas (ajustes y demás) */
+.sheet { background: rgba(2, 4, 12, .45); }
+.sheet-in { border: 1px solid var(--glass-brd); border-bottom: 0; border-radius: 26px 26px 0 0; --blur: 26px; }
+.sheet-in.full { border-radius: 0; border: 0; }
+.sheet-h h2 { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 19px; }
+details.aj-grupo { background: var(--card); border: 1px solid var(--glass-brd); border-radius: 16px; box-shadow: inset 0 1px 0 var(--glass-hi); }
+details.aj-grupo[open] { border-color: rgba(var(--a-rgb), .35); box-shadow: 0 0 0 1px rgba(var(--a-rgb), .08), inset 0 1px 0 var(--glass-hi); }
+.salir-menu { border: 1px solid var(--glass-brd); border-radius: 18px; }
+.toast { border-radius: 16px; border: 1px solid rgba(var(--a-rgb), .4); box-shadow: 0 10px 40px rgba(0, 0, 0, .5), 0 0 24px rgba(var(--a-rgb), .15), inset 0 1px 0 var(--glass-hi); }
+
+/* animaciones suaves al aparecer */
+@keyframes cr-in { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
+.msg { animation: cr-in .22s ease-out; }
+
+/* ---------------------------------------------------------------- efectos ligeros (o modo ahorro): sin desenfoque, mismo aspecto */
+body.cr-ligero .top, body.cr-ligero .dock, body.cr-ligero .tabs, body.cr-ligero .sheet-in, body.cr-ligero .salir-menu, body.cr-ligero .toast, body.cr-ligero .hoy {
+  -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(12, 18, 34, .94); }
+body.cr-ligero::before { display: none; }
+body.cr-ligero .msg { animation: none; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .msg { animation: none; } }
+/* el diseño clásico, para quien lo prefiera */
+body.cr-clasico { --glass: rgba(3, 6, 12, .9); }
+/* barra de arriba en una sola línea en celulares */
+.top { flex-wrap: nowrap; gap: 8px; }
+.top .brand { letter-spacing: .22em; font-size: 14px; flex-shrink: 0; }
+.top .leds { margin-left: 4px; flex-shrink: 0; }
+.top .motor { margin-left: auto; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.top .icon-btn { width: 40px; height: 40px; flex-shrink: 0; }
+@media (max-width: 430px) { .top .status { display: none; } }
+.motor::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
