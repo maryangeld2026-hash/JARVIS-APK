@@ -128,8 +128,15 @@ public class OidoPlugin extends Plugin {
             new Thread(() -> {
                 if (tv != null && tv.isAlive()) { try { tv.join(1500); } catch (InterruptedException ignored) { } }
                 if (EscuchaService.grabando) { yoPause = EscuchaService.soltarMicrofono(getContext(), 2500) || yoPause; }
+                // 3.22: los subtítulos en vivo usan el mismo reconocimiento de voz: se cierran para que Jarvis te oiga
+                if (SubtitulosService.activo) {
+                    try { getContext().startService(new android.content.Intent(getContext(), SubtitulosService.class).setAction(SubtitulosService.PARAR)); } catch (Exception ignored) { }
+                    try { Thread.sleep(600); } catch (InterruptedException ignored) { }
+                }
                 h.post(() -> {
                     if (mio != turno || actual == null) return;
+                    // 3.22: si la grabadora de reuniones tiene el micrófono, se avisa en vez de quedarse sin oír nada
+                    if (GrabadoraService.grabando && !GrabadoraService.pausado) { terminar("", "grabando"); return; }
                     String m = !forzar.isEmpty() ? forzar : primerMotor();
                     if (m.isEmpty()) { terminar("", "sin_servicio"); return; }
                     iniciar(m, 0, mio);

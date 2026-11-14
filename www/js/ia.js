@@ -58,9 +58,11 @@
   /** Abre la conexión con la IA antes de preguntar (al tocar el micrófono): ahorra el saludo inicial con el servidor. */
   let warmAt = 0;
   async function warm() {
-    const c = plan({})[0];
-    // 3.15/3.21: si va a responder la IA del celular (por el plan automático), se carga de una vez
-    if (c.prov === "local" && gemmaSt && gemmaSt.gemma) { const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); }
+    const c = cfg();
+    // 3.22: se carga de una vez solo si de verdad va a responder (es la principal o no hay internet), y la 12B solo si la escogiste de principal
+    const vaLocal = c.prov === "local" || (!navigator.onLine && localListo());
+    const pesada = gemmaSt && /12b/i.test(gemmaSt.nombre || "");
+    if (vaLocal && gemmaSt && gemmaSt.gemma && (!pesada || c.prov === "local")) { const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); }
     if (c.a.ahorroActivo) return;                               // 3.7.1: en modo ahorro no se calienta la conexión
     if (c.prov === "local" || (!c.key && !c.p.sinClave) || !navigator.onLine || Date.now() - warmAt < 45000) return;
     warmAt = Date.now();
@@ -81,7 +83,8 @@
   const localListo = () => !!(gemmaSt && gemmaSt.listo);
   function conexion() {
     const nc = navigator.connection || {};
-    return { online: navigator.onLine !== false, lenta: !!nc.effectiveType && /(?:^|-)2g$/.test(nc.effectiveType) || (nc.rtt > 1800), ahorroDatos: !!nc.saveData };
+    // 3.22: ya no se adivina «conexión lenta» por lo que dice el celular (en muchos Android lo reporta mal y mandaba todo al celular)
+    return { online: navigator.onLine !== false, lenta: nc.effectiveType === "slow-2g", ahorroDatos: !!nc.saveData };
   }
   /** El orden en que se prueba: → [cfg]. */
   function plan(opts) {
@@ -109,15 +112,17 @@
       let got = false;
       const o = Object.assign({}, opts, { onDelta: (d, all) => { got = true; if (opts.onDelta) opts.onDelta(d, all); }, rapidoFalla: hay });
       try {
-        const t = await via(c, o, hay ? 1 : 3);
+        const t0 = Date.now();
+        const t = await via(c, o, hay ? (nube(c) && i === 0 ? 2 : 1) : 3);
+        if (window.JDIAG) window.JDIAG.log("ia", `${c.prov} · ${Date.now() - t0} ms${last && last.ms ? " · 1ª palabra " + last.ms + " ms" : ""}`);
         if (nube(c)) { ruta.caida = 0; anunciar("nube", c.p.nombre); } else if (c.prov === "local") anunciar("local", "");
         return t;
       } catch (e) {
+        if (window.JDIAG) window.JDIAG.log("ia-falla", `${c.prov} · ${e.code || e.status || ""} · ${String(e.message || "").slice(0, 60)}`);
         if (!hay || got || e.code === "abort" || !(L.retryable(e) || e.code === "sin_internet" || e.code === "sin_clave" || e.code === "sin_local" || e.status === 429 || e.status === 403)) throw e;
         if (nube(c)) {
           if (e.status === 429) ruta.agotado[c.prov] = Date.now() + 10 * 60000;          // se acabó el cupo: 10 minutos con otra
-          else if (e.code !== "sin_clave") ruta.caida = Date.now() + 90000;            // falló la red o está lenta: 1,5 minutos con el celular
-          if (p[i + 1].prov === "local") { const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); }
+          else if (e.code === "red" || e.code === "lento" || e.code === "sin_internet") ruta.caida = Date.now() + 60000;   // 3.22: solo si falló la red (no por un error del servidor)
         }
         const sig = p[i + 1];
         if (opts.onAviso) opts.onAviso(e.code === "sin_internet" ? `Sin internet: respondo con ${nombre(sig)}…` : e.status === 429 ? `Se acabó el cupo de ${nombre(c)} por ahora; respondo con ${nombre(sig)}…` : `${nombre(c)} está lenta; respondo con ${nombre(sig)}…`);
@@ -135,7 +140,7 @@
   }
   setInterval(() => { if (ruta.caida > Date.now() && !document.hidden) probarNube(); }, 30000);
   window.addEventListener("online", () => { ruta.caida = 0; setTimeout(probarNube, 1500); });
-  window.addEventListener("offline", () => { if (localListo()) { anunciar("local", ""); const P = native() && plug("IALocal"); if (P && P.precargar) P.precargar().catch(() => {}); } else anunciar("sin", ""); });
+  window.addEventListener("offline", () => { if (localListo()) anunciar("local", ""); else anunciar("sin", ""); });   // 3.22: se carga cuando la necesites, no apenas se va el internet
   const nombre = (c) => c.prov === "local" ? (gemmaSt && /qwen/i.test(gemmaSt.nombre || "") ? "Qwen en el celular" : gemmaSt && /gemma/i.test(gemmaSt.nombre || "") ? "Gemma en el celular" : "la IA del celular") : c.p.nombre;
 
   /** Con un proveedor: si no arranca, está saturado o se cae la red, reintenta (y si hace falta usa otro modelo de la cuenta). */
@@ -310,7 +315,7 @@
     refrescar: gemmaEstado,
     usar() {
       const m = (window.JD.load().ajustes.vozGemma) || "sin_internet";
-      if (m === "nunca" || !gemmaSt || !gemmaSt.listo || !gemmaSt.gemma || gemmaSt.oye === false) return false;   // 3.19: solo los modelos que oyen (Gemma 4)
+      if (m === "nunca" || !gemmaSt || !gemmaSt.listo || !gemmaSt.gemma || gemmaSt.oye === false || /12b/i.test(gemmaSt.nombre || "")) return false;   // 3.19: solo los modelos que oyen (Gemma 4)
       return m === "siempre" || !navigator.onLine;
     },
     async oir(onPartial, opts) {

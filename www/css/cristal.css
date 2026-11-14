@@ -115,5 +115,10 @@ body.cr-clasico { --glass: rgba(3, 6, 12, .9); }
 .top .leds { margin-left: 4px; flex-shrink: 0; }
 .top .motor { margin-left: auto; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .top .icon-btn { width: 40px; height: 40px; flex-shrink: 0; }
-@media (max-width: 430px) { .top .status { display: none; } }
+/* 3.22: en celulares se ve siempre el estado (ESCUCHANDO, PENSANDO…); las lucecitas se esconden para que quepa */
+@media (max-width: 430px) { .top .leds { display: none; } .top .status { display: block; flex: 0 1 auto; min-width: 0; font-size: 10.5px; letter-spacing: .1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+[data-state="listening"] .top .status { color: var(--ok); text-shadow: 0 0 10px rgba(69, 255, 168, .6); }
 .motor::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+@media (max-width: 430px) { .top .brand { letter-spacing: .14em; } .top .motor { margin-left: 2px; } .top .status { flex: 1 1 auto; text-align: right; } }
+@media (max-width: 430px) { .top { gap: 6px; padding-left: 12px; } .top .icon-btn { width: 38px; height: 38px; } .top .motor { padding: 0 7px; font-size: 9.5px; letter-spacing: .06em; } .top .status { font-size: 10px; letter-spacing: .06em; } }
+@media (max-width: 430px) { .top .brand { font-size: 13px; letter-spacing: .08em; gap: 6px; } .top .status { letter-spacing: .02em; font-size: 10px; } .top { padding-right: 8px; } }

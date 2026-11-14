@@ -319,9 +319,11 @@
     const prendido = [a.fondo && "escucha de fondo" + (a.fondoCuando ? " (" + a.fondoCuando + ")" : ""), a.manosLibres && "manos libres", a.burbuja && "burbuja", a.vozIA && "voz IA", a.conduccion && "conducción", a.ahorroActivo && "modo ahorro", a.docente === true && "modo docente", a.gastosAuto && "gastos del banco", (a.buscar || {}).on && "encontrar celular", ha() && "Home Assistant"].filter(Boolean);
     let bat = ""; const E = plug("Escucha"); if (E && E.bateriaEstado) { try { const b = await E.bateriaEstado(); bat = `${b.nivel} %${b.ahorro ? " (ahorro)" : ""}${b.sinRestriccion ? " · sin restricción" : ""}`; } catch (e) { /* nada */ } }
     const txt = L9.reporte({ version: A.VERSION, fecha: new Date().toISOString().slice(0, 16), ua: navigator.userAgent.replace(/\s*\(KHTML.*$/, "").slice(0, 160), proveedor: a.proveedor, respaldo: a.respaldo, ms: lt && lt.ms, prendido, bateria: bat, red: navigator.onLine ? (navigator.connection && navigator.connection.effectiveType) || "sí" : "sin internet", errores: errs, nota: nota ? L9.limpiar(nota, nombres) : "" });
-    pick("🛠️ **Informe listo** (sin tus datos: ni nombres, ni claves, ni números).\n\n```\n" + txt.slice(0, 1500) + (txt.length > 1500 ? "\n…" : "") + "\n```", [
-      ["Compartir el informe", () => N.share({ title: "Informe de Jarvis", text: txt, fileName: "informe-jarvis.txt", mime: "text/plain", base64: btoa(unescape(encodeURIComponent(txt))) }).catch(() => {})],
-      ["Copiar", () => { try { navigator.clipboard.writeText(txt); A.toast("Copiado."); } catch (e) { A.toast("No pude copiar."); } }],
+    const ev = (window.JDIAG ? window.JDIAG.lista() : []).slice(-40).map((x) => `${new Date(x.t).toTimeString().slice(0, 8)} ${x.k}: ${x.d}`).join("\n");
+    const txt2 = txt + (ev ? "\n\nÚltimos eventos (micrófono, voz e IA):\n" + ev : "");
+    pick("🛠️ **Informe listo** (sin tus datos: ni nombres, ni claves, ni números).\n\n```\n" + txt2.slice(0, 2200) + (txt2.length > 2200 ? "\n…" : "") + "\n```", [
+      ["Compartir el informe", () => N.share({ title: "Informe de Jarvis", text: txt2, fileName: "informe-jarvis.txt", mime: "text/plain", base64: btoa(unescape(encodeURIComponent(txt2))) }).catch(() => {})],
+      ["Copiar", () => { try { navigator.clipboard.writeText(txt2); A.toast("Copiado."); } catch (e) { A.toast("No pude copiar."); } }],
       ["Borrar los errores", () => { if (window.__jerr) window.__jerr.borrar(); A.toast("Borrados."); }]], `Listo el informe, con ${errs.length} errores recientes. Compártelo con quien te ayuda con la app.`);
   }
 

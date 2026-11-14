@@ -14,7 +14,8 @@ def gem(route):
         if MODO["v"] == "falla": return route.abort()
         return route.fulfill(json={"models": [{"name": "models/gemini-3.5-flash-lite", "supportedGenerationMethods": ["generateContent"]}]})
     ASKED.append(r.post_data or "")
-    if MODO["v"] == "falla": return route.fulfill(status=503, json={"error": {"code": 503, "message": "overloaded", "status": "UNAVAILABLE"}})
+    if MODO["v"] == "falla": return route.abort()                       # se cae la red
+    if MODO["v"] == "saturada": return route.fulfill(status=503, json={"error": {"code": 503, "message": "overloaded", "status": "UNAVAILABLE"}})
     if MODO["v"] == "cupo": return route.fulfill(status=429, json={"error": {"code": 429, "message": "quota", "status": "RESOURCE_EXHAUSTED"}})
     return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=e2e.sse("Respondo desde la nube, señor."))
 
@@ -95,6 +96,7 @@ def main():
         pg.select_option("#aj-321 select", "clasico"); pg.wait_for_timeout(100)
         check(pg.evaluate("document.querySelector('#css-cristal').disabled"), "Clásico: vuelve el diseño de antes")
         pg.select_option("#aj-321 select", "cristal")
+        check(any(x["k"] == "ia" for x in pg.evaluate("JDIAG.lista()")) and any(x["k"] == "ia-falla" for x in pg.evaluate("JDIAG.lista()")), "bitácora de la IA para el informe de problemas")
         check(not errs, "sin errores de JavaScript " + str(errs[:3]))
         b.close()
     srv.shutdown()

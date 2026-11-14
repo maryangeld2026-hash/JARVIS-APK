@@ -9,6 +9,9 @@
   /** 3.3.1: en el celular, addListener de los plugins no siempre devuelve una promesa (no tiene .catch). Esto sirve en ambos casos. */
   const on = (p, ev, fn) => Promise.resolve().then(() => p.addListener(ev, fn)).catch((e) => { console.warn("addListener", ev, e); return null; });
   window.JON = on;
+  /** 3.22: bitácora de lo que pasa con el micrófono, la voz y la IA (sin lo que dices: solo qué pasó y cuánto tardó), para el informe de problemas. */
+  const diag = [];
+  window.JDIAG = { log(k, d) { diag.push({ t: Date.now(), k, d: d == null ? "" : String(d).slice(0, 120) }); if (diag.length > 60) diag.shift(); }, lista: () => diag.slice() };
   /** 3.7.1: un reloj que se detiene cuando Jarvis no está en pantalla (ahorra batería) y corre una vez al volver. */
   window.JEVERY = function (ms, fn) {
     let id = null;
@@ -74,6 +77,7 @@
       if (!p.ok) throw new Error("Jarvis necesita permiso para usar el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos › Micrófono.");
       oidoOk = true;
     }
+    const t0 = Date.now(); window.JDIAG.log("oir", (opts && opts.idioma) || LANG);
     const h = await on(O, "parcial", (d) => { if (d && d.texto && onPartial) onPartial(d.texto); });
     const h2 = await on(O, "estado", (d) => { if (onListenState && d) onListenState(d.s, d); });
     nativeStop = () => { O.detener().catch(() => {}); };
@@ -81,12 +85,14 @@
       const o = opts || {};
       const r = (await O.escuchar({ idioma: o.idioma || LANG, silencio: o.silencio || 1600, espera: o.espera || 9000, maximo: 15000 })) || {};
       lastListen = r;
+      window.JDIAG.log("oyó", `${r.texto ? r.texto.length + " letras" : "nada"} · ${r.motor || "?"}${r.error ? " · " + r.error : ""}${r.nivel != null ? " · " + r.nivel + " dB" : ""} · ${Date.now() - t0} ms`);
       if (r.error === "permiso") { oidoOk = false; throw new Error("Jarvis no tiene permiso para el micrófono. Dáselo en Ajustes del teléfono › Apps › Jarvis › Permisos › Micrófono."); }
+      if (!r.texto && r.error === "grabando") throw new Error("Estoy grabando una reunión y el micrófono está ocupado. Escríbeme, o termina la grabación desde su aviso (⏹).");
       if (!r.texto && r.error === "red") throw new Error("El reconocimiento de voz necesita internet en este celular. Revisa la conexión, o descarga la voz sin internet en Ajustes › «Jarvis» en segundo plano.");
       if (!r.texto && r.error === "idioma") throw new Error("Falta el español en el reconocimiento de voz del celular: Ajustes del teléfono › Google › Voz › Idiomas.");
       if (!r.texto && r.error === "sin_servicio") throw new Error("Este celular no tiene reconocimiento de voz. Instala o activa la app de Google, o descarga la voz sin internet en Ajustes › «Jarvis» en segundo plano.");
       // si el oído propio no sirvió en este celular, se prueba el reconocimiento de antes
-      if (!r.texto && r.error && !/^(?:cancelado|otra|sin_respuesta)$/.test(r.error) && plug("SpeechRecognition")) {
+      if (!r.texto && r.error && !/^(?:cancelado|otra|sin_respuesta|grabando)$/.test(r.error) && plug("SpeechRecognition")) {
         oidoFallas++; console.warn("Oído:", r.error);
         nativeStop = null; if (h && h.remove) h.remove();
         const t = await listenNative(onPartial, (opts && opts.idioma) || LANG);

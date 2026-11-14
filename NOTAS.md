@@ -1,4 +1,13 @@
-# Jarvis para Android 3.21: diseño Cristal, nube ⇄ celular automático y más rápido
+# Jarvis para Android 3.22: arreglos de fiabilidad del micrófono y la IA
+
+## 🛠️ 3.22: arreglos de fiabilidad (micrófono e IA)
+- Los subtítulos en vivo usaban el mismo reconocimiento de voz que Jarvis: si quedaban prendidos, Jarvis no te oía. Ahora se cierran solos cuando le hablas a Jarvis.
+- Si la grabadora de reuniones tiene el micrófono, Jarvis lo dice en vez de quedarse sin oír.
+- La IA del celular ya no se carga sola en segundo plano (al tocar el micrófono o al perder el internet) salvo que de verdad vaya a responder; la 12B nunca se carga sola. Eso gastaba memoria y podía trabar el micrófono.
+- La voz sin internet con Gemma no usa la 12B (tardaba demasiado).
+- El cambio automático ya no adivina «conexión lenta» (muchos Android lo reportan mal); pasa al celular solo si de verdad falla la red, y ante un error del servidor primero reintenta en la nube.
+- En la barra de arriba se ve otra vez el estado (ESCUCHANDO, PENSANDO…).
+- El informe de problemas (Ajustes › Más › Reportar un problema) ahora trae los últimos eventos del micrófono, la voz y la IA (sin lo que dices), para encontrar fallas.
 
 ## ✨ Diseño «Cristal»
 - Paneles de vidrio esmerilado (blur) sobre un fondo de aurora cian y violeta, barras flotantes con bordes de luz, mensajes acrílicos y un orbe de cristal que cambia de color según escucha, piensa o habla.
