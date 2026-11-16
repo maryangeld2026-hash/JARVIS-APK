@@ -1,4 +1,8 @@
-# Jarvis para Android 3.23.1: la conversación en vivo ya abre
+# Jarvis para Android 3.23.2: el orbe es el asistente y Ajustes con portada
+
+## 🔁 3.23.2: el orbe vuelve a ser el asistente
+- Tocar el orbe (y llamar a Jarvis con el botón de asistente, «Jarvis», el volumen o la burbuja) abre el asistente de siempre. La conversación en vivo se abre solo con su botón ((o)) o diciendo «hablemos en vivo».
+- Ajustes con portada: tu perfil, interruptores rápidos (responder en voz, conversación continua, decir «Jarvis», ahorro de batería), el estado de la IA principal y la del celular, y la lista de temas con íconos de colores. Dentro de cada tema, tarjetas con ícono y flecha.
 
 ## 🩹 3.23.1: la conversación en vivo ya abre
 - Faltaba declarar un permiso de audio que Android exige para usar el micrófono dentro de la app; sin él, la conversación en vivo nunca abría y Jarvis seguía en la forma normal sin decir nada. Ahora abre, y si alguna vez no puede, te dice por qué.

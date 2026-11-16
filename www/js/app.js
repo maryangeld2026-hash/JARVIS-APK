@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.23.1";
+  const VERSION = "3.23.2";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -207,22 +207,8 @@
     }
     if (V.isSpeaking()) V.hush();
     if (state === "thinking") { IA.stop(); }
-    // 3.23: conversación en tiempo real. Al tocar el orbe (o al llamarlo), si se puede, abre la conversación en vivo;
-    // si no arranca, sigue con la escucha normal sin molestar
-    if (!auto && vivoPosible()) {
-      const ok = await window.JX._live.start({ respaldo: (m) => { console.warn("en vivo:", m); if (window.JDIAG) window.JDIAG.log("vivo-falla", m); toast("No pude abrir la conversación en vivo (" + String(m || "").replace(/\.$/, "").slice(0, 90) + "). Sigo con la forma normal.", 6000); listenNormal(false, wake); } });
-      if (ok !== false) return;
-      return;
-    }
+    // 3.23.2: el orbe es el asistente (escucha normal). La conversación en vivo tiene su propio botón ((o)).
     return listenNormal(auto, wake);
-  }
-  /** 3.23: ¿la conversación en vivo puede ser la forma normal de hablar? (Gemini con clave, internet, sin modo ahorro, y que no haya fallado hoy) */
-  function vivoPosible() {
-    const a = D.ajustes, m = a.modoConv || "auto";
-    if (m === "normal" || !window.JX || !window.JX._live || !(a.claves.gemini || "").trim() || !navigator.onLine || a.ahorroActivo) return false;
-    if (m === "auto" && a.proveedor !== "gemini") return false;
-    if (m === "auto" && a.vivoFallaT && Date.now() - a.vivoFallaT < 6 * 3600000) return false;
-    return !!(navigator.mediaDevices && window.AudioWorkletNode);
   }
   async function listenNormal(auto, wake) {
     const my = ++listenGen; heardPart = false;

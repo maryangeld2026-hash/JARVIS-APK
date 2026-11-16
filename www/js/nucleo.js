@@ -62,16 +62,67 @@
     const barV = $("#aj-volver", sc);
     if (barV) [...grupos].reverse().forEach((d) => { const sm = d.querySelector("summary"); if (sm && /^(?:Conversación|Formas de llamar)/.test(sm.textContent) && d.previousElementSibling !== barV && !d.dataset.arriba) { d.dataset.arriba = "1"; barV.after(d); } });
     home.textContent = "";
+    home.append(cabecera(), rapidos(), estados());
     const doc = D.ajustes.docente === true;
+    const lista = mk("div", "aj-lista");
+    lista.append(mk("p", "aj-tit", "Todos los ajustes"));
     L14.TEMAS.forEach(([k, ic, t, ex]) => {
       const n = grupos.filter((d) => d.dataset.tema === k).length;
       if (!n || (k === "docente" && !doc)) return;
       const c = mk("button", "aj-tema"); c.type = "button"; c.dataset.tema = k;
-      c.append(mk("span", "aj-ic", ic), mk("b", "", t), mk("small", "", ex));
+      const txt = mk("span", "aj-tx"); txt.append(mk("b", "", t), mk("small", "", ex));
+      c.append(mk("span", "aj-ic t-" + k, ic), txt, mk("span", "aj-n", String(n)), mk("span", "aj-chev", "›"));
       c.addEventListener("click", () => ver(k));
-      home.append(c);
+      lista.append(c);
     });
+    home.append(lista);
+    // íconos para cada grupo (el título queda como frase, no en mayúsculas)
+    grupos.forEach((d) => { const sm = d.querySelector("summary"); if (sm && !sm.dataset.ic) { sm.dataset.ic = iconoGrupo(sm.textContent); } });
     ver(tema);
+  }
+  // ---------------------------------------------------------------- 3.23.2: portada de los Ajustes
+  const ICONOS = [[/inteligencia artificial/i, "🧠"], [/respaldo/i, "🛟"], [/uso de la ia/i, "📊"], [/^voz natural/i, "🗣️"], [/^voz/i, "🔊"], [/la voz de jarvis/i, "🎩"], [/mientras jarvis habla/i, "✋"],
+    [/segundo plano/i, "👂"], [/manos libres/i, "🙌"], [/conversaci/i, "💬"], [/formas de llamar/i, "📲"], [/^tú$/i, "🙂"], [/asistente/i, "🤖"], [/cómo te llama/i, "🏷️"], [/memoria/i, "🧩"],
+    [/mis datos/i, "🪪"], [/habilidades/i, "⚡"], [/programadas/i, "⏰"], [/vida diaria/i, "☀️"], [/disparadores/i, "🎯"], [/medicamentos/i, "💊"], [/resumen de la mañana/i, "🌅"], [/^casa/i, "🏠"],
+    [/controlar el celular/i, "🕹️"], [/mensajes/i, "✉️"], [/protecci/i, "🛡️"], [/pantalla/i, "📱"], [/reloj/i, "⌚"], [/subtítulos/i, "💭"], [/traductor/i, "🌐"], [/canciones/i, "🎵"],
+    [/diseño/i, "✨"], [/batería|gasta/i, "🔋"], [/diagnóstico/i, "🩺"], [/seguridad/i, "🔒"], [/copia/i, "💾"], [/tus datos/i, "🗂️"], [/sincronizar|computador/i, "💻"], [/google/i, "🟦"],
+    [/en clase/i, "🏫"], [/horario/i, "🗓️"], [/jarvis en el celular/i, "📲"], [/más/i, "🛠️"]];
+  const iconoGrupo = (t) => { for (const [re, ic] of ICONOS) if (re.test(String(t).trim())) return ic; return "⚙️"; };
+  function cabecera() {
+    const a = D.ajustes, n = (a.nombre || "").trim();
+    const c = mk("div", "aj-perfil-h");
+    c.append(mk("div", "aj-avatar", n ? n[0].toUpperCase() : "J"));
+    const tx = mk("div", "aj-perfil-tx");
+    tx.append(mk("b", "", n ? "Hola, " + n : "Tu Jarvis"), mk("small", "", "Jarvis " + (A.VERSION || "") + " · " + (IA && IA.plan ? (IA.plan()[0] === "local" ? "responde la IA del celular" : "responde la nube") : "")));
+    c.append(tx);
+    return c;
+  }
+  function rapidos() {
+    const box = mk("div", "aj-rapidos"), a = D.ajustes;
+    const t = (ic, nombre, on, fn) => { const b = mk("button", "aj-rap" + (on ? " on" : "")); b.type = "button"; b.setAttribute("aria-pressed", on ? "true" : "false"); b.append(mk("span", "", ic), mk("b", "", nombre), mk("i", "", on ? "Sí" : "No")); b.addEventListener("click", () => { fn(); setTimeout(() => { const nb = rapidos(); box.replaceWith(nb); }, 350); }); return b; };
+    const clic = (sel) => { const e = $(sel); if (e) e.click(); };
+    box.append(
+      t("🔊", "Responder en voz", !!a.voz, () => clic("#a-voz")),
+      t("🔁", "Conversación continua", !!a.seguir, () => clic("#btn-conv")),
+      t("👂", "Decir «Jarvis»", !!a.fondo, () => A.dispatch(a.fondo ? "desactiva jarvis en segundo plano" : "activa jarvis en segundo plano")),
+      t("🍃", "Ahorro de batería", !!a.ahorroActivo, () => A.dispatch(a.ahorroActivo ? "desactiva el modo ahorro" : "activa el modo ahorro")));
+    return box;
+  }
+  function estados() {
+    const a = D.ajustes, box = mk("div", "aj-estados");
+    const prov = (window.JL.PROVIDERS[a.proveedor] || {}).nombre || "IA";
+    const conClave = a.proveedor === "local" || !!((a.claves || {})[a.proveedor] || "").trim();
+    const e1 = mk("button", "aj-est" + (conClave ? " ok" : " mal")); e1.type = "button";
+    e1.append(mk("small", "", "IA principal"), mk("b", "", prov.replace(/ \(.*$/, "")), mk("i", "", conClave ? "Lista ✓" : "Falta la clave"));
+    e1.addEventListener("click", () => ver("ia"));
+    const loc = IA && IA.plan ? null : null; void loc;
+    const e2 = mk("button", "aj-est"); e2.type = "button";
+    e2.append(mk("small", "", "Sin internet"), mk("b", "", "IA del celular"), mk("i", "", "Ver o descargar"));
+    e2.addEventListener("click", () => { ver("ia"); const d = [...document.querySelectorAll("#ajustes details.aj-grupo")].find((x) => /respaldo/i.test((x.querySelector("summary") || {}).textContent || "")); if (d) d.open = true; });
+    const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() ? window.Capacitor.Plugins.IALocal : null;
+    if (P && P.estado) P.estado().then((st) => { if (st && st.listo) { $("b", e2).textContent = (A.nombreLocal ? A.nombreLocal(st.nombre) : st.nombre).replace(/ de Google$/, "").slice(0, 22); $("i", e2).textContent = "Lista ✓"; e2.classList.add("ok"); } }).catch(() => {});
+    box.append(e1, e2);
+    return box;
   }
   let abrirT = 0, abrirTema = "";
   function abiertos(d) { const ahora = Date.now(); const k = d.dataset.tema; const r = ahora - abrirT < 80 && abrirTema && abrirTema !== k ? "*" : k; abrirT = ahora; abrirTema = r === "*" ? "*" : k; return r; }
@@ -126,9 +177,7 @@
     // 3.23: conversación
     const s2 = mk("div"); s2.id = "aj-323";
     s2.append(mk("h3", "sub", "Conversación"));
-    const sm = mk("select", "inp"); sm.id = "aj-modoconv"; [["auto", "En tiempo real cuando se pueda (Gemini en vivo) · recomendado"], ["vivo", "Siempre en tiempo real"], ["normal", "Normal (pregunta y respuesta)"]].forEach(([k, t]) => sm.append(new Option(t, k)));
-    sm.value = D.ajustes.modoConv || "auto"; sm.addEventListener("change", () => { D.ajustes.modoConv = sm.value; D.ajustes.vivoFallaT = 0; save(); }); s2.append(sm);
-    s2.append(mk("p", "hint", "En tiempo real hablas como en una llamada: Jarvis contesta al instante, lo interrumpes cuando quieras, hace las órdenes de la app y busca en Google lo actual. Cuelga solo tras 45 s de silencio. Sin internet o sin clave de Gemini, usa la forma normal."));
+    s2.append(mk("p", "hint", "El orbe es el asistente: tócalo, pide y Jarvis responde. Para hablar como en una llamada (en tiempo real, lo interrumpes cuando quieras), toca el botón ((o)) junto a enviar o di «hablemos en vivo»."));
     const chk = (label, val, fn) => { const l2 = mk("label", "lbl check"), i2 = mk("input"); i2.type = "checkbox"; i2.checked = val; i2.addEventListener("change", () => fn(i2.checked)); l2.append(i2, document.createTextNode(" " + label)); s2.append(l2); };
     chk("Buscar en Google cuando la pregunta es de actualidad (noticias, resultados, precios)", D.ajustes.buscarAuto !== false, (v) => { D.ajustes.buscarAuto = v; save(); });
     chk("Esperar más cuando hago pausas al hablar (más lento para responder)", !!D.ajustes.pausaLarga, (v) => { D.ajustes.pausaLarga = v; save(); });

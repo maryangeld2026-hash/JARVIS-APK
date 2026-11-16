@@ -61,26 +61,21 @@ def main():
         pg.reload(); pg.wait_for_timeout(1800)
         say = lambda t, w=1500: (pg.fill("#in-texto", t), pg.press("#in-texto", "Enter"), pg.wait_for_timeout(w))
         last = lambda: pg.evaluate("LASTJ()")
-        # 1) el orbe abre la conversación en tiempo real
-        pg.click("#btn-mic"); pg.wait_for_timeout(3500)
+        # 1) el botón ((o)) abre la conversación en tiempo real
+        pg.click("#btn-live"); pg.wait_for_timeout(3500)
         st = live["setup"] or {}
         tools = json.dumps(st.get("tools", []))
-        check(pg.is_visible("#live-sh") and live["n"] == 1, "tocar el orbe abre la conversación en tiempo real")
+        check(pg.is_visible("#live-sh") and live["n"] == 1, "el botón ((o)) abre la conversación en tiempo real")
         check('"googleSearch"' in tools and "jarvis_orden" in tools, "en vivo: busca en Google lo actual y hace las órdenes de la app")
         check("busca en Google" in json.dumps(st.get("systemInstruction", {}), ensure_ascii=False), "en vivo: la instrucción le pide buscar lo actual")
         # cuelga por silencio
         pg.evaluate("window.JX._live.estado().ultimo = Date.now() - 60000"); pg.wait_for_timeout(5600)
         check(not pg.is_visible("#live-sh"), "cuelga solo tras el silencio (ahorra batería)")
-        # 2) si no hay modelo en vivo, sigue con la escucha normal sin errores
-        CONF["bidi"] = False; pg.evaluate("delete JD.load().ajustes.liveModelo; JD.load().ajustes.vivoFallaT = 0")
+        # 2) el orbe es el asistente: escucha de la forma normal, nunca abre la conversación en vivo
+        n0 = live["n"]
         pg.evaluate("window.__heard.push('qué es la fotosíntesis')")
-        pg.click("#btn-mic"); pg.wait_for_timeout(4000)
-        check(not pg.is_visible("#live-sh") and "fotosíntesis" in pg.inner_text("#chat") and "energía" in last(), "si la conversación en vivo no arranca, escucha de la forma normal")
-        check(pg.evaluate("JD.load().ajustes.vivoFallaT > 0"), "y por unas horas no vuelve a intentarlo (responde de una)")
-        # 3) modo normal elegido
-        pg.evaluate("JD.load().ajustes.modoConv = 'normal'; JD.load().ajustes.vivoFallaT = 0"); CONF["bidi"] = True; n0 = live["n"]
-        pg.evaluate("window.__heard.push('hola')"); pg.click("#btn-mic"); pg.wait_for_timeout(2500)
-        check(live["n"] == n0 and not pg.is_visible("#live-sh"), "modo normal: el orbe escucha sin conversación en vivo")
+        pg.click("#btn-mic"); pg.wait_for_timeout(3000)
+        check(live["n"] == n0 and not pg.is_visible("#live-sh") and "fotosíntesis" in pg.inner_text("#chat") and "energía" in last(), "el orbe es el asistente: escucha normal (sin conversación en vivo)")
         # 4) búsqueda automática de lo actual
         say("¿quién ganó el partido de anoche?", 2000)
         check('"google_search"' in ASKED[-1] and "Millonarios" in last() and "Fuentes" in last() and "eltiempo.com" in last(), "pregunta de actualidad: busca en Google y muestra las fuentes")
@@ -94,6 +89,7 @@ def main():
         vis = pg.evaluate("[...document.querySelectorAll('#ajustes details.aj-grupo')].filter(d => !d.hidden).length")
         check(len(temas) >= 8 and "ia" in temas and "voz" in temas and vis == 0, f"Ajustes: tarjetas por tema ({len(temas)}) y los grupos escondidos")
         pg.click(".aj-tema[data-tema=voz]"); pg.wait_for_timeout(300)
+        check(pg.locator(".aj-perfil-h").count() == 1 and pg.locator(".aj-rap").count() == 4 and pg.locator(".aj-est").count() == 2, "portada de Ajustes: perfil, interruptores rápidos y estado de la IA")
         prim = pg.evaluate("[...document.querySelectorAll('#ajustes details.aj-grupo')].filter(d => !d.hidden).map(d => d.querySelector('summary').textContent)")
         check(prim and prim[0] in ("Formas de llamar a Jarvis", "Conversación") and all(pg.evaluate(f"[...document.querySelectorAll('#ajustes details.aj-grupo')].filter(d => !d.hidden).every(d => d.dataset.tema === 'voz')") for _ in [0]), "Voz y conversación: primero Conversación y Formas de llamar")
         pg.fill("#aj-buscar", "batería"); pg.wait_for_timeout(200)
