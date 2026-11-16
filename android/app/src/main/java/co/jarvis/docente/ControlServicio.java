@@ -17,6 +17,37 @@ public class ControlServicio extends AccessibilityService {
 
     @Override protected void onServiceConnected() { super.onServiceConnected(); instancia = this; }
     @Override public void onAccessibilityEvent(AccessibilityEvent e) { }
+
+    // ======================================================================== 3.23: llamar a Jarvis con el botón de bajar volumen
+    // Mantener presionado bajar volumen ~0,7 s (con la pantalla encendida) abre Jarvis escuchando. Los toques cortos siguen
+    // bajando el volumen como siempre. No gasta batería: Android avisa del botón solo cuando lo presionas.
+    private final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+    private boolean largo = false, abajo = false;
+    private final Runnable lanzar = () -> {
+        largo = true;
+        try { android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE); if (v != null) v.vibrate(40); } catch (Exception ignored) { }
+        capturarY(() -> { try { startActivity(new android.content.Intent(this, MainActivity.class).putExtra("atajo", "hablar").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP | android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)); } catch (Exception ignored) { } });
+    };
+    @Override
+    protected boolean onKeyEvent(android.view.KeyEvent e) {
+        if (e.getKeyCode() != android.view.KeyEvent.KEYCODE_VOLUME_DOWN) return false;
+        if (!getSharedPreferences("jarvis_atajos", 0).getBoolean("volumen", false) || Apagado.es(this)) return false;
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+        if (pm != null && !pm.isInteractive()) return false;                    // con la pantalla apagada, el botón es solo volumen
+        if (e.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+            if (e.getRepeatCount() == 0) { largo = false; abajo = true; h.removeCallbacks(lanzar); h.postDelayed(lanzar, 700); }
+            return true;
+        }
+        if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+            h.removeCallbacks(lanzar);
+            if (abajo && !largo) {                                                 // toque corto: baja el volumen como siempre
+                try { android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE); am.adjustSuggestedStreamVolume(android.media.AudioManager.ADJUST_LOWER, android.media.AudioManager.USE_DEFAULT_STREAM_TYPE, android.media.AudioManager.FLAG_SHOW_UI); } catch (Exception ignored) { }
+            }
+            abajo = false;
+            return true;
+        }
+        return true;
+    }
     @Override public void onInterrupt() { }
     @Override public void onDestroy() { instancia = null; super.onDestroy(); }
     @Override public boolean onUnbind(android.content.Intent i) { instancia = null; return super.onUnbind(i); }

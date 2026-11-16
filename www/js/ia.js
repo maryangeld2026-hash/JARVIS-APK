@@ -107,6 +107,7 @@
   }
   async function chat(opts) {
     const p = plan(opts);
+    fuentes = [];
     for (let i = 0; i < p.length; i++) {
       const c = p[i], hay = i < p.length - 1;
       let got = false;

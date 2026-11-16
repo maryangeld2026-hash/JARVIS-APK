@@ -172,6 +172,24 @@ public class TelefonoPlugin extends Plugin {
         call.resolve(r);
     }
 
+    /** 3.23: llamar a Jarvis manteniendo presionado bajar volumen (usa el control por voz). {on} → {activo: control por voz prendido} */
+    @PluginMethod
+    public void atajoVolumen(PluginCall call) {
+        if (call.hasOption("on")) getContext().getSharedPreferences("jarvis_atajos", 0).edit().putBoolean("volumen", Boolean.TRUE.equals(call.getBoolean("on", false))).apply();
+        JSObject r = new JSObject(); r.put("activo", ControlServicio.instancia != null); r.put("on", getContext().getSharedPreferences("jarvis_atajos", 0).getBoolean("volumen", false));
+        call.resolve(r);
+    }
+
+    /** 3.23: abrir los ajustes del celular para escoger la app de asistente. */
+    @PluginMethod
+    public void ajustesAsistente(PluginCall call) {
+        String[] acciones = { "android.settings.MANAGE_DEFAULT_APPS_SETTINGS", android.provider.Settings.ACTION_VOICE_INPUT_SETTINGS, android.provider.Settings.ACTION_SETTINGS };
+        for (String a : acciones) {
+            try { Intent i = new Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); if (i.resolveActivity(getContext().getPackageManager()) != null) { getContext().startActivity(i); call.resolve(); return; } } catch (Exception ignored) { }
+        }
+        call.resolve();
+    }
+
     /** 3.18: tomar (o no) la foto de la pantalla al llamar a Jarvis. */
     @PluginMethod
     public void pantallaFoto(PluginCall call) {

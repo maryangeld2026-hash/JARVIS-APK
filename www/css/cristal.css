@@ -122,3 +122,44 @@ body.cr-clasico { --glass: rgba(3, 6, 12, .9); }
 @media (max-width: 430px) { .top .brand { letter-spacing: .14em; } .top .motor { margin-left: 2px; } .top .status { flex: 1 1 auto; text-align: right; } }
 @media (max-width: 430px) { .top { gap: 6px; padding-left: 12px; } .top .icon-btn { width: 38px; height: 38px; } .top .motor { padding: 0 7px; font-size: 9.5px; letter-spacing: .06em; } .top .status { font-size: 10px; letter-spacing: .06em; } }
 @media (max-width: 430px) { .top .brand { font-size: 13px; letter-spacing: .08em; gap: 6px; } .top .status { letter-spacing: .02em; font-size: 10px; } .top { padding-right: 8px; } }
+
+/* ================================================================= 3.23: Ajustes por temas */
+.aj-home { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 14px; }
+.aj-tema { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 108px; padding: 14px; text-align: left; border-radius: 20px;
+  background: linear-gradient(150deg, rgba(var(--a-rgb), .12), rgba(var(--v-rgb), .10) 60%, rgba(14, 22, 40, .5)); border: 1px solid var(--glass-brd); box-shadow: inset 0 1px 0 var(--glass-hi); color: var(--text); }
+.aj-tema:active { transform: scale(.97); }
+.aj-tema .aj-ic { font-size: 26px; line-height: 1; filter: drop-shadow(0 0 8px rgba(var(--a-rgb), .4)); }
+.aj-tema b { font-size: 15px; line-height: 1.2; }
+.aj-tema small { color: var(--muted); font-size: 12px; line-height: 1.3; }
+.aj-volver { display: flex; align-items: center; gap: 10px; margin: 8px 0 10px; position: sticky; top: 0; z-index: 2; }
+.aj-volver b { font-size: 16px; }
+details.aj-grupo > summary { text-transform: none; letter-spacing: 0; font-size: 15px; }
+/* formas de llamar a Jarvis */
+.formas { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.forma { padding: 10px 12px; border-radius: 14px; border: 1px solid var(--glass-brd); background: rgba(10, 16, 30, .45); }
+.forma-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.forma small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.forma .lbl.check { margin-top: 6px; }
+.bat { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.bat.b0 { color: var(--ok); background: rgba(69, 255, 168, .1); } .bat.b1 { color: var(--a2); background: rgba(255, 191, 94, .1); } .bat.b2 { color: var(--err); background: rgba(255, 93, 120, .1); }
+/* fuentes de una respuesta con búsqueda */
+.msg .fuentes { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.msg .fuentes a { color: var(--a); text-decoration: none; }
+
+/* ================================================================= 3.23: HUD de la conversación en vivo */
+.live-sh .sheet-in { background: radial-gradient(90% 55% at 50% 38%, rgba(var(--a-rgb), .16), rgba(var(--v-rgb), .10) 45%, rgba(4, 5, 13, .96) 75%); }
+.live-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 10px 16px 18px; min-height: 0; }
+.live-orb { position: relative; width: 210px; height: 210px; background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .22), rgba(var(--a-rgb), .32) 30%, rgba(var(--v-rgb), .2) 55%, transparent 70%);
+  box-shadow: 0 0 calc(30px + var(--lv) * 80px) rgba(var(--a-rgb), .55), 0 0 120px rgba(var(--v-rgb), .25); }
+.live-orb::before, .live-orb::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 2px solid rgba(var(--a-rgb), .45); border-left-color: transparent; border-bottom-color: rgba(var(--v-rgb), .6); animation: rxspin 6s linear infinite; }
+.live-orb::after { inset: -30px; border-width: 1px; border-color: rgba(var(--v-rgb), .35); border-right-color: transparent; animation-duration: 11s; animation-direction: reverse; }
+.live-orb i { width: 84px; height: 84px; background: radial-gradient(circle at 40% 35%, #fff, var(--a) 45%, var(--v)); box-shadow: 0 0 40px var(--a); transform: scale(calc(1 + var(--lv) * .35)); transition: transform .08s; }
+[data-state="speaking"] .live-orb i { background: radial-gradient(circle at 40% 35%, #fff, #8ff6ff 40%, var(--a)); }
+.live-st { font: 600 13px/1.3 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--a); text-align: center; margin: 0; }
+.live-tr { width: 100%; max-height: 34vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.live-tr .lt { margin: 0; padding: 8px 12px; border-radius: 14px; font-size: 16px; line-height: 1.4; background: rgba(14, 22, 40, .55); border: 1px solid var(--glass-brd); }
+.live-tr .lt.tu { align-self: flex-end; background: linear-gradient(135deg, rgba(var(--a-rgb), .2), rgba(var(--v-rgb), .2)); }
+.live-row { width: 100%; justify-content: center; }
+.live-row .btn.danger.big { min-width: 140px; background: rgba(255, 93, 120, .18); border-color: rgba(255, 93, 120, .55); color: #ffd3da; }
+/* lo que vas diciendo (modo normal), como subtítulo de cristal */
+.live:not(:empty) { margin: 0 auto 6px; padding: 4px 12px; max-width: 94%; border-radius: 12px; background: rgba(69, 255, 168, .08); border: 1px solid rgba(69, 255, 168, .25); }

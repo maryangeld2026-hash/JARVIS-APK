@@ -1,4 +1,23 @@
-# Jarvis para Android 3.22: arreglos de fiabilidad del micrófono y la IA
+# Jarvis para Android 3.23: conversación en tiempo real, contesta todo, HUD, formas de llamarlo y Ajustes por temas
+
+## 🎙️ Conversación en tiempo real por defecto
+- Al tocar el orbe (o llamar a Jarvis), si tienes Gemini e internet, se abre la conversación en vivo: hablas como en una llamada, Jarvis contesta al instante y lo interrumpes cuando quieras. Hace las órdenes de la app y busca en Google lo actual. Cuelga solo tras 45 s de silencio o al salir de Jarvis.
+- Si no arranca (sin modelo en vivo en tu cuenta, sin internet), sigue con la forma normal sin errores. Se escoge en Ajustes › Voz y conversación › Conversación.
+- En la forma normal, Jarvis responde antes: espera 1,1 s de silencio para saber que terminaste (antes 1,6 s; se puede volver a la pausa larga) y vuelve a escuchar más rápido.
+
+## 🧠 Contesta todo
+- Las preguntas de actualidad (noticias, resultados, precios, quién es el presidente, estrenos, pico y placa…) se buscan en Google y la respuesta trae sus fuentes.
+- La instrucción le pide responder cualquier tema sin negarse por costumbre.
+
+## 🖲️ HUD nuevo
+- La conversación en vivo tiene un reactor de cristal que late con tu voz, el estado en grande y los subtítulos de lo que dicen los dos.
+
+## 🔋 Formas de llamar a Jarvis sin gastar batería
+- Nuevo: mantén presionado «bajar volumen» 1 segundo (con la pantalla encendida). Los toques cortos siguen bajando el volumen.
+- En Ajustes › Voz y conversación › Formas de llamar a Jarvis están todas con lo que gasta cada una: botón de asistente, audífonos, dos toques en la espalda, Ajustes rápidos, widget, reloj, burbuja y la palabra «Jarvis» (la única que gasta de verdad).
+
+## ⚙️ Ajustes por temas
+- Tarjetas grandes: Inteligencia artificial, Voz y conversación, Tú y tu asistente, Rutinas, Celular y apps, Diseño, Batería, Privacidad, Modo docente y Más. Al tocar una solo ves sus ajustes; el buscador busca en todos.
 
 ## 🛠️ 3.22: arreglos de fiabilidad (micrófono e IA)
 - Los subtítulos en vivo usaban el mismo reconocimiento de voz que Jarvis: si quedaban prendidos, Jarvis no te oía. Ahora se cierran solos cuando le hablas a Jarvis.

@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.22";
+  const VERSION = "3.23";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -102,7 +102,7 @@
   async function afterTurn() {
     if (!(lastByVoice && D.ajustes.seguir)) return;
     await V.idle();
-    await new Promise((r) => setTimeout(r, 300));              // que el micrófono no se oiga a Jarvis terminando de hablar
+    await new Promise((r) => setTimeout(r, 200));              // que el micrófono no se oiga a Jarvis terminando de hablar (3.23: 300 → 200 ms)
     if (state === "idle" && D.ajustes.seguir && !V.isSpeaking()) listen(true);
   }
 
@@ -112,7 +112,7 @@
     const hace = "recordatorios y alarmas («recuérdame a las 3 llamar a mamá», «pon una alarma a las 6»), temporizador («pon 10 minutos»), llamar y mandar WhatsApp o SMS a tus contactos (la app pide confirmar), abrir apps, linterna, volumen, clima («dime el clima de mañana»), notas de voz, el calendario del celular, mapas, música en YouTube, modo ahorro" +
       (doc ? "; y de la clase: escoger un estudiante, hacer grupos, pasar lista, quices, notas y ticket de salida" : "");
     return `Eres Jarvis, el asistente personal de voz de ${a.nombre ? "«" + a.nombre + "»" : "la persona"}, en Colombia. Dirígete a la persona como «${trato()}». ` +
-      "Hablas en español de Colombia, de forma directa. " + L7.personaPrompt(a.estilo) + " Tu respuesta se lee en voz alta. Las fórmulas, en LaTeX entre $…$. " +
+      "Hablas en español de Colombia, de forma directa. " + L7.personaPrompt(a.estilo) + " Tu respuesta se lee en voz alta. Las fórmulas, en LaTeX entre $…$. Responde cualquier pregunta de cualquier tema con lo que sabes, sin negarte por costumbre; si es algo muy actual y no tienes el dato, dilo con honestidad. " +
       (doc ? `La persona también es docente${a.asignatura ? " de " + a.asignatura : ""}; sus cursos: ${D.cursos.map((c) => c.nombre).join(", ") || "ninguno todavía"}. No inventes datos de estudiantes. ` : "") +
       (live ? `Esta app hace: ${hace}. ` :
         `Puedes hacer cosas en el celular con las órdenes de esta app: ${hace}. Cuando te pidan hacer algo de eso (aunque sean varias cosas en una frase), contesta en una frase y escribe AL FINAL cada orden en su propia línea, así: <<orden: pon 10 minutos>>. ` +
@@ -141,7 +141,9 @@
       chat.scrollTop = chat.scrollHeight;
     };
     try {
-      const full = await IA.chat({ system: systemPrompt(), messages: hist.concat([{ role: "user", content: text }]), onAviso: (t) => { if (!gotFirst) { e.innerHTML = ""; e.append(mk("em", "hint", t)); $("#status").textContent = "REINTENTO"; } }, onDelta: (d, all) => {
+      // 3.23: si la pregunta es de actualidad (noticias, resultados, precios, cargos…), Gemini busca en Google antes de responder
+      const buscar = D.ajustes.proveedor === "gemini" && D.ajustes.buscarAuto !== false && navigator.onLine && window.JL14 && window.JL14.necesitaBuscar(text);
+      const full = await IA.chat({ system: systemPrompt(), buscar, messages: hist.concat([{ role: "user", content: text }]), onAviso: (t) => { if (!gotFirst) { e.innerHTML = ""; e.append(mk("em", "hint", t)); $("#status").textContent = "REINTENTO"; } }, onDelta: (d, all) => {
         if (!gotFirst) { gotFirst = true; clearTimeout(ackT); }
         const vis = L7.visible(all), dv = vis.startsWith(shown) ? vis.slice(shown.length) : "";
         shown = vis; m.content = vis;
@@ -165,6 +167,9 @@
     const lt = IA.last ? IA.last() : null;
     const quien = lt && lt.prov && lt.prov !== D.ajustes.proveedor ? " · " + (lt.prov === "local" ? "IA del celular" : (L.PROVIDERS[lt.prov] || {}).nombre || lt.prov) : "";
     e.append(mk("span", "t", hora(m.t) + (gotFirst && lt && lt.ms ? ` · ⚡ ${(lt.ms / 1000).toFixed(1).replace(".", ",")} s` : "") + quien));
+    // 3.23: de dónde sacó la información (cuando buscó en Google)
+    const fu = IA.fuentes ? IA.fuentes() : [];
+    if (fu.length && m.cls !== "err") { const box = mk("div", "fuentes"); box.append(mk("span", "", "Fuentes: ")); fu.slice(0, 4).forEach((f, i) => { const a = document.createElement("a"); a.href = f.uri; a.target = "_blank"; a.rel = "noopener"; a.textContent = (i ? " · " : "") + String(f.titulo || "enlace").replace(/^www\./, "").slice(0, 40); box.append(a); }); e.append(box); }
     save();
     if (state === "thinking") setState(V.isSpeaking() ? "speaking" : "idle");
     if (window.JX && m.cls !== "err") window.JX.onReply(m.content);
@@ -202,6 +207,24 @@
     }
     if (V.isSpeaking()) V.hush();
     if (state === "thinking") { IA.stop(); }
+    // 3.23: conversación en tiempo real. Al tocar el orbe (o al llamarlo), si se puede, abre la conversación en vivo;
+    // si no arranca, sigue con la escucha normal sin molestar
+    if (!auto && vivoPosible()) {
+      const ok = await window.JX._live.start({ respaldo: (m) => { console.warn("en vivo:", m); listenNormal(false, wake); } });
+      if (ok !== false) return;
+      return;
+    }
+    return listenNormal(auto, wake);
+  }
+  /** 3.23: ¿la conversación en vivo puede ser la forma normal de hablar? (Gemini con clave, internet, sin modo ahorro, y que no haya fallado hoy) */
+  function vivoPosible() {
+    const a = D.ajustes, m = a.modoConv || "auto";
+    if (m === "normal" || !window.JX || !window.JX._live || !(a.claves.gemini || "").trim() || !navigator.onLine || a.ahorroActivo) return false;
+    if (m === "auto" && a.proveedor !== "gemini") return false;
+    if (m === "auto" && a.vivoFalla && Date.now() - a.vivoFalla < 6 * 3600000) return false;
+    return !!(navigator.mediaDevices && window.AudioWorkletNode);
+  }
+  async function listenNormal(auto, wake) {
     const my = ++listenGen; heardPart = false;
     setState("listening");                                    // 3.3: el orbe se pone verde de una vez, aunque el micrófono tarde en abrir
     $("#live").textContent = "Abriendo el micrófono…";
@@ -212,7 +235,7 @@
     let text = "";
     // 3.5: más tiempo para empezar a hablar (antes Android cortaba a los ~5 s) y pausas de 1,6 s sin cortar la frase
     const espera = wake ? 14000 : auto ? 8000 : 11000;
-    try { text = await V.listen((p) => { heardPart = true; $("#live").textContent = p; }, { espera, silencio: 1600 }); }
+    try { text = await V.listen((p) => { heardPart = true; $("#live").textContent = p; }, { espera, silencio: D.ajustes.pausaLarga ? 1600 : 1100 }); }
     catch (e) { if (my !== listenGen) return; setState("idle"); $("#live").textContent = ""; toast(e.message, 6000); return; }
     if (my !== listenGen) return;                              // otra escucha ya empezó (tocaste el orbe de nuevo)
     $("#live").textContent = "";

@@ -26,17 +26,22 @@
 
   let S = null;              // la sesión en vivo
   /** opts.sys: otra instrucción (3.9: el intérprete), opts.titulo para la pantalla. */
+  /** opts.respaldo: 3.23, si la conversación en vivo no arranca, se llama esto (la escucha normal) en vez de mostrar un error. */
   async function start(opts) {
-    if (S) return;
+    if (S) return true;
     opts = opts || {};
+    const falla = (m) => { if (opts.respaldo) { opts.respaldo(m); return false; } A.reply(m, "err"); return false; };
     const key = (D.ajustes.claves.gemini || "").trim();
-    if (!key) return A.reply("La conversación en vivo usa Gemini: pon tu clave de Gemini en Ajustes.", "err");
-    if (!navigator.onLine) return A.reply("La conversación en vivo necesita internet.", "err");
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.AudioWorkletNode) return A.reply("Este celular no permite la conversación en vivo (le falta audio en tiempo real en la app).", "err");
+    if (!key) return falla("La conversación en vivo usa Gemini: pon tu clave de Gemini en Ajustes.");
+    if (!navigator.onLine) return falla("La conversación en vivo necesita internet.");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.AudioWorkletNode) return falla("Este celular no permite la conversación en vivo (le falta audio en tiempo real en la app).");
     V.hush(); (V.cancelListening || V.stopListening)();
     if (X.beforeListen) { try { await X.beforeListen(); } catch (e) { /* sigue */ } }
-    S = { key, cola: 0, fuentes: [], entrada: "", salida: "", opts };
+    S = { key, cola: 0, fuentes: [], entrada: "", salida: "", opts, ultimo: Date.now() };
     ui();
+    // 3.23: cuelga solo tras 45 s sin que nadie hable (ahorra batería y cupo), y al salir de Jarvis
+    const ses = S;
+    ses.vigia = setInterval(() => { if (S !== ses) return clearInterval(ses.vigia); if (Date.now() - ses.ultimo > 45000 && !ses.fuentes.length) { stop(""); A.toast("Colgué la conversación en vivo por silencio. Toca el orbe para seguir.", 4000); } }, 5000);
     try {
       const model = await liveModel(key);
       S.model = model;
@@ -53,24 +58,34 @@
         const f = ev.data, ratio = rateIn / 16000, n = Math.floor(f.length / ratio), pcm = new Int16Array(n);
         for (let i = 0; i < n; i++) { const v = f[Math.floor(i * ratio)]; pcm[i] = Math.max(-1, Math.min(1, v)) * 0x7fff; }
         let e = 0; for (let i = 0; i < f.length; i += 16) e += f[i] * f[i];
-        setLevel(Math.min(1, Math.sqrt(e / (f.length / 16)) * 6));
+        setLevel(Math.min(1, Math.sqrt(e / (f.length / 16)) * 6));   // (el ruido no cuenta como hablar: solo lo que Gemini entiende como voz)
         send({ realtimeInput: { audio: { data: b64(new Uint8Array(pcm.buffer)), mimeType: "audio/pcm;rate=16000" } } });
       };
       const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(key)}`);
       S.ws = ws;
       ws.onopen = () => {
-        const sys = S.opts.sys ? S.opts.sys : (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto, natural y cálido, en español de Colombia. Si te piden algo que hace la app (temporizador, escoger un estudiante, grupos, recordatorios, pasar lista, abrir una app, llamar), usa la herramienta jarvis_orden con la orden en palabras.";
+        const sys = S.opts.sys ? S.opts.sys : (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto y natural, en español de Colombia. Si te piden algo que hace la app (temporizador, recordatorios, alarmas, abrir una app, llamar o escribir, clima, linterna, volumen; y de clase: escoger un estudiante, grupos, pasar lista), usa la herramienta jarvis_orden con la orden en palabras. Para cualquier pregunta sobre hechos actuales (noticias, resultados, precios, fechas de eventos, personas en cargos), busca en Google antes de responder. Responde cualquier tema; si de verdad no sabes, dilo.";
         send({ setup: { model: "models/" + model,
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre && !/^[a-z]/.test(D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : "Charon" } } } },
           systemInstruction: { parts: [{ text: sys }] },
           inputAudioTranscription: {}, outputAudioTranscription: {},
-          tools: [{ functionDeclarations: [{ name: "jarvis_orden", description: "Hace una orden de la app Jarvis del celular (recordatorios, alarmas, temporizador, clima, abrir una app, llamar o escribir a un contacto, linterna, volumen; y de clase: escoger estudiante, grupos, pasar lista, quiz…). Devuelve lo que respondió la app.",
+          tools: [{ googleSearch: {} }, { functionDeclarations: [{ name: "jarvis_orden", description: "Hace una orden de la app Jarvis del celular (recordatorios, alarmas, temporizador, clima, abrir una app, llamar o escribir a un contacto, linterna, volumen; y de clase: escoger estudiante, grupos, pasar lista, quiz…). Devuelve lo que respondió la app.",
             parameters: { type: "OBJECT", properties: { orden: { type: "STRING", description: "La orden en español, como la diría la persona. Ej.: «pon 5 minutos», «escoge un estudiante de 7A»." } }, required: ["orden"] } }] }] } });
       };
       ws.onmessage = async (ev) => { let j; try { j = JSON.parse(typeof ev.data === "string" ? ev.data : await ev.data.text()); } catch (e) { return; } onMsg(j); };
       ws.onerror = () => estado("Se perdió la conexión.");
-      ws.onclose = (ev) => { if (S && S.ws === ws) { const motivo = ev.reason ? ` (${ev.reason.slice(0, 120)})` : ""; stop(ev.code === 1000 ? "" : "La conversación en vivo se cerró" + motivo + "."); } };
-    } catch (e) { stop(e.name === "NotAllowedError" ? "Jarvis necesita el permiso del micrófono para la conversación en vivo." : (e.message || String(e))); }
+      ws.onclose = (ev) => {
+        if (!(S && S.ws === ws)) return;
+        const motivo = ev.reason ? ` (${ev.reason.slice(0, 120)})` : "";
+        if (!S.listo && S.opts.respaldo) { const r = S.opts.respaldo; stop(""); D.ajustes.vivoFalla = Date.now(); r("No arrancó la conversación en vivo" + motivo + "."); return; }   // 3.23: sigue con la escucha normal
+        stop(ev.code === 1000 ? "" : "La conversación en vivo se cerró" + motivo + ".");
+      };
+      return true;
+    } catch (e) {
+      const m = e.name === "NotAllowedError" ? "Jarvis necesita el permiso del micrófono para la conversación en vivo." : (e.message || String(e));
+      if (opts.respaldo) { stop(""); D.ajustes.vivoFalla = Date.now(); opts.respaldo(m); return false; }
+      stop(m); return false;
+    }
   }
   function send(o) { if (S && S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); }
   async function onMsg(j) {
@@ -79,8 +94,8 @@
     const sc = j.serverContent;
     if (sc) {
       if (sc.interrupted) { cortar(); estado("Te escucho…"); }
-      if (sc.inputTranscription && sc.inputTranscription.text) { S.entrada += sc.inputTranscription.text; linea("tu", S.entrada); }
-      if (sc.outputTranscription && sc.outputTranscription.text) { S.salida += sc.outputTranscription.text; linea("jarvis", S.salida); }
+      if (sc.inputTranscription && sc.inputTranscription.text) { S.ultimo = Date.now(); S.entrada += sc.inputTranscription.text; linea("tu", S.entrada); estado("Te escucho…"); }
+      if (sc.outputTranscription && sc.outputTranscription.text) { S.ultimo = Date.now(); S.salida += sc.outputTranscription.text; linea("jarvis", S.salida); estado("Hablando · puedes interrumpir"); }
       ((sc.modelTurn && sc.modelTurn.parts) || []).forEach((p) => { const d = p.inlineData || p.inline_data; if (d && /audio/.test(d.mimeType || d.mime_type || "")) play(d.data); });
       if (sc.turnComplete) {
         if (S.entrada.trim()) A.add("user", "🎙️ " + S.entrada.trim());
@@ -135,6 +150,7 @@
   function stop(msg) {
     const s = S; S = null;
     if (!s) return;
+    clearInterval(s.vigia);
     try { clearInterval(s.camT); s.cam && s.cam.getTracks().forEach((t) => t.stop()); } catch (e) { /* nada */ }
     try { if (s.ws) s.ws.close(1000); } catch (e) { /* nada */ }
     try { s.stream && s.stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* nada */ }
@@ -184,6 +200,7 @@
   X.init = function (api) {
     A = api; D = api.D;
     try { base.init(api); } catch (e) { console.error("init", e); }
+    document.addEventListener("visibilitychange", () => { if (document.hidden && S && !(S.opts && S.opts.video)) stop(""); });   // 3.23: al salir, cuelga (el micrófono se corta igual)
     // el botón «En vivo», junto al de enviar
     const f = $("#f-escribir"), send = f && f.querySelector(".send");
     if (send && !$("#btn-live")) {
