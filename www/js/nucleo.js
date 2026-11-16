@@ -127,7 +127,7 @@
     const s2 = mk("div"); s2.id = "aj-323";
     s2.append(mk("h3", "sub", "Conversación"));
     const sm = mk("select", "inp"); sm.id = "aj-modoconv"; [["auto", "En tiempo real cuando se pueda (Gemini en vivo) · recomendado"], ["vivo", "Siempre en tiempo real"], ["normal", "Normal (pregunta y respuesta)"]].forEach(([k, t]) => sm.append(new Option(t, k)));
-    sm.value = D.ajustes.modoConv || "auto"; sm.addEventListener("change", () => { D.ajustes.modoConv = sm.value; D.ajustes.vivoFalla = 0; save(); }); s2.append(sm);
+    sm.value = D.ajustes.modoConv || "auto"; sm.addEventListener("change", () => { D.ajustes.modoConv = sm.value; D.ajustes.vivoFallaT = 0; save(); }); s2.append(sm);
     s2.append(mk("p", "hint", "En tiempo real hablas como en una llamada: Jarvis contesta al instante, lo interrumpes cuando quieras, hace las órdenes de la app y busca en Google lo actual. Cuelga solo tras 45 s de silencio. Sin internet o sin clave de Gemini, usa la forma normal."));
     const chk = (label, val, fn) => { const l2 = mk("label", "lbl check"), i2 = mk("input"); i2.type = "checkbox"; i2.checked = val; i2.addEventListener("change", () => fn(i2.checked)); l2.append(i2, document.createTextNode(" " + label)); s2.append(l2); };
     chk("Buscar en Google cuando la pregunta es de actualidad (noticias, resultados, precios)", D.ajustes.buscarAuto !== false, (v) => { D.ajustes.buscarAuto = v; save(); });

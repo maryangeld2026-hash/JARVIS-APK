@@ -1,4 +1,8 @@
-# Jarvis para Android 3.23: conversación en tiempo real, contesta todo, HUD, formas de llamarlo y Ajustes por temas
+# Jarvis para Android 3.23.1: la conversación en vivo ya abre
+
+## 🩹 3.23.1: la conversación en vivo ya abre
+- Faltaba declarar un permiso de audio que Android exige para usar el micrófono dentro de la app; sin él, la conversación en vivo nunca abría y Jarvis seguía en la forma normal sin decir nada. Ahora abre, y si alguna vez no puede, te dice por qué.
+- También se declaró la cámara para «te veo» (visión en vivo).
 
 ## 🎙️ Conversación en tiempo real por defecto
 - Al tocar el orbe (o llamar a Jarvis), si tienes Gemini e internet, se abre la conversación en vivo: hablas como en una llamada, Jarvis contesta al instante y lo interrumpes cuando quieras. Hace las órdenes de la app y busca en Google lo actual. Cuelga solo tras 45 s de silencio o al salir de Jarvis.

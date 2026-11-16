@@ -77,13 +77,13 @@
       ws.onclose = (ev) => {
         if (!(S && S.ws === ws)) return;
         const motivo = ev.reason ? ` (${ev.reason.slice(0, 120)})` : "";
-        if (!S.listo && S.opts.respaldo) { const r = S.opts.respaldo; stop(""); D.ajustes.vivoFalla = Date.now(); r("No arrancó la conversación en vivo" + motivo + "."); return; }   // 3.23: sigue con la escucha normal
+        if (!S.listo && S.opts.respaldo) { const r = S.opts.respaldo; stop(""); D.ajustes.vivoFallaT = Date.now(); r("No arrancó la conversación en vivo" + motivo + "."); return; }   // 3.23: sigue con la escucha normal
         stop(ev.code === 1000 ? "" : "La conversación en vivo se cerró" + motivo + ".");
       };
       return true;
     } catch (e) {
       const m = e.name === "NotAllowedError" ? "Jarvis necesita el permiso del micrófono para la conversación en vivo." : (e.message || String(e));
-      if (opts.respaldo) { stop(""); D.ajustes.vivoFalla = Date.now(); opts.respaldo(m); return false; }
+      if (opts.respaldo) { stop(""); D.ajustes.vivoFallaT = Date.now(); opts.respaldo(m); return false; }
       stop(m); return false;
     }
   }

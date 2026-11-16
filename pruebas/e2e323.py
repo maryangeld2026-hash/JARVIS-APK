@@ -72,13 +72,13 @@ def main():
         pg.evaluate("window.JX._live.estado().ultimo = Date.now() - 60000"); pg.wait_for_timeout(5600)
         check(not pg.is_visible("#live-sh"), "cuelga solo tras el silencio (ahorra batería)")
         # 2) si no hay modelo en vivo, sigue con la escucha normal sin errores
-        CONF["bidi"] = False; pg.evaluate("delete JD.load().ajustes.liveModelo; JD.load().ajustes.vivoFalla = 0")
+        CONF["bidi"] = False; pg.evaluate("delete JD.load().ajustes.liveModelo; JD.load().ajustes.vivoFallaT = 0")
         pg.evaluate("window.__heard.push('qué es la fotosíntesis')")
         pg.click("#btn-mic"); pg.wait_for_timeout(4000)
         check(not pg.is_visible("#live-sh") and "fotosíntesis" in pg.inner_text("#chat") and "energía" in last(), "si la conversación en vivo no arranca, escucha de la forma normal")
-        check(pg.evaluate("JD.load().ajustes.vivoFalla > 0"), "y por unas horas no vuelve a intentarlo (responde de una)")
+        check(pg.evaluate("JD.load().ajustes.vivoFallaT > 0"), "y por unas horas no vuelve a intentarlo (responde de una)")
         # 3) modo normal elegido
-        pg.evaluate("JD.load().ajustes.modoConv = 'normal'; JD.load().ajustes.vivoFalla = 0"); CONF["bidi"] = True; n0 = live["n"]
+        pg.evaluate("JD.load().ajustes.modoConv = 'normal'; JD.load().ajustes.vivoFallaT = 0"); CONF["bidi"] = True; n0 = live["n"]
         pg.evaluate("window.__heard.push('hola')"); pg.click("#btn-mic"); pg.wait_for_timeout(2500)
         check(live["n"] == n0 and not pg.is_visible("#live-sh"), "modo normal: el orbe escucha sin conversación en vivo")
         # 4) búsqueda automática de lo actual
