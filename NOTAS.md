@@ -1,3 +1,12 @@
+# Jarvis para Android 3.25: el escritorio en el PC por el cable USB
+
+## 🖱️ Nueva forma de conexión: PC por cable USB‑C a USB
+- Con **Nexo Escritorio 1.2**, el escritorio se ve en el **navegador del PC** (Chrome o Edge) por el cable USB normal, sin instalar nada en el PC, sin salida de video y sin depuración USB. Enciendes «Módem USB», tocas «Empezar» en Nexo y escribes en el PC la dirección y la clave de 6 cifras. También funciona por Wi‑Fi.
+- O con el programa **Nexo PC** (Windows, Mac, Linux), que va directo por el cable en el modo accesorio de Android (AOA), sin red.
+- El ratón y el teclado del PC manejan el celular: con Shizuku como un computador de verdad (rueda, atajos); sin Shizuku, con el asistente de Nexo (clic, arrastrar, mantener, rueda y escribir).
+- En la pestaña Escritorio, la tarjeta «PC por cable USB» con «Empezar», «Módem USB», «Programa Nexo PC», «Detener» y la dirección para copiar.
+- Por voz: «muestra el escritorio en el PC», «¿cuál es la dirección para el PC?», «deja de compartir con el PC».
+
 # Jarvis para Android 3.24.1: formas de conexión del escritorio y correcciones
 
 ## 🔌 3.24.1: formas de conexión en la pestaña Escritorio

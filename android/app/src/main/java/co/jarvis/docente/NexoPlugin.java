@@ -47,6 +47,10 @@ public class NexoPlugin extends Plugin {
                 r.put("dondeAbierto", i.getStringExtra("dondeAbierto"));
                 r.put("version", i.getStringExtra("version"));
                 r.put("ventanas", i.getIntExtra("ventanas", 0));
+                r.put("pcActivo", i.getBooleanExtra("pcActivo", false));
+                r.put("pcUrl", i.getStringExtra("pcUrl"));
+                r.put("pcClave", i.getStringExtra("pcClave"));
+                r.put("pcPrograma", i.getBooleanExtra("pcPrograma", false));
                 notifyListeners("resultado", r);
             }
         };
@@ -105,6 +109,7 @@ public class NexoPlugin extends Plugin {
         if (call.getString("app") != null) i.putExtra("app", call.getString("app"));
         if (call.getString("modo") != null) i.putExtra("modo", call.getString("modo"));
         if (call.getString("q") != null) i.putExtra("q", call.getString("q"));
+        if (call.getBoolean("empezar", false)) i.putExtra("empezar", true);
         try {
             if (getActivity() != null) getActivity().startActivity(i); else getContext().startActivity(i);
             call.resolve();
@@ -133,6 +138,11 @@ public class NexoPlugin extends Plugin {
             case "desarrollador":
                 l.add(new Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
                 l.add(new Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS));
+                break;
+            case "modem":
+                l.add(new Intent().setComponent(new android.content.ComponentName("com.android.settings", "com.android.settings.TetherSettings")));
+                l.add(new Intent("android.settings.TETHER_SETTINGS"));
+                l.add(new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS));
                 break;
             case "acerca":
                 l.add(new Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS));

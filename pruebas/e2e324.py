@@ -34,7 +34,10 @@ const P = {
     estado: async () => window.__nexo.instalado ? ({ instalado: true, version: '1.1', monitor: 'HDMI', monitorTam: '1920×1080' }) : ({ instalado: false, monitor: '' }),
     orden: async (o) => { log('nexo ' + o.accion + (o.app ? ' ' + o.app + ' ' + (o.modo || '-') : '') + (o.q ? ' ' + o.q : ''));
       const sm = window.__nexo.sinMonitor;
-      setTimeout(() => window.__emit('resultado', { id: o.id, ok: !sm, codigo: sm ? 'sin_monitor' : 'ok', mensaje: sm ? 'No veo ningún monitor ni TV conectado.' : '', monitor: sm ? '' : 'HDMI', abierto: !sm, dondeAbierto: 'monitor', ventanas: 2 }), 60); },
+      if (o.accion === 'pc') window.__nexo.pc = true; if (o.accion === 'pc_parar') window.__nexo.pc = false;
+      const pc = !!window.__nexo.pc;
+      setTimeout(() => window.__emit('resultado', { id: o.id, ok: !sm, codigo: sm ? 'sin_monitor' : 'ok', mensaje: sm ? 'No veo ningún monitor ni TV conectado.' : '', monitor: sm ? '' : 'HDMI', abierto: !sm, dondeAbierto: 'monitor', ventanas: 2,
+        pcActivo: pc, pcUrl: pc ? 'http://192.168.42.129:8686/?k=482913' : '', pcClave: pc ? '482913' : '', pcPrograma: false }), 60); },
     responder: async (o) => log('responder ' + o.pregunta + ' => ' + o.texto),
     abrir: async (o) => { log('ajuste ' + o.que); return { ok: true }; } }),
 };
@@ -72,7 +75,7 @@ def main():
         check("nexo abrir" in logs() and pg.evaluate("document.body.dataset.tab") == "hablar", "botón «Abrir en el monitor» → Nexo abre el escritorio")
         # formas de conexión (3.24.1)
         pg.click(".tabs button[data-tab=escritorio]"); pg.wait_for_timeout(500)
-        check(pg.locator("#v-escritorio .esc-forma").count() == 4 and pg.locator("#v-escritorio .esc-forma.on[data-forma=cable]").count() == 1, "pestaña: 4 formas de conexión, marcada la que está conectada (cable)")
+        check(pg.locator("#v-escritorio .esc-forma").count() == 5 and pg.locator("#v-escritorio .esc-forma.on[data-forma=cable]").count() == 1, "pestaña: 4 formas de conexión, marcada la que está conectada (cable)")
         check("scrcpy --new-display" in pg.inner_text("#v-escritorio") and pg.locator("#v-escritorio .esc-det").count() == 1, "comandos de scrcpy y «Preparar el celular»")
         clear(); pg.click("#v-escritorio .esc-forma[data-forma=inalambrica] button:has-text(\"Buscar pantallas\")"); pg.wait_for_timeout(600)
         check("ajuste pantallas" in logs(), "«Buscar pantallas» abre Proyectar (Miracast) " + str(logs()) + last()[:80])
@@ -82,11 +85,23 @@ def main():
         check("ajuste desarrollador" in logs(), "botón «Opciones de desarrollador»")
         pg.click(".tabs button[data-tab=hablar]"); pg.wait_for_timeout(200)
         clear(); say("¿cómo conecto el monitor?", 900)
-        check(pg.locator(".msg.jarvis >> nth=-1").locator(".esc-forma").count() == 4, "«¿cómo conecto el monitor?» → las 4 formas en la conversación")
+        check(pg.locator(".msg.jarvis >> nth=-1").locator(".esc-forma").count() == 5, "«¿cómo conecto el monitor?» → las 4 formas en la conversación")
         clear(); say("busca pantallas", 900)
         check("ajuste pantallas" in logs(), "«busca pantallas» por voz")
         say("prepara el celular para el escritorio", 900)
         check("formato libre" in last(), "«prepara el celular para el escritorio» → los pasos")
+        # PC por cable USB (Nexo 1.2)
+        clear(); say("muestra el escritorio en el PC", 900)
+        check("nexo pc" in logs(), "«muestra el escritorio en el PC» → Nexo › Escritorio en el PC " + str(logs()))
+        say("¿cuál es la dirección para el PC?", 900)
+        check("192.168.42.129:8686" in last() and "482913" in last(), "«¿cuál es la dirección para el PC?» → dirección y clave")
+        pg.click(".tabs button[data-tab=escritorio]"); pg.wait_for_timeout(500)
+        check(pg.locator("#v-escritorio .esc-forma.on[data-forma=pcusb]").count() == 1 and "192.168.42.129" in pg.inner_text("#v-escritorio .esc-forma[data-forma=pcusb]"), "pestaña: «PC por cable USB» marcada con la dirección")
+        clear(); pg.click("#v-escritorio .esc-forma[data-forma=pcusb] button:has-text(\"Módem USB\")"); pg.wait_for_timeout(300)
+        check("ajuste modem" in logs(), "botón «Módem USB»")
+        pg.click(".tabs button[data-tab=hablar]"); pg.wait_for_timeout(200)
+        clear(); say("deja de compartir con el pc", 900)
+        check("nexo pc_parar" in logs(), "«deja de compartir con el pc»")
         # 2) voz: apps acomodadas
         clear(); say("abre Chrome a la izquierda y Word a la derecha en el monitor", 2600)
         check(logs()[:2] == ["nexo app chrome izquierda", "nexo app word derecha"], "«abre Chrome a la izquierda y Word a la derecha en el monitor» " + str(logs()))

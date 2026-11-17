@@ -48,8 +48,13 @@ test("lo que sabe la IA", () => {
 });
 
 test("formas de conexión", () => {
-  assert.equal(L.FORMAS.length, 4);
-  assert.deepEqual(L.FORMAS.map((f) => f[0]), ["cable", "inalambrica", "computador", "celular"]);
+  assert.equal(L.FORMAS.length, 5);
+  assert.deepEqual(L.FORMAS.map((f) => f[0]), ["cable", "inalambrica", "pcusb", "computador", "celular"]);
+  assert.deepEqual(L.nexoIntent("muestra el escritorio en el PC"), { nx: "pc" });
+  assert.deepEqual(L.nexoIntent("conecta el celular al computador por cable USB"), { nx: "pc" });
+  assert.deepEqual(L.nexoIntent("deja de compartir con el pc"), { nx: "pc_parar" });
+  assert.deepEqual(L.nexoIntent("¿cuál es la dirección para el PC?"), { nx: "pc_dir" });
+  assert.match(L.NEXO_PC, /NexoPC\.zip$/);
   assert.deepEqual(L.nexoIntent("busca pantallas"), { nx: "pantallas" });
   assert.deepEqual(L.nexoIntent("conéctame a la TV inalámbrica"), { nx: "pantallas" });
   assert.deepEqual(L.nexoIntent("¿cómo conecto el monitor?"), { nx: "formas" });

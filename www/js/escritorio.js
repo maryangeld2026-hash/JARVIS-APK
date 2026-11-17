@@ -32,7 +32,7 @@
     return est;
   }
   function alResultado(r) {
-    Object.assign(est, { monitor: r.monitor != null ? r.monitor : est.monitor, monitorTam: r.monitorTam || est.monitorTam, abierto: !!r.abierto, dondeAbierto: r.dondeAbierto || "", ventanas: r.ventanas || 0, version: r.version || est.version, instalado: true });
+    Object.assign(est, { pcActivo: !!r.pcActivo, pcUrl: r.pcUrl || "", pcClave: r.pcClave || "", pcPrograma: !!r.pcPrograma, monitor: r.monitor != null ? r.monitor : est.monitor, monitorTam: r.monitorTam || est.monitorTam, abierto: !!r.abierto, dondeAbierto: r.dondeAbierto || "", ventanas: r.ventanas || 0, version: r.version || est.version, instalado: true });
     const f = esperando.get(r.id);
     if (f) { esperando.delete(r.id); f(r); }
     pintarTab();
@@ -63,6 +63,23 @@
     if (it.nx === "formas") return formasEnChat();
     if (it.nx === "preparar") return prepararEnChat();
     if (!native()) return R("El escritorio funciona en la app instalada (el APK), con Nexo Escritorio instalado.", "err");
+    if (it.nx === "pc" || it.nx === "pc_parar" || it.nx === "pc_dir") {
+      await refrescar();
+      if (!est.instalado) return faltaNexo();
+      if (it.nx !== "pc_dir") R(L15.describir(it));
+      let r;
+      try { r = await orden(it.nx === "pc_dir" ? "estado" : it.nx, it.nx === "pc" ? { empezar: true } : null); } catch (e) { return R(e.message || String(e), "err"); }
+      if (!r.ok && /no conoce/.test(r.mensaje || "")) return R("Tu Nexo es una versión vieja: actualízalo a la 1.2 (la que trae el escritorio en el PC por cable USB).", "err");
+      if (!r.ok) return R(r.mensaje || "Nexo no pudo hacerlo.", "err");
+      if (it.nx === "pc_dir") {
+        if (!r.pcActivo) return R("Todavía no estás compartiendo el escritorio con el PC. Dime «muestra el escritorio en el PC».");
+        const { e } = A.add("assistant", "", "tool");
+        e.innerHTML = A.md(r.pcUrl ? `🖥️ En el navegador del PC (Chrome o Edge) escribe:\n\n\`${r.pcUrl}\`\n\nClave: **${r.pcClave}**` : `Nexo está compartiendo, pero todavía no hay red con el PC: enciende «Módem USB» o conéctate a la misma Wi‑Fi. Clave: **${r.pcClave}**`);
+        const box = mk("div", "doc-acts"), b = mk("button", "chip", "📋 Copiar"); b.type = "button"; b.addEventListener("click", () => copiar(r.pcUrl || r.pcClave)); box.append(b); e.append(box);
+        A.say(`La clave es ${String(r.pcClave).split("").join(" ")}.`);
+      }
+      return;
+    }
     if (it.nx === "pantallas") {
       R(L15.describir(it));
       try { await P().abrir({ que: "pantallas" }); } catch (e) { return R((e.message || "No pude abrir «Proyectar».") + " Búscalo en Ajustes › Conexiones › Smart View, o Ajustes › Pantalla › Proyectar.", "err"); }
@@ -115,6 +132,16 @@
     if (acc === "abrir") bt("🖥️ Abrir en el monitor", () => { A.tab("hablar"); A.add("user", "🖥️ Abrir en el monitor"); hacer({ nx: "abrir" }); }, true);
     if (acc === "pantallas") bt("📡 Buscar pantallas", () => hacer({ nx: "pantallas" }), true);
     if (acc === "aqui") bt("📱 Escritorio en el celular", () => { A.tab("hablar"); A.add("user", "🖥️ Escritorio en el celular"); hacer({ nx: "aqui" }); }, true);
+    if (acc === "pcusb") {
+      if (est.pcActivo && est.pcUrl) {
+        const r = mk("div", "esc-cmd"); r.append(mk("span", "esc-ce", "En el navegador del PC"), mk("code", "", est.pcUrl));
+        const b = mk("button", "chip", "📋"); b.type = "button"; b.title = "Copiar"; b.addEventListener("click", () => copiar(est.pcUrl)); r.append(b); c.append(r);
+      }
+      bt(est.pcActivo ? "🖱️ Ver en Nexo" : "🖱️ Empezar", () => { A.tab("hablar"); A.add("user", "🖥️ Escritorio en el PC"); hacer({ nx: "pc" }); }, true);
+      bt("📶 Módem USB", () => abrirAjuste("modem"));
+      bt("⬇️ Programa Nexo PC", () => abrirUrl(L15.NEXO_PC));
+      if (est.pcActivo) bt("⏹ Detener", () => { A.tab("hablar"); A.add("user", "🖥️ Detener el escritorio en el PC"); hacer({ nx: "pc_parar" }); });
+    }
     if (acc === "comandos") {
       const cmd = (etq, t) => { const r = mk("div", "esc-cmd"); r.append(mk("span", "esc-ce", etq), mk("code", "", t)); const b = mk("button", "chip", "📋"); b.type = "button"; b.title = "Copiar"; b.addEventListener("click", () => copiar(t)); r.append(b); c.append(r); };
       cmd("Con cable", L15.SCRCPY.cable);
@@ -127,13 +154,13 @@
     return c;
   }
   function formasEnChat() {
-    const act = L15.tipoConexion(est.monitor);
+    const act = est.pcActivo ? "pcusb" : L15.tipoConexion(est.monitor);
     const { e } = A.add("assistant", "", "tool");
     e.innerHTML = A.md("**Formas de conectar el escritorio** (Nexo Escritorio)" + (est.monitor ? ` · ahora: ${est.monitor}` : ""));
     L15.FORMAS.forEach((f) => e.append(tarjetaForma(f, f[0] === act)));
     if (!est.instalado && native()) { const b = mk("button", "chip on", "⬇️ Descargar Nexo Escritorio"); b.type = "button"; b.addEventListener("click", () => abrirUrl(L15.DESCARGA)); const d = mk("div", "doc-acts"); d.append(b); e.append(d); }
     $("#chat").scrollTop = $("#chat").scrollHeight;
-    A.say("Hay cuatro formas: con cable USB-C a HDMI, inalámbrica por Miracast, desde el computador con scrcpy, o en este mismo celular. Te dejo cada una con su botón.");
+    A.say("Hay cinco formas: con cable USB-C a HDMI, inalámbrica por Miracast, al PC por el cable USB en el navegador, desde el computador con scrcpy, o en este mismo celular. Te dejo cada una con su botón.");
   }
   /** Los pasos de una sola vez (opciones de desarrollador) con sus botones. */
   function bloquePreparar() {
@@ -183,7 +210,7 @@
 
   // ======================================================================== LA PESTAÑA
   let firma = "";
-  const firmaDe = () => [native(), est.instalado, est.monitor, est.monitorTam, est.abierto, est.dondeAbierto].join("|");
+  const firmaDe = () => [native(), est.instalado, est.monitor, est.monitorTam, est.abierto, est.dondeAbierto, est.pcActivo, est.pcUrl].join("|");
   /** Vuelve a dibujar la pestaña solo si cambió algo (así no se borra lo que estás escribiendo ni se pierde un toque). */
   function pintarTab() {
     const v = $("#v-escritorio"); if (!v || v.hidden) return;
@@ -208,7 +235,7 @@
     w.append(h);
     const formas = () => {
       w.append(mk("h3", "sub", "Formas de conexión"));
-      const act = L15.tipoConexion(est.monitor);
+      const act = est.pcActivo ? "pcusb" : L15.tipoConexion(est.monitor);
       const fl = mk("div", "esc-formas");
       L15.FORMAS.forEach((f) => fl.append(tarjetaForma(f, f[0] === act)));
       w.append(fl);

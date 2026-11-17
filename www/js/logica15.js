@@ -43,6 +43,10 @@
     // conectar: buscar pantallas inalámbricas o las formas de conexión
     if (/^(?:busca(?:r)?|buscame)\s+(?:las\s+)?(?:pantallas|televisores|teles|tvs?)(?:\s+(?:inalambricas|cercanas))?$|^(?:conecta(?:me)?|proyecta(?:me)?|duplica(?:me)?)\s+(?:a\s+)?(?:la\s+|el\s+)?(?:tele|tv|televisor|smart tv)(?:\s+(?:inalambrica|por wi ?fi|sin cable))?$|^(?:conexion|pantalla) inalambrica$|^miracast$/.test(t)) return { nx: "pantallas" };
     if (/^(?:como (?:conecto|conectar|se conecta)|formas de (?:conexion|conectar)|como (?:pongo|abro) el escritorio en)\b.*(?:monitor|tv|tele|televisor|escritorio|nexo|pantalla|computador)?/.test(t) && /monitor|tv|tele|televisor|escritorio|nexo|pantalla|computador|conexion/.test(t)) return { nx: "formas" };
+    // el escritorio en el PC por el cable USB (navegador o programa Nexo PC)
+    if (/^(?:deja de compartir|para de compartir|deten|detener|quita|cierra|apaga)\s+(?:el\s+)?(?:escritorio\s+)?(?:en|con|del)\s+(?:el\s+)?(?:pc|computador|portatil)$/.test(t)) return { nx: "pc_parar" };
+    if (/^(?:cual es |dame |dime )?(?:la\s+)?(?:direccion|clave|url|link|enlace)\s+(?:para|del)\s+(?:el\s+)?(?:pc|computador|navegador|portatil)$/.test(t)) return { nx: "pc_dir" };
+    if (/^(?:muestra(?:me)?|pon(?:me)?|pasa(?:me)?|lleva|abre|comparte|conecta)\s+(?:el\s+)?(?:escritorio|nexo|celular|telefono)\s+(?:en|al|con)\s+(?:el\s+)?(?:pc|computador|portatil)(?:\s+(?:por|con)\s+(?:el\s+)?(?:cable|usb)(?:\s+usb)?)?$|^escritorio en el (?:pc|computador|portatil)$/.test(t)) return { nx: "pc" };
     if (/^(?:prepara(?:r)?|configura(?:r)?)\s+(?:el\s+)?(?:celular|telefono)\s+(?:para|con)\s+(?:el\s+)?(?:escritorio|nexo)$/.test(t)) return { nx: "preparar" };
     // cerrar
     if (new RegExp(`^(?:cierra|cerrar|sal(?:ir)?(?: del)?|apaga|quita|termina)\\s+(?:del\\s+)?${esc}$`).test(t)) return { nx: "cerrar" };
@@ -86,6 +90,8 @@
       "Conecta el adaptador o el hub USB‑C a HDMI al monitor o la TV. El escritorio se abre solo; si no, toca «Abrir en el monitor». Con un hub puedes cargar y conectar teclado y ratón al mismo tiempo.", "abrir"],
     ["inalambrica", "📡", "Inalámbrica (Miracast)", "Smart TV o Fire TV con «Screen mirroring/Miracast», o un PC con Windows («Proyectar a este equipo»). Chromecast solo duplica la pantalla: para él usa «En este celular». La TV y el celular en la misma red Wi‑Fi.",
       "Toca «Buscar pantallas», escoge tu TV o PC y espera a que conecte. Nexo abre el escritorio en esa pantalla. Hay un poco de retraso: para juegos rápidos es mejor el cable o el computador.", "pantallas"],
+    ["pcusb", "🖱️", "PC por cable USB (sin instalar nada)", "Cualquier celular con Nexo 1.2 y un cable USB‑C a USB normal. El PC con Chrome o Edge (Windows, Mac, Linux o Chromebook).",
+      "Conecta el cable, enciende «Módem USB» en el celular y toca «Empezar» en Nexo. En el navegador del PC escribe la dirección y la clave que muestra Nexo: ves el escritorio y lo manejas con el ratón y el teclado del PC. También funciona por Wi‑Fi. O usa el programa Nexo PC, que va directo por el cable (modo accesorio), sin red.", "pcusb"],
     ["computador", "💻", "Computador (scrcpy)", "Casi cualquier Android 10 o más nuevo, también sin salida de video. Necesitas scrcpy en el computador y la depuración USB activada.",
       "Conecta el celular al computador con el cable y ejecuta el comando de abajo. El celular crea una pantalla nueva que se ve en el computador, con sonido; Nexo la detecta y abre el escritorio ahí.", "comandos"],
     ["celular", "📱", "En este celular", "Cualquier celular.",
@@ -102,6 +108,7 @@
     "adb shell settings put global force_desktop_mode_on_external_displays 1",
     "adb reboot",
   ];
+  const NEXO_PC = "https://github.com/maryangeld2026-hash/Voltix-apk/releases/download/nexo-escritorio/NexoPC.zip";
   /** Por el nombre de la pantalla conectada: ¿cable, inalámbrica o computador? */
   function tipoConexion(nombre) {
     const n = norm(nombre);
@@ -141,7 +148,7 @@
     const e = estado || {};
     let s = " También manejas Nexo Escritorio (el celular como computador en un monitor o TV, con ventanas). Órdenes: «abre el escritorio», «escritorio en el celular», " +
       "«abre Chrome a la izquierda en el monitor», «abre Word a la derecha en el monitor», «abre YouTube a pantalla completa en el monitor», «abre Spotify en ventana en el monitor», " +
-      "«busca pantallas» (conectar la TV sin cable), «¿cómo conecto el monitor?», «busca … en el monitor», «muestra el escritorio», «abre el menú de inicio», «abre el centro de control», «abre el touchpad», «cierra el escritorio». " +
+      "«busca pantallas» (conectar la TV sin cable), «muestra el escritorio en el PC» (por el cable USB, en el navegador del PC), «¿cómo conecto el monitor?», «busca … en el monitor», «muestra el escritorio», «abre el menú de inicio», «abre el centro de control», «abre el touchpad», «cierra el escritorio». " +
       "Para organizar el escritorio escribe una orden por app (<<orden: abre chrome a la izquierda en el monitor>>).";
     if (e.monitor) s += ` Hay un monitor conectado (${e.monitor}).`;
     if (e.abierto) s += ` El escritorio está abierto${e.dondeAbierto === "celular" ? " en el celular" : " en el monitor"}.`;
@@ -164,6 +171,9 @@
       case "pantallas": return "Abro «Proyectar»: escoge tu TV o tu PC y Nexo abre el escritorio ahí.";
       case "formas": return "Estas son las formas de conectar el escritorio:";
       case "preparar": return "Para preparar el celular (una sola vez):";
+      case "pc": return "Abro «Escritorio en el PC» en Nexo: acepta compartir la pantalla y escribe en el navegador del PC la dirección que aparece.";
+      case "pc_parar": return "Dejo de compartir el escritorio con el PC.";
+      case "pc_dir": return "Miro la dirección…";
       case "buscar": return `Busco «${it.q}» en el monitor.`;
       case "app": return `Abro ${it.app} ${NOMBRE_MODO[it.modo || ""] || ""} en el monitor.`.replace(/\s+/g, " ").replace(" .", ".");
       case "apps": return "Organizo el escritorio: " + it.lista.map((x) => `${x.app}${x.modo ? " " + NOMBRE_MODO[x.modo] : ""}`).join(", ") + ".";
@@ -171,7 +181,7 @@
     return "";
   }
 
-  const API = { norm, PAQUETE, DESCARGA, FORMAS, SCRCPY, ADB_PREPARAR, tipoConexion, MODOS, NOMBRE_MODO, modoDe, nexoIntent, parseEscena, escenasDe, escenaIntent, prompt, describir };
+  const API = { norm, PAQUETE, DESCARGA, NEXO_PC, FORMAS, SCRCPY, ADB_PREPARAR, tipoConexion, MODOS, NOMBRE_MODO, modoDe, nexoIntent, parseEscena, escenasDe, escenaIntent, prompt, describir };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   else root.JL15 = API;
 })(typeof window !== "undefined" ? window : globalThis);
