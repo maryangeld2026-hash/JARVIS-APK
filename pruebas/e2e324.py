@@ -35,7 +35,8 @@ const P = {
     orden: async (o) => { log('nexo ' + o.accion + (o.app ? ' ' + o.app + ' ' + (o.modo || '-') : '') + (o.q ? ' ' + o.q : ''));
       const sm = window.__nexo.sinMonitor;
       setTimeout(() => window.__emit('resultado', { id: o.id, ok: !sm, codigo: sm ? 'sin_monitor' : 'ok', mensaje: sm ? 'No veo ningún monitor ni TV conectado.' : '', monitor: sm ? '' : 'HDMI', abierto: !sm, dondeAbierto: 'monitor', ventanas: 2 }), 60); },
-    responder: async (o) => log('responder ' + o.pregunta + ' => ' + o.texto) }),
+    responder: async (o) => log('responder ' + o.pregunta + ' => ' + o.texto),
+    abrir: async (o) => { log('ajuste ' + o.que); return { ok: true }; } }),
 };
 window.Capacitor = { isNativePlatform: () => true, Plugins: new Proxy({}, { get: (t, n) => P[n] || (n === 'SpeechRecognition' || n === 'Escaner' || n === 'Calendario' || n === 'Oido' || n === 'IALocal' ? undefined : generic) }) };
 """
@@ -69,6 +70,23 @@ def main():
         check(pg.locator(".esc-pt.on").count() == 1, "punto verde: Nexo instalado y monitor conectado")
         pg.click(".esc-b >> text=Abrir en el monitor"); pg.wait_for_timeout(600)
         check("nexo abrir" in logs() and pg.evaluate("document.body.dataset.tab") == "hablar", "botón «Abrir en el monitor» → Nexo abre el escritorio")
+        # formas de conexión (3.24.1)
+        pg.click(".tabs button[data-tab=escritorio]"); pg.wait_for_timeout(500)
+        check(pg.locator("#v-escritorio .esc-forma").count() == 4 and pg.locator("#v-escritorio .esc-forma.on[data-forma=cable]").count() == 1, "pestaña: 4 formas de conexión, marcada la que está conectada (cable)")
+        check("scrcpy --new-display" in pg.inner_text("#v-escritorio") and pg.locator("#v-escritorio .esc-det").count() == 1, "comandos de scrcpy y «Preparar el celular»")
+        clear(); pg.click("#v-escritorio .esc-forma[data-forma=inalambrica] button:has-text(\"Buscar pantallas\")"); pg.wait_for_timeout(600)
+        check("ajuste pantallas" in logs(), "«Buscar pantallas» abre Proyectar (Miracast) " + str(logs()) + last()[:80])
+        pg.click(".tabs button[data-tab=escritorio]"); pg.wait_for_timeout(400)
+        pg.evaluate("document.querySelector('#v-escritorio .esc-det').open = true")
+        clear(); pg.click("#v-escritorio .esc-det button:has-text(\"Opciones de desarrollador\")"); pg.wait_for_timeout(300)
+        check("ajuste desarrollador" in logs(), "botón «Opciones de desarrollador»")
+        pg.click(".tabs button[data-tab=hablar]"); pg.wait_for_timeout(200)
+        clear(); say("¿cómo conecto el monitor?", 900)
+        check(pg.locator(".msg.jarvis >> nth=-1").locator(".esc-forma").count() == 4, "«¿cómo conecto el monitor?» → las 4 formas en la conversación")
+        clear(); say("busca pantallas", 900)
+        check("ajuste pantallas" in logs(), "«busca pantallas» por voz")
+        say("prepara el celular para el escritorio", 900)
+        check("formato libre" in last(), "«prepara el celular para el escritorio» → los pasos")
         # 2) voz: apps acomodadas
         clear(); say("abre Chrome a la izquierda y Word a la derecha en el monitor", 2600)
         check(logs()[:2] == ["nexo app chrome izquierda", "nexo app word derecha"], "«abre Chrome a la izquierda y Word a la derecha en el monitor» " + str(logs()))

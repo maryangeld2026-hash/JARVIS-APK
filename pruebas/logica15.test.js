@@ -46,3 +46,19 @@ test("lo que sabe la IA", () => {
   // la orden que escribe la IA la entiende la misma lógica
   assert.deepEqual(L.nexoIntent("abre chrome a la izquierda en el monitor"), { nx: "app", app: "chrome", modo: "izquierda" });
 });
+
+test("formas de conexión", () => {
+  assert.equal(L.FORMAS.length, 4);
+  assert.deepEqual(L.FORMAS.map((f) => f[0]), ["cable", "inalambrica", "computador", "celular"]);
+  assert.deepEqual(L.nexoIntent("busca pantallas"), { nx: "pantallas" });
+  assert.deepEqual(L.nexoIntent("conéctame a la TV inalámbrica"), { nx: "pantallas" });
+  assert.deepEqual(L.nexoIntent("¿cómo conecto el monitor?"), { nx: "formas" });
+  assert.deepEqual(L.nexoIntent("¿cómo conecto el celular a la tele?"), { nx: "formas" });
+  assert.deepEqual(L.nexoIntent("prepara el celular para el escritorio"), { nx: "preparar" });
+  assert.equal(L.nexoIntent("¿cómo conecto los audífonos?"), null);
+  assert.equal(L.tipoConexion("scrcpy"), "computador");
+  assert.equal(L.tipoConexion("HDMI Screen"), "cable");
+  assert.equal(L.tipoConexion("Wireless display"), "inalambrica");
+  assert.equal(L.tipoConexion(""), "");
+  assert.match(L.SCRCPY.cable, /--new-display=.*--start-app=com\.nexo\.escritorio/);
+});

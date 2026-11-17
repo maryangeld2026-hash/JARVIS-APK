@@ -1,3 +1,18 @@
+# Jarvis para Android 3.24.1: formas de conexión del escritorio y correcciones
+
+## 🔌 3.24.1: formas de conexión en la pestaña Escritorio
+- Las cuatro formas de conectar Nexo, cada una con su botón: **cable USB‑C a HDMI**, **inalámbrica (Miracast)** con «Buscar pantallas», **computador (scrcpy)** con los comandos para copiar (por cable y por Wi‑Fi) y **en este celular**. Se marca en verde la que está conectada.
+- «Preparar el celular (una sola vez)»: los pasos de las opciones de desarrollador con botones para abrir «Acerca del teléfono», «Opciones de desarrollador» y Nexo, y los comandos adb.
+- Por voz: «¿cómo conecto el monitor?», «busca pantallas», «conecta la tele», «prepara el celular para el escritorio».
+- Sin monitor conectado, las formas de conexión salen primero.
+
+## 🩹 Correcciones
+- «Abre X en ventana / a la izquierda» sin decir «monitor» ya no se va para Nexo cuando no hay monitor ni escritorio abierto (lo hace el celular como antes). Las escenas tampoco se activan sin Nexo.
+- La pestaña Escritorio ya no se redibuja sola mientras escribes (se perdía lo escrito o un toque).
+- El clima y la rutina de la noche ya no fallan con un error raro cuando el celular no da la ubicación: dicen qué pasó, y la rutina sigue sin el clima.
+- El traductor sin internet ya no muestra «undefined» si el traductor del celular no devuelve nada.
+- Las tasas de cambio y las páginas que no responden dan un mensaje claro.
+
 # Jarvis para Android 3.24: pestaña Escritorio (Nexo Escritorio)
 
 ## 🖥️ Nexo Escritorio dentro de Jarvis, en las dos direcciones

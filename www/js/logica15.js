@@ -40,6 +40,10 @@
     if (m) return { nx: m[1] && /celular|telefono|movil/.test(m[1]) ? "aqui" : "abrir" };
     if (new RegExp(`^${esc}\\s+en\\s+(?:el\\s+)?(?:celular|telefono|movil)$`).test(t)) return { nx: "aqui" };
     if (/^(?:proyecta(?:me)?|manda|pasa)\s+(?:el\s+)?(?:celular|telefono)\s+(?:al|a la)\s+(?:monitor|tv|tele|televisor|pantalla)$/.test(t)) return { nx: "abrir" };
+    // conectar: buscar pantallas inalámbricas o las formas de conexión
+    if (/^(?:busca(?:r)?|buscame)\s+(?:las\s+)?(?:pantallas|televisores|teles|tvs?)(?:\s+(?:inalambricas|cercanas))?$|^(?:conecta(?:me)?|proyecta(?:me)?|duplica(?:me)?)\s+(?:a\s+)?(?:la\s+|el\s+)?(?:tele|tv|televisor|smart tv)(?:\s+(?:inalambrica|por wi ?fi|sin cable))?$|^(?:conexion|pantalla) inalambrica$|^miracast$/.test(t)) return { nx: "pantallas" };
+    if (/^(?:como (?:conecto|conectar|se conecta)|formas de (?:conexion|conectar)|como (?:pongo|abro) el escritorio en)\b.*(?:monitor|tv|tele|televisor|escritorio|nexo|pantalla|computador)?/.test(t) && /monitor|tv|tele|televisor|escritorio|nexo|pantalla|computador|conexion/.test(t)) return { nx: "formas" };
+    if (/^(?:prepara(?:r)?|configura(?:r)?)\s+(?:el\s+)?(?:celular|telefono)\s+(?:para|con)\s+(?:el\s+)?(?:escritorio|nexo)$/.test(t)) return { nx: "preparar" };
     // cerrar
     if (new RegExp(`^(?:cierra|cerrar|sal(?:ir)?(?: del)?|apaga|quita|termina)\\s+(?:del\\s+)?${esc}$`).test(t)) return { nx: "cerrar" };
     // mostrar el escritorio, menú de inicio, centro de control, ajustes, touchpad
@@ -75,6 +79,38 @@
     return null;
   }
 
+  // ======================================================================== FORMAS DE CONEXIÓN
+  /** [clave, ícono, título, para quién, cómo, acción] · acción: lo que hace el botón de la tarjeta */
+  const FORMAS = [
+    ["cable", "🔌", "Cable USB‑C a HDMI", "Celulares con salida de video por USB‑C (DisplayPort): por ejemplo Samsung Galaxy S, Note y Tab, Motorola Edge y otros de gama alta (en la ficha del celular dice «DisplayPort» o «salida de video»).",
+      "Conecta el adaptador o el hub USB‑C a HDMI al monitor o la TV. El escritorio se abre solo; si no, toca «Abrir en el monitor». Con un hub puedes cargar y conectar teclado y ratón al mismo tiempo.", "abrir"],
+    ["inalambrica", "📡", "Inalámbrica (Miracast)", "Smart TV o Fire TV con «Screen mirroring/Miracast», o un PC con Windows («Proyectar a este equipo»). Chromecast solo duplica la pantalla: para él usa «En este celular». La TV y el celular en la misma red Wi‑Fi.",
+      "Toca «Buscar pantallas», escoge tu TV o PC y espera a que conecte. Nexo abre el escritorio en esa pantalla. Hay un poco de retraso: para juegos rápidos es mejor el cable o el computador.", "pantallas"],
+    ["computador", "💻", "Computador (scrcpy)", "Casi cualquier Android 10 o más nuevo, también sin salida de video. Necesitas scrcpy en el computador y la depuración USB activada.",
+      "Conecta el celular al computador con el cable y ejecuta el comando de abajo. El celular crea una pantalla nueva que se ve en el computador, con sonido; Nexo la detecta y abre el escritorio ahí.", "comandos"],
+    ["celular", "📱", "En este celular", "Cualquier celular.",
+      "El escritorio en la pantalla del celular, en horizontal. Para verlo grande, duplica el celular en la TV (Proyectar/Smart View) o conecta teclado y ratón por Bluetooth.", "aqui"],
+  ];
+  const SCRCPY = {
+    cable: "scrcpy --new-display=1920x1080/160 --start-app=com.nexo.escritorio",
+    wifi1: "adb tcpip 5555",
+    wifi2: "scrcpy --tcpip=IP_DEL_CELULAR:5555 --new-display=1920x1080/160 --start-app=com.nexo.escritorio",
+  };
+  const ADB_PREPARAR = [
+    "adb shell settings put global enable_freeform_support 1",
+    "adb shell settings put global force_resizable_activities 1",
+    "adb shell settings put global force_desktop_mode_on_external_displays 1",
+    "adb reboot",
+  ];
+  /** Por el nombre de la pantalla conectada: ¿cable, inalámbrica o computador? */
+  function tipoConexion(nombre) {
+    const n = norm(nombre);
+    if (!n) return "";
+    if (/scrcpy|virtual/.test(n)) return "computador";
+    if (/wireless|wi ?fi|miracast|cast|inalambrica|mirror|smart view|proyecci|wfd/.test(n)) return "inalambrica";
+    return "cable";
+  }
+
   // ======================================================================== ESCENAS
   /** «Trabajo: Chrome izquierda, Word derecha» → {nombre, apps:[{app, modo}]} o null. */
   function parseEscena(linea) {
@@ -105,7 +141,7 @@
     const e = estado || {};
     let s = " También manejas Nexo Escritorio (el celular como computador en un monitor o TV, con ventanas). Órdenes: «abre el escritorio», «escritorio en el celular», " +
       "«abre Chrome a la izquierda en el monitor», «abre Word a la derecha en el monitor», «abre YouTube a pantalla completa en el monitor», «abre Spotify en ventana en el monitor», " +
-      "«busca … en el monitor», «muestra el escritorio», «abre el menú de inicio», «abre el centro de control», «abre el touchpad», «cierra el escritorio». " +
+      "«busca pantallas» (conectar la TV sin cable), «¿cómo conecto el monitor?», «busca … en el monitor», «muestra el escritorio», «abre el menú de inicio», «abre el centro de control», «abre el touchpad», «cierra el escritorio». " +
       "Para organizar el escritorio escribe una orden por app (<<orden: abre chrome a la izquierda en el monitor>>).";
     if (e.monitor) s += ` Hay un monitor conectado (${e.monitor}).`;
     if (e.abierto) s += ` El escritorio está abierto${e.dondeAbierto === "celular" ? " en el celular" : " en el monitor"}.`;
@@ -125,6 +161,9 @@
       case "touchpad": return "Abro el touchpad.";
       case "cerrar": return "Cierro el escritorio.";
       case "estado": return "Miro el escritorio…";
+      case "pantallas": return "Abro «Proyectar»: escoge tu TV o tu PC y Nexo abre el escritorio ahí.";
+      case "formas": return "Estas son las formas de conectar el escritorio:";
+      case "preparar": return "Para preparar el celular (una sola vez):";
       case "buscar": return `Busco «${it.q}» en el monitor.`;
       case "app": return `Abro ${it.app} ${NOMBRE_MODO[it.modo || ""] || ""} en el monitor.`.replace(/\s+/g, " ").replace(" .", ".");
       case "apps": return "Organizo el escritorio: " + it.lista.map((x) => `${x.app}${x.modo ? " " + NOMBRE_MODO[x.modo] : ""}`).join(", ") + ".";
@@ -132,7 +171,7 @@
     return "";
   }
 
-  const API = { norm, PAQUETE, DESCARGA, MODOS, NOMBRE_MODO, modoDe, nexoIntent, parseEscena, escenasDe, escenaIntent, prompt, describir };
+  const API = { norm, PAQUETE, DESCARGA, FORMAS, SCRCPY, ADB_PREPARAR, tipoConexion, MODOS, NOMBRE_MODO, modoDe, nexoIntent, parseEscena, escenasDe, escenaIntent, prompt, describir };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   else root.JL15 = API;
 })(typeof window !== "undefined" ? window : globalThis);

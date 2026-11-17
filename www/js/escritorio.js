@@ -60,7 +60,16 @@
 
   /** Hace una orden para el escritorio (de la voz, de la IA, de la pestaña o de una escena). */
   async function hacer(it, callado) {
+    if (it.nx === "formas") return formasEnChat();
+    if (it.nx === "preparar") return prepararEnChat();
     if (!native()) return R("El escritorio funciona en la app instalada (el APK), con Nexo Escritorio instalado.", "err");
+    if (it.nx === "pantallas") {
+      R(L15.describir(it));
+      try { await P().abrir({ que: "pantallas" }); } catch (e) { return R((e.message || "No pude abrir «Proyectar».") + " Búscalo en Ajustes › Conexiones › Smart View, o Ajustes › Pantalla › Proyectar.", "err"); }
+      await refrescar();
+      if (!est.instalado) A.toast("Para el escritorio en la TV instala también Nexo Escritorio (pestaña Escritorio).", 6000);
+      return;
+    }
     await refrescar();
     if (!est.instalado) return faltaNexo();
     if (it.nx === "apps" || it.nx === "escena") {
@@ -88,6 +97,70 @@
     if (!r.ok) R(r.mensaje || "Nexo no pudo hacerlo.", "err");
   }
 
+  // ======================================================================== FORMAS DE CONEXIÓN
+  const copiar = (t) => (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => A.toast("Copiado: pégalo en la terminal del computador.")).catch(() => A.toast("No pude copiar. Escríbelo a mano."));
+  async function abrirAjuste(que) {
+    const p = P(); if (!p) return A.toast("Funciona en la app instalada (el APK).");
+    try { await p.abrir({ que }); } catch (e) { A.toast(e.message || "No pude abrirlo.", 5000); }
+  }
+  /** Tarjeta de una forma de conexión (en la pestaña y en la conversación). */
+  function tarjetaForma(f, activa) {
+    const [k, ic, tit, quien, como, acc] = f;
+    const c = mk("div", "esc-forma" + (activa ? " on" : "")); c.dataset.forma = k;
+    const h = mk("div", "esc-fh"); h.append(mk("span", "esc-fi", ic), mk("b", "", tit));
+    if (activa) h.append(mk("span", "esc-tag", "Conectado"));
+    c.append(h, mk("p", "esc-fq", quien), mk("p", "esc-fc", como));
+    const acts = mk("div", "doc-acts");
+    const bt = (t, fn, on) => { const b = mk("button", "chip" + (on ? " on" : ""), t); b.type = "button"; b.addEventListener("click", fn); acts.append(b); };
+    if (acc === "abrir") bt("🖥️ Abrir en el monitor", () => { A.tab("hablar"); A.add("user", "🖥️ Abrir en el monitor"); hacer({ nx: "abrir" }); }, true);
+    if (acc === "pantallas") bt("📡 Buscar pantallas", () => hacer({ nx: "pantallas" }), true);
+    if (acc === "aqui") bt("📱 Escritorio en el celular", () => { A.tab("hablar"); A.add("user", "🖥️ Escritorio en el celular"); hacer({ nx: "aqui" }); }, true);
+    if (acc === "comandos") {
+      const cmd = (etq, t) => { const r = mk("div", "esc-cmd"); r.append(mk("span", "esc-ce", etq), mk("code", "", t)); const b = mk("button", "chip", "📋"); b.type = "button"; b.title = "Copiar"; b.addEventListener("click", () => copiar(t)); r.append(b); c.append(r); };
+      cmd("Con cable", L15.SCRCPY.cable);
+      cmd("Por Wi‑Fi (1 vez con cable)", L15.SCRCPY.wifi1);
+      cmd("Por Wi‑Fi", L15.SCRCPY.wifi2);
+      c.append(mk("p", "esc-fq", "scrcpy es gratis: github.com/Genymobile/scrcpy (Windows, Mac y Linux). La depuración USB está en Opciones de desarrollador."));
+      bt("⚙️ Opciones de desarrollador", () => abrirAjuste("desarrollador"));
+    }
+    if (acts.childNodes.length) c.append(acts);
+    return c;
+  }
+  function formasEnChat() {
+    const act = L15.tipoConexion(est.monitor);
+    const { e } = A.add("assistant", "", "tool");
+    e.innerHTML = A.md("**Formas de conectar el escritorio** (Nexo Escritorio)" + (est.monitor ? ` · ahora: ${est.monitor}` : ""));
+    L15.FORMAS.forEach((f) => e.append(tarjetaForma(f, f[0] === act)));
+    if (!est.instalado && native()) { const b = mk("button", "chip on", "⬇️ Descargar Nexo Escritorio"); b.type = "button"; b.addEventListener("click", () => abrirUrl(L15.DESCARGA)); const d = mk("div", "doc-acts"); d.append(b); e.append(d); }
+    $("#chat").scrollTop = $("#chat").scrollHeight;
+    A.say("Hay cuatro formas: con cable USB-C a HDMI, inalámbrica por Miracast, desde el computador con scrcpy, o en este mismo celular. Te dejo cada una con su botón.");
+  }
+  /** Los pasos de una sola vez (opciones de desarrollador) con sus botones. */
+  function bloquePreparar() {
+    const b = mk("div", "esc-prep");
+    const ol = mk("ol", "esc-l");
+    ["Activa las opciones de desarrollador: Ajustes › Acerca del teléfono › toca 7 veces «Número de compilación».",
+      "En Opciones de desarrollador activa «Habilitar ventanas de formato libre», «Forzar modo de escritorio» y «Forzar actividades redimensionables».",
+      "Reinicia el celular.",
+      "Abre Nexo una vez: te guía con los permisos (mostrar sobre otras apps, el asistente de Nexo y las notificaciones). Shizuku es opcional y hace las ventanas más rápidas."].forEach((t) => ol.append(mk("li", "", t)));
+    b.append(ol);
+    const acts = mk("div", "doc-acts");
+    const bt = (t, que) => { const x = mk("button", "chip", t); x.type = "button"; x.addEventListener("click", () => abrirAjuste(que)); acts.append(x); };
+    bt("ℹ️ Acerca del teléfono", "acerca"); bt("⚙️ Opciones de desarrollador", "desarrollador"); bt("🖥️ Abrir Nexo", "nexo");
+    b.append(acts);
+    const r = mk("div", "esc-cmd"); r.append(mk("span", "esc-ce", "O desde un computador, de una vez"), mk("code", "", L15.ADB_PREPARAR.join("\n")));
+    const cp = mk("button", "chip", "📋"); cp.type = "button"; cp.addEventListener("click", () => copiar(L15.ADB_PREPARAR.join("\n"))); r.append(cp);
+    b.append(r);
+    return b;
+  }
+  function prepararEnChat() {
+    const { e } = A.add("assistant", "", "tool");
+    e.innerHTML = A.md("**Preparar el celular para el escritorio** (una sola vez)");
+    e.append(bloquePreparar());
+    $("#chat").scrollTop = $("#chat").scrollHeight;
+    A.say("Activa las opciones de desarrollador, enciende las ventanas de formato libre y el modo de escritorio, y reinicia el celular. Te dejo los botones.");
+  }
+
   // ======================================================================== NEXO → JARVIS
   let aNexo = null;                                                             // la respuesta que hay que devolverle a Nexo
   async function desdeNexo(e) {
@@ -109,12 +182,17 @@
   };
 
   // ======================================================================== LA PESTAÑA
+  let firma = "";
+  const firmaDe = () => [native(), est.instalado, est.monitor, est.monitorTam, est.abierto, est.dondeAbierto].join("|");
+  /** Vuelve a dibujar la pestaña solo si cambió algo (así no se borra lo que estás escribiendo ni se pierde un toque). */
   function pintarTab() {
     const v = $("#v-escritorio"); if (!v || v.hidden) return;
-    render();
+    if (firmaDe() !== firma) render();
   }
   function render() {
     const v = $("#v-escritorio"); if (!v) return;
+    firma = firmaDe();
+    const det = v.querySelector(".esc-det"), abierto = !!(det && det.open), scroll = v.scrollTop;
     v.innerHTML = "";
     const w = mk("div", "esc");
     // cabecera con el estado
@@ -128,10 +206,20 @@
     const pt = mk("span", "esc-pt" + (est.instalado && est.monitor ? " on" : ""));
     h.append(ic, tx, pt);
     w.append(h);
+    const formas = () => {
+      w.append(mk("h3", "sub", "Formas de conexión"));
+      const act = L15.tipoConexion(est.monitor);
+      const fl = mk("div", "esc-formas");
+      L15.FORMAS.forEach((f) => fl.append(tarjetaForma(f, f[0] === act)));
+      w.append(fl);
+      const d = mk("details", "esc-det"), sm = mk("summary", "", "🛠️ Preparar el celular (una sola vez)");
+      d.append(sm, bloquePreparar()); w.append(d);
+    };
     if (native() && !est.instalado) {
       w.append(mk("p", "hint", "Nexo convierte el celular en un computador: conectas un monitor o una TV (cable USB-C a HDMI o inalámbrica) y tienes ventanas, barra de tareas, menú de inicio y touchpad. Jarvis lo maneja con la voz y tú le preguntas a Jarvis desde el escritorio."));
       const b = mk("button", "btn", "⬇️ Descargar Nexo Escritorio"); b.type = "button"; b.addEventListener("click", () => abrirUrl(L15.DESCARGA)); w.append(b);
       w.append(mk("p", "hint", "Al abrir el archivo, Android te pide permitir instalar apps de esa fuente. Después vuelve aquí."));
+      formas();
       v.append(w); return;
     }
     // botones grandes
@@ -146,6 +234,7 @@
     boton("ℹ️", "¿Cómo está?", { nx: "estado" });
     boton("⏻", "Cerrar escritorio", { nx: "cerrar" });
     w.append(g);
+    if (!est.monitor) formas();                                                  // sin monitor: primero cómo conectarlo
     // abrir una app en el monitor
     w.append(mk("h3", "sub", "Abrir una app en el monitor"));
     const f = mk("form", "esc-app"); f.autocomplete = "off";
@@ -165,6 +254,7 @@
     ta.addEventListener("change", () => { cfg().escenas = ta.value; save(); render(); });
     w.append(ta);
     w.append(mk("p", "hint", "Una escena por línea: «Nombre: app modo, app modo». Modos: izquierda, derecha, maximizada, ventana, pantalla completa."));
+    if (est.monitor) formas();
     // la IA en las dos direcciones
     w.append(mk("h3", "sub", "Jarvis y el escritorio"));
     const ul = mk("ul", "esc-l");
@@ -174,13 +264,19 @@
     i.addEventListener("change", () => { cfg().respuestas = i.checked; save(); });
     l.append(i, document.createTextNode(" Mostrar en el monitor las respuestas a lo que pregunto desde Nexo")); w.append(l);
     v.append(w);
+    const d2 = v.querySelector(".esc-det"); if (d2 && abierto) d2.open = true;
+    v.scrollTop = scroll;
   }
 
   // ======================================================================== ÓRDENES
   const base = { init: X.init, intent: X.intent, run: X.run, settings: X.settings, promptExtra: X.promptExtra };
+  const nombraEscritorio = (text) => /\b(?:monitor|escritorio|nexo|tele|tv|televisor|pantalla grande|pantalla externa)\b/.test(L15.norm(text));
   X.intent = function (text) {
-    const es = L15.escenaIntent(text, escenas()); if (es) return { t324: 1, nx: "escena", escena: es };
-    const it = L15.nexoIntent(text); if (it) return Object.assign({ t324: 1 }, it);
+    // las escenas y «abre X en ventana / a la izquierda» sin decir «monitor» solo van a Nexo si está instalado y hay monitor o escritorio abierto
+    const conEscritorio = est.instalado && (est.monitor || est.abierto);
+    const es = L15.escenaIntent(text, escenas()); if (es && (conEscritorio || nombraEscritorio(text))) return { t324: 1, nx: "escena", escena: es };
+    const it = L15.nexoIntent(text);
+    if (it && !((it.nx === "app" || it.nx === "apps") && !nombraEscritorio(text) && !conEscritorio)) return Object.assign({ t324: 1 }, it);
     return base.intent(text);
   };
   X.run = async function (it, text) {

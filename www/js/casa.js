@@ -115,7 +115,7 @@
     if (T && T.brillo && D.ajustes.nocheBrillo !== false) { try { const r = await T.brillo({ nivel: 15 }); if (r && r.ok) p.push("Bajé el brillo."); } catch (e) { /* nada */ } }
     if (!p.some((x) => /alarma/.test(x))) p.push("Si quieres alarma, dime «buenas noches, despiértame a las 6».");
     R(p.join(" "));
-    if (X._gen && X._gen.clima && navigator.onLine) { await V.idle(); X._gen.clima({ clima: true, dia: 1, ciudad: "" }); }
+    if (X._gen && X._gen.clima && navigator.onLine) { await V.idle(); try { await X._gen.clima({ clima: true, dia: 1, ciudad: "" }); } catch (e) { /* sin ubicación: la rutina de la noche no falla por el clima */ } }
   }
   async function buenosDias() { const T = plug("Telefono"); if (T && T.noMolestar) { try { await T.noMolestar({ on: false }); } catch (e) { /* nada */ } } }
 
@@ -251,7 +251,7 @@
     D.tasas = D.tasas || {};
     const c = D.tasas[base];
     if (c && Date.now() - c.t < 12 * 3600e3) return c.r;
-    const j = JSON.parse(await VD().http(`https://open.er-api.com/v6/latest/${base}`));
+    let j; try { j = JSON.parse(await VD().http(`https://open.er-api.com/v6/latest/${base}`)); } catch (e) { throw new Error("No pude consultar las tasas de cambio ahora. Revisa la conexión e inténtalo otra vez."); }
     if (j.result !== "success" || !j.rates) throw new Error("No pude consultar las tasas de cambio.");
     D.tasas[base] = { t: Date.now(), r: j.rates }; save();
     return j.rates;

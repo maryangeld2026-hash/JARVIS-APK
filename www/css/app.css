@@ -506,6 +506,24 @@ body.sin-docente .tabs button[data-tab="clase"], body.sin-docente .tabs button[d
 .esc-app .inp { margin: 0; min-width: 0; }
 .esc-esc { font-family: inherit; resize: vertical; }
 .esc-l { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.esc-formas { display: flex; flex-direction: column; gap: 8px; }
+.esc-forma { padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255, 255, 255, .035); display: flex; flex-direction: column; gap: 6px; }
+.msg .esc-forma { margin-top: 8px; }
+.esc-forma.on { border-color: rgba(34, 197, 94, .6); background: rgba(34, 197, 94, .07); }
+.esc-fh { display: flex; align-items: center; gap: 8px; }
+.esc-fh b { flex: 1; font-size: 14.5px; }
+.esc-fi { font-size: 20px; }
+.esc-tag { font-size: 11px; font-weight: 700; color: #22c55e; border: 1px solid rgba(34, 197, 94, .5); border-radius: 999px; padding: 2px 8px; }
+.esc-fq, .esc-fc { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+.esc-fc { color: inherit; opacity: .9; }
+.esc-forma .doc-acts { margin-top: 2px; }
+.esc-cmd { display: grid; grid-template-columns: 1fr auto; gap: 4px 6px; align-items: center; }
+.esc-ce { grid-column: 1 / -1; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.esc-cmd code { font-size: 11.5px; white-space: pre-wrap; word-break: break-all; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, .35); border: 1px solid var(--line); }
+.esc-det { border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; background: rgba(255, 255, 255, .03); }
+.esc-det summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.esc-prep { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.msg .esc-prep { margin-top: 8px; }
 @media (max-width: 340px) { .esc-grid { grid-template-columns: repeat(2, 1fr); } .esc-app { grid-template-columns: 1fr 1fr; } }
 .convbar { display: flex; gap: 6px; align-items: center; padding: 4px 12px 0; }
 .convbar .conv-n { flex: 1; text-align: left; background: none; border: 0; color: var(--muted, #9ab); font: inherit; font-size: 13px; padding: 4px 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

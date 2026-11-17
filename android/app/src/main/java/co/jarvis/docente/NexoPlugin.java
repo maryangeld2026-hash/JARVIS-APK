@@ -115,6 +115,47 @@ public class NexoPlugin extends Plugin {
         }
     }
 
+    /**
+     * abrir({que}) · «pantallas» (proyectar / Miracast), «desarrollador» (opciones de desarrollador), «acerca» (número de compilación),
+     * «nexo» (la app Nexo, que guía la preparación), «ajustes-nexo» (información de la app Nexo).
+     */
+    @PluginMethod
+    public void abrir(PluginCall call) {
+        String que = call.getString("que", "");
+        Context c = getContext();
+        java.util.List<Intent> l = new java.util.ArrayList<>();
+        switch (que == null ? "" : que) {
+            case "pantallas":
+                l.add(new Intent(android.provider.Settings.ACTION_CAST_SETTINGS));
+                l.add(new Intent("android.settings.WIFI_DISPLAY_SETTINGS"));
+                l.add(new Intent(android.provider.Settings.ACTION_DISPLAY_SETTINGS));
+                break;
+            case "desarrollador":
+                l.add(new Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
+                l.add(new Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS));
+                break;
+            case "acerca":
+                l.add(new Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS));
+                break;
+            case "nexo": {
+                Intent i = c.getPackageManager().getLaunchIntentForPackage(PKG);
+                if (i != null) l.add(i);
+                break;
+            }
+            case "ajustes-nexo":
+                l.add(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + PKG)));
+                break;
+        }
+        for (Intent i : l) {
+            try {
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (getActivity() != null) getActivity().startActivity(i); else c.startActivity(i);
+                JSObject r = new JSObject(); r.put("ok", true); call.resolve(r); return;
+            } catch (Exception ignored) { }
+        }
+        call.reject(que.equals("nexo") ? "Nexo Escritorio no está instalado." : "Tu celular no tiene esa pantalla de ajustes.");
+    }
+
     @PluginMethod
     public void responder(PluginCall call) {
         String texto = call.getString("texto", "");

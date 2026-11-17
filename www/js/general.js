@@ -100,6 +100,7 @@
     const S = plug("Lugares");
     if (!S) throw new Error("Dime de qué ciudad: «el clima en Bogotá», o escribe tu ciudad en Ajustes › Asistente.");
     const r = await S.aqui({ aprox: true });                                     // ubicación aproximada: casi no gasta batería
+    if (!r || !isFinite(+r.lat) || !isFinite(+r.lng)) throw new Error("No pude saber dónde estás (¿ubicación apagada?). Dime de qué ciudad: «el clima en Bogotá».");
     D.ajustes.climaPos = { lat: r.lat, lng: r.lng, t: Date.now(), nombre: "" }; save();
     return D.ajustes.climaPos;
   }

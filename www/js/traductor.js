@@ -62,6 +62,7 @@
     if (bajar && !celularListo) A.toast(`Bajando el paquete de ${L12.nombre(a)} para traducir sin internet (unos 30 MB, una sola vez)…`, 6000);
     try {
       const r = await T.traducir({ texto, de: de || "", a, descargar: bajar });
+      if (!r || !r.texto) throw new Error("No pude traducir eso con el traductor del celular. Inténtalo de nuevo con internet.");
       if (bajar && !celularListo) bajados(true);
       return { texto: r.texto, de: r.de, a: r.a, pron: "", nota: r.igual ? "Ya estaba en " + L12.nombre(a) + "." : "", original: texto, motor: "celular" };
     } catch (e) {

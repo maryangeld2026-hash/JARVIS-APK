@@ -34,7 +34,7 @@
   }
   async function http(url) {
     const H = plug("CapacitorHttp");
-    if (H) { const r = await H.request({ method: "GET", url, headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36", Accept: "text/html,application/xml,*/*" }, responseType: "text" }); if (r.status >= 400) throw new Error("HTTP " + r.status); return typeof r.data === "string" ? r.data : JSON.stringify(r.data); }
+    if (H) { const r = await H.request({ method: "GET", url, headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36", Accept: "text/html,application/xml,*/*" }, responseType: "text" }); if (r.status >= 400) throw new Error("HTTP " + r.status); if (r.data == null || r.data === "") throw new Error("La página no respondió nada."); return typeof r.data === "string" ? r.data : JSON.stringify(r.data); }
     const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 12000);
     try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.text(); } finally { clearTimeout(to); }
   }
