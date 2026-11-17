@@ -28,6 +28,11 @@
                 <action android:name="android.intent.action.ASSIST" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- 3.24: preguntas desde Nexo Escritorio (el menú de inicio y el botón de Jarvis de la barra) -->
+            <intent-filter>
+                <action android:name="co.jarvis.docente.PREGUNTAR" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VOICE_COMMAND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -202,6 +207,7 @@
     <!-- Android 11+: para encontrar el reconocimiento de voz y la voz del teléfono -->
     <queries>
         <package android:name="com.shazam.android" />
+        <package android:name="com.nexo.escritorio" />
         <package android:name="com.google.android.googlequicksearchbox" />
         <intent>
             <action android:name="android.speech.RecognitionService" />

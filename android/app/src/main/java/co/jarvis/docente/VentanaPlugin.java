@@ -67,9 +67,16 @@ public class VentanaPlugin extends Plugin {
             e = new JSObject(); e.put("tipo", "atajo"); e.put("atajo", "hablar");
         } else if (Intent.ACTION_SEND.equals(a) || Intent.ACTION_SEND_MULTIPLE.equals(a)) {
             e = compartido(c, i);
+        } else if ("co.jarvis.docente.PREGUNTAR".equals(a)) {                      // 3.24: desde Nexo Escritorio
+            e = new JSObject(); e.put("tipo", "nexo");
+            String t = i.getStringExtra("texto");
+            if (t != null) e.put("texto", t.length() > 2000 ? t.substring(0, 2000) : t);
+            e.put("escuchar", i.getBooleanExtra("escuchar", false));
+            e.put("origen", i.getStringExtra("origen"));
+            i.removeExtra("texto");
         }
         if (e == null) return;
-        if (Intent.ACTION_SEND.equals(a) || Intent.ACTION_SEND_MULTIPLE.equals(a) || Intent.ACTION_ASSIST.equals(a)) i.setAction(Intent.ACTION_MAIN);
+        if (Intent.ACTION_SEND.equals(a) || Intent.ACTION_SEND_MULTIPLE.equals(a) || Intent.ACTION_ASSIST.equals(a) || "co.jarvis.docente.PREGUNTAR".equals(a)) i.setAction(Intent.ACTION_MAIN);
         synchronized (cola) { cola.add(e); }
         if (instancia != null) instancia.notifyListeners("entrada", new JSObject());
     }

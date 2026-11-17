@@ -26,6 +26,7 @@
     for (const e of (r && r.lista) || []) { try { await entrada(e); } catch (er) { console.error(er); A.toast(er.message || String(er), 6000); } }
   }
   async function entrada(e) {
+    if (e.tipo === "nexo") return X._nexo ? X._nexo.desdeNexo(e) : (e.texto ? A.handle(e.texto, false) : null);   // 3.24: desde Nexo Escritorio
     if (e.tipo === "atajo") {
       A.tab("hablar");
       if (/^orden:/.test(e.atajo || "")) { const o = e.atajo.slice(6); A.add("assistant", "▶ Automático: " + o, "tool orden"); return A.dispatch ? A.dispatch(o) : A.handle(o, false); }   // 3.9: disparadores

@@ -28,7 +28,7 @@
     ["voz", "🎙️", "Voz y conversación", "Cómo suena y cómo te escucha Jarvis", /^(?:voz|la voz de jarvis|voz natural|mientras jarvis habla|manos libres|conversacion|formas de llamar|«?jarvis»? en segundo plano|jarvis en segundo plano)/],
     ["tu", "👤", "Tú y tu asistente", "Tu nombre, personalidad, memoria y datos", /^(?:tu$|asistente|como te llama|memoria|mis datos|habilidades propias)/],
     ["rutinas", "🗓️", "Rutinas y día a día", "Órdenes programadas, disparadores, salud y casa", /^(?:ordenes programadas|vida diaria|disparadores|medicamentos|resumen de la manana|casa)/],
-    ["celular", "📱", "Celular y apps", "Controlar el celular, mensajes, pantalla, reloj", /^(?:controlar el celular|mensajes|proteccion y agente|jarvis ve tu pantalla|reloj y audifonos|subtitulos|jarvis en el celular|traductor|canciones)/],
+    ["celular", "📱", "Celular y apps", "Controlar el celular, mensajes, pantalla, reloj", /^(?:controlar el celular|mensajes|proteccion y agente|jarvis ve tu pantalla|reloj y audifonos|subtitulos|jarvis en el celular|traductor|canciones|nexo escritorio)/],
     ["aspecto", "✨", "Diseño", "Cristal, letra y pantalla", /^(?:diseno|pantalla$)/],
     ["bateria", "🔋", "Batería", "Qué gasta batería y cómo ahorrar", /^(?:bateria|lo que gasta|diagnostico)/],
     ["datos", "🔒", "Privacidad y copias", "Seguridad, copias y el computador", /^(?:seguridad|copia de seguridad|tus datos|sincronizar|el jarvis del computador|google)/],
