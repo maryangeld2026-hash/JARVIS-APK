@@ -1,4 +1,11 @@
-# Jarvis para Android 3.23.2: el orbe es el asistente y Ajustes con portada
+# Jarvis para Android 3.24: pestaña Escritorio (Nexo Escritorio)
+
+## 🖥️ Nexo Escritorio dentro de Jarvis, en las dos direcciones
+- Nueva pestaña **Escritorio** (también sin modo docente). Muestra el estado del monitor y tiene botones para abrir el escritorio en el monitor o en el celular, el touchpad, mostrar el escritorio, el menú de inicio, el centro de control y cerrar.
+- Para abrir apps en el monitor, escoge cómo: en ventana, maximizada, a la izquierda, a la derecha o en pantalla completa. Las **escenas** acomodan varias apps de una vez («Trabajo: Chrome izquierda, Docs derecha»).
+- Por voz: «abre el escritorio», «abre Chrome a la izquierda y Word a la derecha en el monitor», «pon el escritorio de trabajo», «busca … en el monitor», «abre el touchpad», «¿está conectado el monitor?». La IA también puede acomodar el escritorio («organiza el escritorio para estudiar»).
+- Desde Nexo: escribe una pregunta en el menú de inicio (o toca el botón ✦ de la barra). Jarvis responde en una ventana del monitor y la respuesta queda en una tarjeta del escritorio.
+- Si Nexo no está instalado, Jarvis ofrece descargarlo. Se necesita Nexo Escritorio 1.1 o más nuevo.
 
 ## 🔁 3.23.2: el orbe vuelve a ser el asistente
 - Tocar el orbe (y llamar a Jarvis con el botón de asistente, «Jarvis», el volumen o la burbuja) abre el asistente de siempre. La conversación en vivo se abre solo con su botón ((o)) o diciendo «hablemos en vivo».
