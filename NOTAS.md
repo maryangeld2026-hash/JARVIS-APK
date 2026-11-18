@@ -1,3 +1,18 @@
+# Jarvis para Android 3.26: DeepSeek V4.1 Flash, todos los modelos de Gemini y el probador
+
+## 🧠 DeepSeek V4.1 Flash, la segunda IA en la nube
+- DeepSeek ahora usa **V4.1 Flash** (`deepseek-flash`, el nombre que siempre apunta a la Flash más nueva; `deepseek-chat` quedó obsoleto).
+- En Ajustes › Inteligencia artificial › «Segunda IA en la nube: DeepSeek»: pones la clave y tocas «Usar DeepSeek de respaldo». Si Gemini falla, se queda sin cupo o la clave no sirve, responde DeepSeek; si tampoco, la IA del celular.
+
+## 📋 Todos los modelos de tu cuenta
+- «Modelos y probador» muestra **todos** los modelos de tu cuenta que sirven para conversar (sin los de voz, imágenes ni embeddings). Tocas uno para usarlo siempre, o «Automático».
+- **Rotación:** antes Jarvis alternaba entre 4 modelos; ahora entre todos. Gemini da el cupo por modelo: si uno se queda sin cupo, Jarvis sigue con el siguiente de la lista sin que lo notes, y no vuelve a intentar ese modelo por una hora.
+
+## 🧪 El probador
+- «Probar todos» prueba cada modelo (de a 3 a la vez) y dice cuánto tarda, cuál no tiene cupo y cuál no sirve, con un resumen.
+- Por voz: «prueba los modelos», «prueba los modelos de DeepSeek», «¿qué modelos tengo?».
+- En Nexo Escritorio 1.3: botón «Probar la IA de Jarvis» en el menú de inicio (el resumen queda en la tarjeta del monitor).
+
 # Jarvis para Android 3.25: el escritorio en el PC por el cable USB
 
 ## 🖱️ Nueva forma de conexión: PC por cable USB‑C a USB

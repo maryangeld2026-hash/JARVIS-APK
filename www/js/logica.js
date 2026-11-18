@@ -240,8 +240,9 @@
       prefer: [/instant/, /^llama-[\d.]+-\d+b/, /^llama/, /gemma|qwen|mistral/], clave: "https://console.groq.com/keys", pista: "gsk_…" },
     openrouter: { nombre: "OpenRouter", tipo: "openai", modelo: "", base: "https://openrouter.ai/api/v1", nota: "muchos modelos, algunos gratis",
       prefer: [/^google\/gemini-[\d.]+-flash-lite$/, /^google\/gemini-[\d.]+-flash$/, /^openai\/gpt-[\d.]+-mini$/, /:free$/], clave: "https://openrouter.ai/keys", pista: "sk-or-…" },
-    deepseek: { nombre: "DeepSeek", tipo: "openai", modelo: "deepseek-chat", base: "https://api.deepseek.com/v1", nota: "pago por uso, barata",
-      prefer: [/^deepseek-chat$/], clave: "https://platform.deepseek.com/api_keys", pista: "sk-…" },
+    // 3.26: DeepSeek V4.1 Flash («deepseek-flash» siempre apunta a la Flash más nueva; «deepseek-chat» quedó obsoleto)
+    deepseek: { nombre: "DeepSeek V4.1 Flash", tipo: "openai", modelo: "deepseek-flash", base: "https://api.deepseek.com", nota: "barata y rápida, buena segunda opción",
+      prefer: [/^deepseek-flash$/, /^deepseek-v[\d.]+-flash$/, /^deepseek-chat$/], clave: "https://platform.deepseek.com/api_keys", pista: "sk-…" },
     mistral: { nombre: "Mistral", tipo: "openai", modelo: "mistral-small-latest", base: "https://api.mistral.ai/v1", nota: "con nivel gratuito",
       prefer: [/^mistral-small-latest$/, /^ministral-8b-latest$/, /small/], clave: "https://console.mistral.ai/api-keys", pista: "…" },
     propio: { nombre: "Servidor propio (Ollama o LM Studio en tu PC)", tipo: "openai", modelo: "", base: "", propio: true, sinClave: true, nota: "en tu wifi, sin costo",

@@ -488,6 +488,20 @@ body.ahorro *, body.ahorro *::before, body.ahorro *::after { animation: none !im
 body.sin-docente.sin-escritorio .tabs, body.sin-docente .doc-only { display: none !important; }
 /* 3.24: sin modo docente, la barra de pestañas queda con Hablar y Escritorio */
 body.sin-docente .tabs button[data-tab="clase"], body.sin-docente .tabs button[data-tab="quices"], .tabs button[hidden] { display: none !important; }
+/* 3.26: modelos y probador */
+.pm-fila { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; }
+.pm-fila .inp { margin: 0; min-width: 0; }
+.pm-lista { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; margin-top: 6px; }
+.pm-m { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, .03); }
+.pm-m.pm-auto { grid-template-columns: auto 1fr; border-color: rgba(var(--a-rgb), .35); }
+.pm-t { display: flex; flex-direction: column; min-width: 0; }
+.pm-t b { font-size: 13px; font-family: ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-auto .pm-t b { font-family: inherit; }
+.pm-t small { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-est { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.pm-est[data-e="ok"] { color: #22c55e; } .pm-est[data-e="cupo"] { color: #f59e0b; } .pm-est[data-e="clave"], .pm-est[data-e="error"], .pm-est[data-e="no"], .pm-est[data-e="lento"] { color: #f87171; }
+.pm-ds { display: flex; flex-direction: column; gap: 6px; }
+.pm-ds .doc-acts a.chip { text-decoration: none; }
 /* 3.24: pestaña Escritorio (Nexo) */
 #v-escritorio { overflow-y: auto; }
 .esc { padding: 14px 14px 24px; display: flex; flex-direction: column; gap: 10px; }

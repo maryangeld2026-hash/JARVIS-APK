@@ -32,25 +32,39 @@
   const cacheKey = (c) => (c.key || "").slice(-6) + "|" + (c.prov === "propio" ? c.base : "");
 
   /** El modelo que se usa: el que escribiste en Ajustes, o el rápido de tu cuenta (se revisa cada semana). */
+  // 3.26: los modelos que se quedaron sin cupo (Gemini da cupo por modelo): «prov:modelo» → hasta cuándo no se usa
+  const sinCupo = {};
+  const agotadosDe = (prov) => { const o = {}; Object.keys(sinCupo).forEach((k) => { if (k.startsWith(prov + ":")) o[k.slice(prov.length + 1)] = sinCupo[k]; }); return o; };
+  /** Todos los modelos de la cuenta que sirven para conversar, en el orden de la rotación (se guarda con el modelo automático). */
+  function rotacion(c) {
+    const cache = (c.a.modeloAuto || {})[c.prov] || {};
+    return [cache.m].concat(cache.alt || []).filter(Boolean);
+  }
+  /** El modelo que se usa: el que escribiste en Ajustes, o el rápido de tu cuenta (se revisa cada semana). */
   async function model(c) {
     c = c || cfg();
     if (c.prov === "local") return "local";
     if (c.modelo) return c.modelo;
+    c.a.modeloAuto = c.a.modeloAuto || {};
     const cache = c.a.modeloAuto[c.prov];
     const ok = cache && cache.k === cacheKey(c);
-    if (ok && Date.now() - cache.t < 7 * 864e5) return cache.m;
+    const libre = () => (window.JL16 && window.JL16.siguiente(rotacion(c), [], agotadosDe(c.prov))) || cache.m;
+    if (ok && Date.now() - cache.t < 7 * 864e5 && (cache.v || 0) >= 326) return libre();
     let m = c.p.modelo, alt = [];
     try {
       const r = L.modelsRequest(c.prov, c.key, c.base);
       const res = await fetchT(r.url, { headers: r.headers }, 6000);
       if (res.ok) {
-        const ids = L.modelsFrom(c.prov, await res.json());
+        const raw = await res.json();
+        const ids = L.modelsFrom(c.prov, raw);
         m = L.pickModel(c.prov, ids) || m || (c.prov === "propio" ? ids[0] : "");
-        alt = L.pickModels(c.prov, ids).filter((x) => x !== m);
-      } else if (ok) return cache.m;                                                   // no respondió bien: el que ya funcionaba
-    } catch (e) { if (ok) return cache.m; }
-    if (m) { c.a.modeloAuto[c.prov] = { m, alt, t: Date.now(), k: cacheKey(c) }; window.JD.save(); }
-    return m;
+        const L16 = window.JL16;
+        // 3.26: la rotación usa TODOS los modelos de la cuenta que conversan (no solo 4)
+        alt = (L16 ? L16.ordenar(c.prov === "gemini" ? L16.deGemini(raw) : L16.deOtros(raw), c.p.prefer) : L.pickModels(c.prov, ids)).filter((x) => x !== m);
+      } else if (ok) return libre();                                                   // no respondió bien: el que ya funcionaba
+    } catch (e) { if (ok) return libre(); }
+    if (m) { c.a.modeloAuto[c.prov] = { m, alt, t: Date.now(), k: cacheKey(c), v: 326 }; window.JD.save(); }
+    return (window.JL16 && window.JL16.siguiente([m].concat(alt), [], agotadosDe(c.prov))) || m;
   }
   let stopped = false;
   function stop() { stopped = true; if (ctrl) { ctrl.abort(); ctrl = null; } const P = native() && plug("IALocal"); if (P && P.detener) P.detener().catch(() => {}); }
@@ -120,7 +134,7 @@
         return t;
       } catch (e) {
         if (window.JDIAG) window.JDIAG.log("ia-falla", `${c.prov} · ${e.code || e.status || ""} · ${String(e.message || "").slice(0, 60)}`);
-        if (!hay || got || e.code === "abort" || !(L.retryable(e) || e.code === "sin_internet" || e.code === "sin_clave" || e.code === "sin_local" || e.status === 429 || e.status === 403)) throw e;
+        if (!hay || got || e.code === "abort" || !(L.retryable(e) || e.code === "sin_internet" || e.code === "sin_clave" || e.code === "sin_local" || e.status === 429 || e.status === 403 || e.status === 401 || e.status === 404)) throw e;
         if (nube(c)) {
           if (e.status === 429) ruta.agotado[c.prov] = Date.now() + 10 * 60000;          // se acabó el cupo: 10 minutos con otra
           else if (e.code === "red" || e.code === "lento" || e.code === "sin_internet") ruta.caida = Date.now() + 60000;   // 3.22: solo si falló la red (no por un error del servidor)
@@ -150,6 +164,7 @@
     if (opts.system && opts.system.indexOf("\u0001") >= 0) opts = Object.assign({}, opts, { system: opts.system.replace("\u0001", " ") });
     let m = await model(c);
     const tried = [];
+    let saltos = 0;
     for (let intento = 0; intento < intentos; intento++) {
       const key = c.prov + ":" + m;
       const fast = !(c.a.sinRapido || {})[key];
@@ -159,7 +174,21 @@
       catch (e) {
         // el modelo no acepta «sin pensar»: se quita ese ajuste (y se recuerda para la próxima)
         if (fast && e.status === 400 && e.rapido) { c.a.sinRapido = Object.assign(c.a.sinRapido || {}, { [key]: true }); window.JD.save(); intento--; continue; }
-        if (got || e.code === "abort" || intento === intentos - 1) throw e;
+        if (got || e.code === "abort") throw e;
+        // 3.26: sin cupo (o el modelo ya no existe): se pasa al siguiente modelo de la cuenta sin gastar un intento
+        if ((e.status === 429 || e.status === 404) && c.a.rotarModelos !== false && saltos < 12 && window.JL16) {
+          sinCupo[c.prov + ":" + m] = Date.now() + (e.status === 429 ? 60 * 60000 : 24 * 3600e3);
+          tried.push(m);
+          const otro = window.JL16.siguiente(rotacion(c), tried, agotadosDe(c.prov));
+          if (otro) {
+            saltos++;
+            if (window.JDIAG) window.JDIAG.log("ia-modelo", `${c.prov} · ${m} ${e.status === 429 ? "sin cupo" : "no disponible"} → ${otro}`);
+            if (opts.onAviso && saltos === 1) opts.onAviso(e.status === 429 ? `${m} se quedó sin cupo; sigo con ${otro}…` : `Pruebo con ${otro}…`);
+            m = otro; intento--; continue;
+          }
+          throw e;                                                                     // todos los modelos sin cupo: la siguiente IA
+        }
+        if (intento === intentos - 1) throw e;
         tried.push(m);
         if (e.status === 404 && !c.modelo) { m = await model(c); if (tried.includes(m)) throw e; }
         else if (L.retryable(e)) {
@@ -173,7 +202,7 @@
       }
     }
   }
-  async function chat1(c, { system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true, fast = true, buscar = false, modelo = "", rapidoFalla = false }) {
+  async function chat1(c, { system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true, fast = true, buscar = false, modelo = "", rapidoFalla = false, aparte = false }) {
     if (!c.key && !c.p.sinClave) { const e = new Error(`Falta la clave de ${c.p.nombre}. Ponla en Ajustes (el engranaje de arriba).`); e.code = "sin_clave"; throw e; }
     if (c.prov === "propio" && !c.base) { const e = new Error("Falta la dirección de tu servidor (Ollama o LM Studio). Ponla en Ajustes."); e.code = "sin_clave"; throw e; }
     if (!navigator.onLine && c.prov !== "propio") { const e = new Error("No hay internet. Las órdenes de la app siguen funcionando; para la IA sin internet, descarga la IA del celular en Ajustes."); e.code = "sin_internet"; throw e; }
@@ -181,13 +210,13 @@
     if (!m) { const e = new Error(`No encontré un modelo en ${c.p.nombre}. Escríbelo en Ajustes › Modelo.`); e.code = "sin_clave"; throw e; }
     const req = L.chatRequest(c.prov, { key: c.key, model: m, system, messages, stream, json, maxTokens, temperature, fast, base: c.base });
     if (buscar && c.prov === "gemini") req.body.tools = [{ google_search: {} }];     // 3.0: «investiga…» con la Búsqueda de Google
-    fuentes = [];
+    if (!aparte) fuentes = [];
     const t0 = performance.now();
     warmAt = Date.now();
-    if (ctrl) ctrl.abort();
-    stopped = false;
-    ctrl = new AbortController();
-    const my = ctrl;
+    // 3.26: el probador hace varias peticiones a la vez («aparte»): no cortan la conversación ni se cortan entre ellas
+    let my;
+    if (aparte) my = new AbortController();
+    else { if (ctrl) ctrl.abort(); stopped = false; ctrl = new AbortController(); my = ctrl; }
     // vigilante: si no llega nada a tiempo, o la respuesta se queda quieta 20 s, se corta (y se reintenta o pasa a la de respaldo)
     let wd = null;
     const watch = (ms) => { clearTimeout(wd); wd = setTimeout(() => my.abort("lento"), ms); };
@@ -228,7 +257,7 @@
             const gm = c.prov === "gemini" && ev.candidates && ev.candidates[0] && ev.candidates[0].groundingMetadata;
             if (gm && gm.groundingChunks) gm.groundingChunks.forEach((g) => { if (g.web && g.web.uri && !fuentes.some((f) => f.uri === g.web.uri)) fuentes.push({ uri: g.web.uri, titulo: g.web.title || g.web.uri }); });
             const d = L.deltaText(c.prov, ev);
-            if (d) { if (!full) last = { ms: Math.round(performance.now() - t0), modelo: m, prov: c.prov }; full += d; if (onDelta) onDelta(d, full); }
+            if (d) { if (!full && !aparte) last = { ms: Math.round(performance.now() - t0), modelo: m, prov: c.prov }; full += d; if (onDelta) onDelta(d, full); }
           });
         }
         const tail = L.parseSSE(buf + "\n\n");
@@ -236,7 +265,7 @@
       } else {
         const j = await res.json();
         full = stream ? L.deltaText(c.prov, j) : L.fullText(c.prov, j);
-        last = { ms: Math.round(performance.now() - t0), modelo: m, prov: c.prov };
+        if (!aparte) last = { ms: Math.round(performance.now() - t0), modelo: m, prov: c.prov };
         if (onDelta && full) onDelta(full, full);
       }
     } catch (e) {
@@ -339,11 +368,43 @@
     const t = await chat(Object.assign({ json: true, stream: false, temperature: 0.4, maxTokens: 6000 }, opts));
     return L.extractJSON(t);
   }
+  /** 3.26: el probador. Un modelo exacto de un proveedor → {ok, ms, texto} o {ok: false, error}. */
+  async function probarModelo(prov, modelo) {
+    const c = cfgFor(prov, false);
+    c.modelo = modelo;
+    const t0 = performance.now();
+    try {
+      const t = await chat1(c, { system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: 30, modelo, fast: true, aparte: true });
+      const ms = Math.round(performance.now() - t0);
+      delete sinCupo[prov + ":" + modelo];
+      return { ok: true, ms, texto: String(t || "").trim() };
+    } catch (e) {
+      if (e.status === 400 && e.rapido) {                                              // no acepta «sin pensar»: se prueba sin ese ajuste
+        try { const t = await chat1(c, { system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: 30, modelo, fast: false, aparte: true }); return { ok: true, ms: Math.round(performance.now() - t0), texto: String(t || "").trim() }; } catch (e2) { e = e2; }
+      }
+      if (e.status === 429) sinCupo[prov + ":" + modelo] = Date.now() + 60 * 60000;
+      return { ok: false, ms: Math.round(performance.now() - t0), error: { status: e.status || 0, code: e.code || "", message: e.message || String(e) } };
+    }
+  }
+  /** Todos los modelos de la cuenta de un proveedor (para la lista y el probador). → [{id, nombre}] */
+  async function modelosCuenta(prov) {
+    const c = cfgFor(prov, false);
+    if (!c.key && !c.p.sinClave) throw Object.assign(new Error(`Falta la clave de ${c.p.nombre}.`), { code: "sin_clave" });
+    const r = L.modelsRequest(prov, c.key, c.base);
+    const res = await fetchT(r.url, { headers: r.headers, cache: "no-store" }, 10000);
+    if (!res.ok) { let j = null; try { j = await res.json(); } catch (e) { /* nada */ } throw Object.assign(new Error(L.apiError(prov, res.status, j)), { status: res.status }); }
+    const raw = await res.json();
+    const L16 = window.JL16;
+    const lista = prov === "gemini" ? L16.deGemini(raw) : L16.deOtros(raw);
+    const orden = L16.ordenar(lista, c.p.prefer);
+    const por = {}; lista.forEach((x) => (por[x.id] = x));
+    return orden.map((id) => por[id] || { id });
+  }
   async function test(prov) {
     const t0 = performance.now();
     const c = prov ? cfgFor(prov, prov === cfg().prov) : cfg();
     const t = await via(c, { system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: c.prov === "local" ? 256 : 20 }, 1);
     return { ok: true, texto: t.trim(), ms: Math.round(performance.now() - t0), modelo: await model(c) };
   }
-  window.JIA = { chat, json, test, stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor, plan: (o) => plan(o || {}).map((x) => x.prov), ruta: () => Object.assign({}, ruta) };
+  window.JIA = { chat, json, test, probarModelo, modelosCuenta, sinCupo: () => Object.assign({}, sinCupo), rotacion: (prov) => rotacion(cfgFor(prov || cfg().prov, false)), stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor, plan: (o) => plan(o || {}).map((x) => x.prov), ruta: () => Object.assign({}, ruta) };
 })();
