@@ -69,7 +69,10 @@ def main():
         say("mándale un whatsapp a Ana que ya voy", 1200)
         check("elegir" in logs(), "sin permiso de contactos: Jarvis abre la agenda para escoger a la persona")
         # 5) Mi día
-        say("mi día", 2000)
+        say("mi día", 500)
+        for _ in range(30):                                   # el resumen espera el clima y lo demás (hasta ~9 s)
+            if "Próximos pasos" in last(): break
+            pg.wait_for_timeout(500)
         check("Próximos pasos" in last() and "Mi día" in PED[-1], "«Mi día» con próximos pasos")
         # 6) Ajustes
         pg.click("#btn-ajustes"); pg.wait_for_timeout(600)
