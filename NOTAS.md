@@ -1,3 +1,9 @@
+# Jarvis para Android 3.27: Jarvis solo (sin Nexo Escritorio)
+
+- Se quitó la integración con Nexo Escritorio: la pestaña Escritorio, sus órdenes de voz, la conexión con la app Nexo y el permiso para verla. Jarvis queda como asistente independiente.
+- Sin el modo docente, la barra de pestañas vuelve a esconderse (solo queda la conversación).
+- Todo lo demás sigue igual: DeepSeek V4.1 Flash de respaldo, todos los modelos de Gemini con rotación y el probador.
+
 # Jarvis para Android 3.26: DeepSeek V4.1 Flash, todos los modelos de Gemini y el probador
 
 ## 🧠 DeepSeek V4.1 Flash, la segunda IA en la nube

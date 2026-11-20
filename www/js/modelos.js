@@ -3,7 +3,7 @@
      escoger uno o «Automático», probar uno o todos (cuánto tarda cada uno, cuáles no tienen cupo).
    · Jarvis rota entre todos los modelos de la cuenta: si uno se queda sin cupo, sigue con el siguiente.
    · DeepSeek V4.1 Flash como segunda IA en la nube (respaldo), con su clave y su prueba.
-   · Por voz (y desde Nexo): «prueba los modelos», «¿qué modelos tengo?». */
+   · Por voz: «prueba los modelos», «¿qué modelos tengo?». */
 (function () {
   "use strict";
   const X = window.JX;
@@ -135,7 +135,7 @@
     return out;
   }
 
-  // ======================================================================== POR VOZ (y desde Nexo)
+  // ======================================================================== POR VOZ
   async function enChat(it) {
     const prov = it.prov || aj().proveedor;
     if (!L.PROVIDERS[prov] || ["local", "propio"].includes(prov)) return R("El probador es para las IA de la nube (Gemini, DeepSeek, ChatGPT…). La del celular la pruebas en Ajustes › IA de respaldo.");

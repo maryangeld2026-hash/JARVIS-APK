@@ -2,7 +2,7 @@
 sin cupo), el probador (en Ajustes y por voz) y DeepSeek V4.1 Flash como segunda IA en la nube."""
 import os, sys, json, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import e2e, e2e324
+import e2e
 from playwright.sync_api import sync_playwright
 
 NOMBRES = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.5-pro", "gemini-3-flash", "gemini-3-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro",
@@ -34,6 +34,20 @@ def deepseek(route):
         return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=ev)
     return route.fulfill(json={"choices": [{"message": {"content": "listo"}}]})
 
+NATIVE = """
+window.__log = []; window.__cola = []; const lst = {}; const log = (x) => window.__log.push(x);
+const on = (n, f) => { (lst[n] = lst[n] || []).push(f); return { remove() {} }; };
+window.__emit = (n, d) => (lst[n] || []).forEach((f) => f(d));
+const anyP = (o) => new Proxy(o, { get: (t, n) => (n in t ? t[n] : n === 'then' ? undefined : async () => ({})) });
+const generic = { addListener: on, modelo: async () => ({}), estado: async () => ({}), checkPermissions: async () => ({ display: 'granted' }), requestPermissions: async () => ({}), schedule: async () => {}, cancel: async () => {}, registerActionTypes: async () => {},
+  keepAwake: async () => {}, allowSleep: async () => {}, config: async () => {}, bateriaEstado: async () => ({ nivel: 80 }), stop: async () => {}, speak: async (o) => { window.__said.push(o.text); }, getSupportedVoices: async () => ({ voices: [] }) };
+const generic2 = anyP(generic); const P = {
+  Llavero: { obtener: async () => ({ llave: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=' }) },
+  Ventana: anyP({ addListener: on, pendientes: async () => ({ lista: window.__cola.splice(0) }), abrir: async (o) => log('url ' + o.url) }),
+};
+window.Capacitor = { isNativePlatform: () => true, Plugins: new Proxy({}, { get: (t, n) => P[n] || (n === 'SpeechRecognition' || n === 'Escaner' || n === 'Calendario' || n === 'Oido' || n === 'IALocal' ? undefined : generic2) }) };
+"""
+
 def main():
     srv = e2e.serve(); base = f"http://127.0.0.1:{srv.server_address[1]}/index.html"
     fails = []
@@ -43,7 +57,7 @@ def main():
     with sync_playwright() as p:
         b = p.chromium.launch(args=["--no-sandbox"])
         ctx = b.new_context(viewport={"width": 390, "height": 840}, is_mobile=True, has_touch=True, locale="es-CO")
-        ctx.add_init_script(e2e.FAKE_VOICE); ctx.add_init_script(e2e324.NATIVE.replace("const P = {", "const generic2 = anyP(generic); const P = {").replace(": generic) })", ": generic2) })").replace("window.__nexo = { instalado: true", "window.__nexo = { instalado: false"))
+        ctx.add_init_script(e2e.FAKE_VOICE); ctx.add_init_script(NATIVE)
         ctx.route("https://generativelanguage.googleapis.com/**", gem)
         ctx.route("https://api.deepseek.com/**", deepseek)
         pg = ctx.new_page(); errs = []

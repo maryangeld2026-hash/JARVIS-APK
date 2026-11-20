@@ -40,7 +40,6 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(GrabadoraPlugin.class);
         registerPlugin(SubtitulosPlugin.class);
         registerPlugin(RelojPlugin.class);
-        registerPlugin(NexoPlugin.class);
         super.onCreate(savedInstanceState);
         Apagado.marcar(this, false);                                           // 3.16: al abrir Jarvis, vuelve a estar encendido
         // 3.0.2: con la letra del celular muy grande, la barra de arriba no cabía y el botón de Ajustes quedaba por fuera
