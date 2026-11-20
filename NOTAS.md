@@ -1,3 +1,24 @@
+# Jarvis para Android 3.28: lo nuevo de 2026
+
+## 📍 Lugares con Google Maps
+- Las preguntas de lugares («¿qué restaurantes buenos hay cerca abiertos ahora?», «¿dónde hay una farmacia cerca?», «¿a cuánto queda el aeropuerto?») se responden con Google Maps, cerca de tu ubicación aproximada. Los lugares salen como fuentes 📍 que abren Maps. Solo con Gemini; se apaga en Ajustes.
+
+## 🔎 Tareas largas en segundo plano
+- «Investiga a fondo …»: Jarvis la manda a la nube (Interactions API de Gemini, con el agente de investigación profunda si tu cuenta lo tiene) y puedes cerrar la app. Un aviso en vivo muestra que está trabajando y te llega una notificación cuando termina; el informe queda en la conversación (léelo, cópialo o guárdalo en Material). «Mis tareas» para verlas.
+- Si tu cuenta no tiene las tareas en segundo plano, Jarvis lo dice y la hace en el momento con la Búsqueda de Google.
+
+## 🔔 Avisos en vivo (Android 16+)
+- El temporizador, la grabación, la descarga de la IA del celular y las tareas largas suben a la barra de estado como un chip y se ven en la pantalla bloqueada, con colores: azul informativo, verde va bien, naranja cuidado, rojo grabando.
+
+## 🔊 Volumen propio de Jarvis (Android 17)
+- La voz de Jarvis sale como «asistente»: en Android 17 tiene su propio volumen, aparte de la música. «Sube el volumen de Jarvis», «habla más duro». En Android anteriores suena igual que antes.
+
+## 👤 Agenda privada
+- Opción para escoger el contacto cada vez que llamas o escribes: Jarvis solo recibe esa persona, no toda tu agenda. Si no le das el permiso de Contactos o no encuentra a alguien, también te deja escogerlo.
+
+## ☀️ Mi día
+- «Mi día»: agenda, recordatorios, clima, compromisos, tus correos importantes sin leer (si conectaste Gmail) y las investigaciones, ordenado por importancia y con los próximos pasos.
+
 # Jarvis para Android 3.27: Jarvis solo (sin Nexo Escritorio)
 
 - Se quitó la integración con Nexo Escritorio: la pestaña Escritorio, sus órdenes de voz, la conexión con la app Nexo y el permiso para verla. Jarvis queda como asistente independiente.

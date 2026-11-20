@@ -103,6 +103,7 @@ public class GrabadoraService extends Service {
             .setContentText("Avísales a los presentes que estás grabando").setContentIntent(abrir).setOngoing(true)
             .addAction(0, pausado ? "Seguir" : "Pausa", ps).addAction(0, "Terminar", parar);
         if (grabando && !pausado) { b.setUsesChronometer(true).setWhen(System.currentTimeMillis() - segundos() * 1000); }
+        EnVivo.promover(b, pausado ? "Pausa" : "REC", pausado ? EnVivo.NARANJA : EnVivo.ROJO);   // 3.28: aviso en vivo
         Notification n = b.build();
         if (Build.VERSION.SDK_INT >= 30) startForeground(74, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE); else startForeground(74, n);
     }

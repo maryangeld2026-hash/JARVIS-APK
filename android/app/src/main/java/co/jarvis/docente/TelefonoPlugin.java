@@ -359,6 +359,50 @@ public class TelefonoPlugin extends Plugin {
         } catch (Exception e) { call.reject("No pude cambiar el volumen: " + e.getMessage()); }
     }
 
+    /** 3.28: el volumen de Jarvis. En Android 17 el asistente tiene su propio volumen (aparte de la música); antes, el de la música. */
+    static int corrienteJarvis() {
+        if (android.os.Build.VERSION.SDK_INT >= 37) {
+            try { return AudioManager.class.getField("STREAM_ASSISTANT").getInt(null); } catch (Throwable ignored) { }
+        }
+        return AudioManager.STREAM_MUSIC;
+    }
+    @PluginMethod
+    public void volumenJarvis(PluginCall call) {
+        String a = call.getString("accion", "subir");
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        if (am == null) { call.reject("Sin control de volumen."); return; }
+        int s = corrienteJarvis(), fl = AudioManager.FLAG_SHOW_UI;
+        try {
+            switch (a) {
+                case "bajar": am.adjustStreamVolume(s, AudioManager.ADJUST_LOWER, fl); am.adjustStreamVolume(s, AudioManager.ADJUST_LOWER, fl); break;
+                case "max": am.setStreamVolume(s, am.getStreamMaxVolume(s), fl); break;
+                case "estado": break;
+                default: am.adjustStreamVolume(s, AudioManager.ADJUST_RAISE, fl); am.adjustStreamVolume(s, AudioManager.ADJUST_RAISE, fl);
+            }
+            JSObject r = new JSObject(); r.put("nivel", am.getStreamVolume(s)); r.put("max", am.getStreamMaxVolume(s)); r.put("propio", s != AudioManager.STREAM_MUSIC);
+            call.resolve(r);
+        } catch (Exception e) { call.reject("No pude cambiar el volumen: " + e.getMessage()); }
+    }
+
+    /** 3.28: escoger UN contacto en la agenda del celular, sin darle a Jarvis permiso para ver todos (Android 17: selector de contactos). */
+    @PluginMethod
+    public void elegirContacto(PluginCall call) {
+        Intent i = new Intent(Intent.ACTION_PICK, android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+        try { startActivityForResult(call, i, "contactoElegido"); } catch (Exception e) { call.reject("No pude abrir tus contactos: " + e.getMessage()); }
+    }
+    @com.getcapacitor.annotation.ActivityCallback
+    private void contactoElegido(PluginCall call, androidx.activity.result.ActivityResult res) {
+        if (call == null) return;
+        if (res.getResultCode() != android.app.Activity.RESULT_OK || res.getData() == null || res.getData().getData() == null) { call.reject("No escogiste ningún contacto.", "cancelado"); return; }
+        String[] cols = { android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER };
+        try (Cursor k = getContext().getContentResolver().query(res.getData().getData(), cols, null, null, null)) {
+            if (k != null && k.moveToFirst()) {
+                JSObject r = new JSObject(); r.put("nombre", k.getString(0)); r.put("numero", k.getString(1)); call.resolve(r); return;
+            }
+        } catch (Exception e) { call.reject("No pude leer ese contacto: " + e.getMessage()); return; }
+        call.reject("No pude leer ese contacto.");
+    }
+
     @PluginMethod
     public void alarma(PluginCall call) {
         try {

@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.27.0";
+  const VERSION = "3.28.0";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -143,7 +143,9 @@
     try {
       // 3.23: si la pregunta es de actualidad (noticias, resultados, precios, cargos…), Gemini busca en Google antes de responder
       const buscar = D.ajustes.proveedor === "gemini" && D.ajustes.buscarAuto !== false && navigator.onLine && window.JL14 && window.JL14.necesitaBuscar(text);
-      const full = await IA.chat({ system: systemPrompt(), buscar, messages: hist.concat([{ role: "user", content: text }]), onAviso: (t) => { if (!gotFirst) { e.innerHTML = ""; e.append(mk("em", "hint", t)); $("#status").textContent = "REINTENTO"; } }, onDelta: (d, all) => {
+      // 3.28: preguntas de lugares → Google Maps (con la ubicación aproximada, si la hay)
+      const mapas = D.ajustes.proveedor === "gemini" && D.ajustes.mapasAuto !== false && navigator.onLine && window.JL17 && window.JL17.necesitaMapas(text) ? ((window.JX && window.JX.posAprox ? await window.JX.posAprox() : null) || true) : false;
+      const full = await IA.chat({ system: systemPrompt(), buscar, mapas, messages: hist.concat([{ role: "user", content: text }]), onAviso: (t) => { if (!gotFirst) { e.innerHTML = ""; e.append(mk("em", "hint", t)); $("#status").textContent = "REINTENTO"; } }, onDelta: (d, all) => {
         if (!gotFirst) { gotFirst = true; clearTimeout(ackT); }
         const vis = L7.visible(all), dv = vis.startsWith(shown) ? vis.slice(shown.length) : "";
         shown = vis; m.content = vis;

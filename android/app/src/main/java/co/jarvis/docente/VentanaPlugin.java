@@ -199,6 +199,7 @@ public class VentanaPlugin extends Plugin {
             .setContentIntent(abrir)
             .addAction(new Notification.Action.Builder(null, "Parar", parar).build());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) b.setChronometerCountDown(true);
+        EnVivo.promover(b, null, EnVivo.AZUL);                                   // 3.28: aviso en vivo (chip con la cuenta regresiva)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) b.setTimeoutAfter(Math.max(1000, fin - System.currentTimeMillis() + 1500));
         try { nm.notify(ID_TIEMPO, b.build()); } catch (Exception ignored) { }
         call.resolve();

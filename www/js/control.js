@@ -44,9 +44,20 @@
   let contactos = null, apps = null;
   async function contact(q) {
     const P = T(); if (!P) throw new Error("Llamar y enviar mensajes funciona en la app instalada (el APK).");
-    if (!contactos) contactos = ((await P.contactos({ q: "" })) || {}).lista || [];
+    // 3.28: «agenda privada»: escoges tú el contacto (Jarvis no ve toda tu agenda). También si no hay permiso o no lo encuentra.
+    const elegir = async (aviso) => {
+      if (!P.elegirContacto) return null;
+      A.toast(aviso, 4000);
+      try { const r = await P.elegirContacto(); return r && r.numero ? { nombre: r.nombre || q, numero: r.numero } : null; }
+      catch (e) { if (e && e.code === "cancelado") throw new Error("Listo, no escogiste a nadie."); throw e; }
+    };
+    if (D.ajustes.agendaPrivada) { const r = await elegir(`Escoge a «${q}» en tus contactos`); if (r) return r; }
+    if (!contactos) {
+      try { contactos = ((await P.contactos({ q: "" })) || {}).lista || []; }
+      catch (e) { const r = await elegir(`Sin permiso para ver la agenda: escoge a «${q}»`); if (r) return r; throw e; }
+    }
     const c = L5.bestMatch(q, contactos) || L5.bestMatch(q.replace(/^(?:la|el|mi|a)\s+/i, ""), contactos);
-    if (!c) throw new Error(`No encontré a «${q}» en tus contactos.`);
+    if (!c) { const r = await elegir(`No encontré a «${q}»: escógelo tú`); if (r) return r; throw new Error(`No encontré a «${q}» en tus contactos.`); }
     return c;
   }
   async function app(q) {

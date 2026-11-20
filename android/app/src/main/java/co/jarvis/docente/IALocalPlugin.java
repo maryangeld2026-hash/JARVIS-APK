@@ -266,7 +266,7 @@ public class IALocalPlugin extends Plugin {
                         out.write(buf, 0, r);
                         n += r;
                         int p = total > 0 ? (int) (n * 100 / total) : -1;
-                        if (p != ultimo) { ultimo = p; JSObject ev = new JSObject(); ev.put("p", p); ev.put("mb", n / (1024 * 1024)); notifyListeners("progreso", ev); }
+                        if (p != ultimo) { ultimo = p; JSObject ev = new JSObject(); ev.put("p", p); ev.put("mb", n / (1024 * 1024)); notifyListeners("progreso", ev); avisoDescarga(nombre, p, n / (1024 * 1024)); }
                     }
                 }
                 cerrarMotor();
@@ -274,9 +274,11 @@ public class IALocalPlugin extends Plugin {
                 if (fin.exists()) fin.delete();
                 if (!parte.renameTo(fin)) throw new Exception("No pude guardar el modelo.");
                 getContext().getSharedPreferences("jarvis_ia_local", 0).edit().putString("activo", nombre).apply();
+                quitarAvisoDescarga();
                 JSObject ok = new JSObject(); ok.put("ok", true); ok.put("mb", fin.length() / (1024 * 1024));
                 call.resolve(ok);
             } catch (Exception e) {
+                quitarAvisoDescarga();
                 call.reject(e.getMessage() != null ? e.getMessage() : "No pude descargar el modelo.");
             } finally { if (con != null) con.disconnect(); }
         });
@@ -284,6 +286,27 @@ public class IALocalPlugin extends Plugin {
 
     @PluginMethod
     public void cancelar(PluginCall call) { cancelar = true; call.resolve(); }
+
+    /** 3.28: la descarga de la IA del celular como aviso en vivo (barra de progreso arriba y en la pantalla bloqueada). */
+    private void avisoDescarga(String nombre, int p, long mb) {
+        try {
+            android.content.Context c = getContext();
+            android.app.NotificationManager nm = (android.app.NotificationManager) c.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(new android.app.NotificationChannel("jarvis_descargas", "Descargas de Jarvis", android.app.NotificationManager.IMPORTANCE_LOW));
+            android.app.Notification.Builder b = android.os.Build.VERSION.SDK_INT >= 26 ? new android.app.Notification.Builder(c, "jarvis_descargas") : new android.app.Notification.Builder(c);
+            int fl = android.app.PendingIntent.FLAG_UPDATE_CURRENT | (android.os.Build.VERSION.SDK_INT >= 23 ? android.app.PendingIntent.FLAG_IMMUTABLE : 0);
+            b.setSmallIcon(R.mipmap.ic_launcher_foreground).setContentTitle("Descargando la IA del celular")
+                .setContentText((p >= 0 ? p + " % · " : "") + mb + " MB · " + nombre).setOngoing(true).setOnlyAlertOnce(true)
+                .setContentIntent(android.app.PendingIntent.getActivity(c, 61, new android.content.Intent(c, MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP), fl));
+            EnVivo.progreso(b, p, EnVivo.VERDE);
+            EnVivo.promover(b, p >= 0 ? p + "%" : "IA", EnVivo.VERDE);
+            nm.notify(62, b.build());
+        } catch (Exception ignored) { }
+    }
+    private void quitarAvisoDescarga() {
+        try { ((android.app.NotificationManager) getContext().getSystemService(android.content.Context.NOTIFICATION_SERVICE)).cancel(62); } catch (Exception ignored) { }
+    }
 
     @PluginMethod
     public void generar(PluginCall call) {

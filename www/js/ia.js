@@ -172,6 +172,8 @@
       const o = Object.assign({}, opts, { fast, modelo: m, onDelta: (d, all) => { got = true; if (opts.onDelta) opts.onDelta(d, all); } });
       try { return await chat1(c, o); }
       catch (e) {
+        // 3.28: el modelo no acepta Google Maps o la Búsqueda: se repite sin esas herramientas
+        if (e.status === 400 && (opts.mapas || opts.buscar) && !got) { opts = Object.assign({}, opts, { mapas: false, buscar: false }); intento--; continue; }
         // el modelo no acepta «sin pensar»: se quita ese ajuste (y se recuerda para la próxima)
         if (fast && e.status === 400 && e.rapido) { c.a.sinRapido = Object.assign(c.a.sinRapido || {}, { [key]: true }); window.JD.save(); intento--; continue; }
         if (got || e.code === "abort") throw e;
@@ -202,7 +204,7 @@
       }
     }
   }
-  async function chat1(c, { system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true, fast = true, buscar = false, modelo = "", rapidoFalla = false, aparte = false }) {
+  async function chat1(c, { system, messages, onDelta, json = false, maxTokens = 1500, temperature = 0.6, stream = true, fast = true, buscar = false, mapas = false, modelo = "", rapidoFalla = false, aparte = false }) {
     if (!c.key && !c.p.sinClave) { const e = new Error(`Falta la clave de ${c.p.nombre}. Ponla en Ajustes (el engranaje de arriba).`); e.code = "sin_clave"; throw e; }
     if (c.prov === "propio" && !c.base) { const e = new Error("Falta la dirección de tu servidor (Ollama o LM Studio). Ponla en Ajustes."); e.code = "sin_clave"; throw e; }
     if (!navigator.onLine && c.prov !== "propio") { const e = new Error("No hay internet. Las órdenes de la app siguen funcionando; para la IA sin internet, descarga la IA del celular en Ajustes."); e.code = "sin_internet"; throw e; }
@@ -210,6 +212,11 @@
     if (!m) { const e = new Error(`No encontré un modelo en ${c.p.nombre}. Escríbelo en Ajustes › Modelo.`); e.code = "sin_clave"; throw e; }
     const req = L.chatRequest(c.prov, { key: c.key, model: m, system, messages, stream, json, maxTokens, temperature, fast, base: c.base });
     if (buscar && c.prov === "gemini") req.body.tools = [{ google_search: {} }];     // 3.0: «investiga…» con la Búsqueda de Google
+    // 3.28: preguntas de lugares con Google Maps (lugares reales, abiertos, distancias), cerca de donde estás
+    if (mapas && c.prov === "gemini") {
+      req.body.tools = (req.body.tools || []).concat([{ googleMaps: {} }]);
+      if (mapas.lat != null && mapas.lng != null) req.body.toolConfig = { retrievalConfig: { latLng: { latitude: +mapas.lat, longitude: +mapas.lng } } };
+    }
     if (!aparte) fuentes = [];
     const t0 = performance.now();
     warmAt = Date.now();
@@ -255,7 +262,10 @@
           p.datos.forEach((ev) => {
             if (ev.error) throw new Error(L.apiError(c.prov, 500, ev));
             const gm = c.prov === "gemini" && ev.candidates && ev.candidates[0] && ev.candidates[0].groundingMetadata;
-            if (gm && gm.groundingChunks) gm.groundingChunks.forEach((g) => { if (g.web && g.web.uri && !fuentes.some((f) => f.uri === g.web.uri)) fuentes.push({ uri: g.web.uri, titulo: g.web.title || g.web.uri }); });
+            if (gm && gm.groundingChunks) gm.groundingChunks.forEach((g) => {
+              const w = g.web || g.maps;                                                 // 3.28: también los lugares de Google Maps
+              if (w && w.uri && !fuentes.some((f) => f.uri === w.uri)) fuentes.push({ uri: w.uri, titulo: (g.maps ? "📍 " : "") + (w.title || w.uri), mapa: !!g.maps });
+            });
             const d = L.deltaText(c.prov, ev);
             if (d) { if (!full && !aparte) last = { ms: Math.round(performance.now() - t0), modelo: m, prov: c.prov }; full += d; if (onDelta) onDelta(d, full); }
           });

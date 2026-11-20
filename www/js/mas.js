@@ -28,6 +28,8 @@
   async function entrada(e) {
     if (e.tipo === "atajo") {
       A.tab("hablar");
+      if (/^tarea:/.test(e.atajo || "") && X._tareas) return X._tareas.abrir(e.atajo.slice(6));   // 3.28: la notificación de una tarea larga
+      if (e.atajo === "tareas" && X._tareas) return X._tareas.ver();
       if (/^orden:/.test(e.atajo || "")) { const o = e.atajo.slice(6); A.add("assistant", "▶ Automático: " + o, "tool orden"); return A.dispatch ? A.dispatch(o) : A.handle(o, false); }   // 3.9: disparadores
       switch (e.atajo) {
         case "hablar": setTimeout(() => (A.wake ? A.wake() : A.listen(false)), 350); return;
