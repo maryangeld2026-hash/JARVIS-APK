@@ -889,7 +889,7 @@
   if ("serviceWorker" in navigator && !V.native() && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
   document.addEventListener("visibilitychange", () => { if (document.hidden && state === "listening") (V.cancelListening || V.stopListening)(); if (!document.hidden && IA.warm) IA.warm(); });
   if (IA.warm) setTimeout(() => IA.warm(), 1500);
-  window.__jarvis = { handle, dispatch, renderChat, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
+  window.__jarvis = { handle, dispatch, askAI, renderChat, tab, D, startTimer, makeQuiz, renderClase, showGrade, reply, add, say, toast, listen, setState, courseFor, mdInline, md,
     getState: () => state, wake, trato, systemPrompt, applyVoice, LOCALES, nombreLocal, localStatus, getGroups: () => lastGroups, getQuiz: () => current, setQuiz: (q) => { current = q; }, renderQuices, timer, VERSION };
   if (window.JX) window.JX.init(window.__jarvis);
 })();

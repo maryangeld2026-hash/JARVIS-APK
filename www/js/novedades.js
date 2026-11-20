@@ -167,7 +167,8 @@
     if (listas.length) datos.push(`Investigaciones listas sin ver: ${listas.map((t) => t.titulo).join("; ")}.`);
     const hayIA = navigator.onLine && (aj().proveedor === "local" || ((aj().claves || {})[aj().proveedor] || "").trim());
     if (!hayIA) return R("☀️ " + datos.join(" "), "tool", datos.join(" "));
-    return A.dispatch(L17.promptMiDia(datos.join("\n")));
+    // 3.28: directo a la IA (sin pasar por las órdenes: el texto del resumen podría parecer una orden)
+    return A.askAI ? A.askAI(L17.promptMiDia(datos.join("\n"))) : A.dispatch(L17.promptMiDia(datos.join("\n")));
   }
 
   // ======================================================================== AJUSTES

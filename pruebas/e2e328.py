@@ -70,10 +70,10 @@ def main():
         check("elegir" in logs(), "sin permiso de contactos: Jarvis abre la agenda para escoger a la persona")
         # 5) Mi día
         say("mi día", 500)
-        for _ in range(30):                                   # el resumen espera el clima y lo demás (hasta ~9 s)
+        for _ in range(50):                                   # el resumen espera el clima y lo demás (hasta ~9 s)
             if "Próximos pasos" in last(): break
             pg.wait_for_timeout(500)
-        check("Próximos pasos" in last() and "Mi día" in PED[-1], "«Mi día» con próximos pasos")
+        check("Próximos pasos" in last() and "Mi día" in PED[-1], "«Mi día» con próximos pasos · " + last()[:160])
         # 6) Ajustes
         pg.click("#btn-ajustes"); pg.wait_for_timeout(600)
         pg.evaluate("document.querySelectorAll('#ajustes details').forEach(d => d.open = true)"); pg.wait_for_timeout(300)
