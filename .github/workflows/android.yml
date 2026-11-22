@@ -63,8 +63,12 @@ jobs:
       - name: Probar los tres motores
         run: |
           mkdir -p ../jars && cd ../jars
-          curl -fsSL -o ort.jar https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/1.23.2/onnxruntime-1.23.2.jar
-          curl -fsSL -o json.jar https://repo1.maven.org/maven2/org/json/json/20250517/json-20250517.jar
+          M=https://repo1.maven.org/maven2
+          ov=$(curl -fsSL $M/com/microsoft/onnxruntime/onnxruntime/maven-metadata.xml | grep -o '<release>[^<]*' | cut -d'>' -f2)
+          jv=$(curl -fsSL $M/org/json/json/maven-metadata.xml | grep -o '<release>[^<]*' | cut -d'>' -f2)
+          echo "onnxruntime $ov · org.json $jv"
+          curl -fsSL -o ort.jar $M/com/microsoft/onnxruntime/onnxruntime/$ov/onnxruntime-$ov.jar
+          curl -fsSL -o json.jar $M/org/json/json/$jv/json-$jv.jar
           cd -
           mkdir -p ../clases
           javac -d ../clases -cp ../jars/ort.jar:../jars/json.jar \
@@ -102,7 +106,7 @@ jobs:
         run: npm ci
 
       - name: Pruebas de la lógica
-        run: node --test pruebas/logica.test.js pruebas/logica2.test.js pruebas/logica3.test.js pruebas/logica4.test.js pruebas/logica5.test.js pruebas/logica6.test.js pruebas/logica7.test.js pruebas/logica8.test.js pruebas/logica9.test.js pruebas/logica10.test.js pruebas/logica11.test.js pruebas/logica12.test.js pruebas/logica13.test.js pruebas/logica14.test.js pruebas/logica16.test.js pruebas/logica17.test.js
+        run: node --test pruebas/logica.test.js pruebas/logica2.test.js pruebas/logica3.test.js pruebas/logica4.test.js pruebas/logica5.test.js pruebas/logica6.test.js pruebas/logica7.test.js pruebas/logica8.test.js pruebas/logica9.test.js pruebas/logica10.test.js pruebas/logica11.test.js pruebas/logica12.test.js pruebas/logica13.test.js pruebas/logica14.test.js pruebas/logica16.test.js pruebas/logica17.test.js pruebas/logica18.test.js
 
       - name: Prueba de punta a punta (celular simulado)
         run: |
@@ -127,6 +131,7 @@ jobs:
           python3 pruebas/e2e323.py
           python3 pruebas/e2e326.py
           python3 pruebas/e2e328.py
+          python3 pruebas/e2e329.py
 
       - uses: actions/upload-artifact@v5
         if: always()

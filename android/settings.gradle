@@ -1,4 +1,7 @@
 include ':app'
+// 3.29: los motores nativos de la IA del celular (GGUF y dictado sin internet)
+include ':motor-llama'
+include ':motor-whisper'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 

@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.28.0";
+  const VERSION = "3.29.0";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -767,7 +767,7 @@
   /** 3.19: el nombre bonito de un modelo descargado («Qwen 3.5 4B», «Gemma 4 E4B»). */
   function nombreLocal(archivo) {
     const k = Object.keys(LOCALES).find((x) => LOCALES[x].archivo === archivo);
-    return k ? LOCALES[k].nombre.split(" (")[0].replace(/^(?:Liviana|Mejor) · /, "") : String(archivo || "").replace(/\.(?:litertlm|task)$/, "").replace(/[_-](?:it|int8|mixed_int4|multi-prefill.*)$/i, "");
+    return k ? LOCALES[k].nombre.split(" (")[0].replace(/^(?:Liviana|Mejor) · /, "") : String(archivo || "").replace(/\.(?:litertlm|task|gguf)$/, "").replace(/[_-](?:it|int8|mixed_int4|multi-prefill.*)$/i, "");
   }
   let bajando = false;
   async function localDownload() {

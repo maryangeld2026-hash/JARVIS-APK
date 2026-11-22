@@ -1,3 +1,23 @@
+# Jarvis para Android 3.29: lo de PocketPal AI dentro de Jarvis
+
+## 🧩 Modelos GGUF en el celular (llama.cpp)
+- Jarvis ahora corre **cualquier modelo GGUF** de Hugging Face dentro del celular, sin internet, con el mismo motor que PocketPal AI (llama.cpp). Se usa igual que la IA del celular: la rotación nube → celular, la etiqueta LOCAL y la conversación completa.
+- Recomendados (un toque para descargar): LFM2.5 1,2B, Gemma 3 1B, Qwen3 1,7B, SmolLM3 3B, Ministral 3 3B, Phi-4 mini, Qwen 3.5 4B y Gemma 4 E2B.
+- **Buscador de Hugging Face**: escribe «llama», «qwen», «phi»… y escoge el archivo; la cuantización recomendada (Q4_K_M) sale marcada con ⭐. Avisa si el modelo es muy grande para la memoria de tu celular.
+- **⚡ Velocidad**: cuántas palabras por segundo lee y escribe el modelo en tu celular. «Mide la velocidad de la IA del celular».
+- Responde más rápido desde la segunda pregunta: reutiliza lo que ya leyó de la conversación.
+
+## 🎙️ Dictado sin internet (Whisper)
+- Whisper (whisper.cpp) reconoce tu voz dentro del celular: sin internet y sin mandar tu voz a ningún lado. Modelo «base» (82 MB, rápido) o «small» (264 MB, entiende mejor). Se usa cuando no hay internet, siempre, o nunca.
+
+## 🗣️ Voz neural sin internet (Supertonic 3)
+- Una voz mucho más natural que la del celular, generada dentro del celular (31 idiomas, español incluido), con 10 voces (5 de hombre y 5 de mujer). Unos 400 MB. Suena como asistente (volumen propio en Android 17). «Usa la voz neural» / «vuelve a la voz normal».
+
+## ✅ Probado en el computador con modelos de verdad
+- En cada compilación, GitHub prueba los tres motores con los mismos archivos del celular: una pregunta en español al modelo GGUF, una frase dicha con la voz neural y esa misma frase transcrita por Whisper.
+
+Basado en PocketPal AI (MIT). llama.cpp y whisper.cpp (MIT). Supertonic 3: código MIT, modelo OpenRAIL-M.
+
 # Jarvis para Android 3.28: lo nuevo de 2026
 
 ## 📍 Lugares con Google Maps

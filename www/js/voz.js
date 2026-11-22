@@ -39,6 +39,13 @@
     // 3.13: sin internet (o si lo escogiste), Gemma 4 entiende tu voz dentro del celular
     const idi = (opts && opts.idioma) || LANG;                                        // 3.17: también en otros idiomas (traductor)
     if (idi === LANG && window.__gemmaVoz && window.__gemmaVoz.usar()) { try { return await window.__gemmaVoz.oir(onPartial, opts); } catch (e) { console.warn("Gemma no pudo oír", e); } }
+    // 3.29: dictado sin internet con Whisper (whisper.cpp), si lo descargaste
+    if (window.__whisperVoz && window.__whisperVoz.usar(idi)) {
+      nativeStop = () => window.__whisperVoz.parar();
+      try { const t = await window.__whisperVoz.oir(onPartial, opts, (s, d) => { if (onListenState) onListenState(s, d); }); lastListen = window.__whisperVoz.ultimo(); return t; }
+      catch (e) { console.warn("Whisper no pudo oír", e); if (e && /permiso/.test(e.message || "")) throw e; }
+      finally { nativeStop = null; }
+    }
     if (native() && plug("Oido") && oidoFallas < 2) return listenOido(onPartial, opts);
     if (native() && plug("SpeechRecognition")) return listenNative(onPartial, idi);
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;

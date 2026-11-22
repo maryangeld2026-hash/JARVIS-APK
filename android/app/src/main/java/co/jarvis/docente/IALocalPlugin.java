@@ -37,14 +37,17 @@ public class IALocalPlugin extends Plugin {
     private File carpeta() { File d = new File(getContext().getFilesDir(), "ia-local"); if (!d.exists()) d.mkdirs(); return d; }
 
     /** 3.19: varios modelos descargados a la vez; se usa el que escogiste (o el último que bajaste). */
-    private static boolean esModelo(File f) { return (f.getName().endsWith(".task") || f.getName().endsWith(".litertlm")) && f.length() > 50L * 1024 * 1024; }
+    private static boolean esModelo(File f) {
+        String n = f.getName();
+        return (n.endsWith(".task") || n.endsWith(".litertlm") || (n.endsWith(".gguf") && !n.toLowerCase().startsWith("mmproj"))) && f.length() > 50L * 1024 * 1024;   // 3.29: GGUF (llama.cpp)
+    }
     private File modelo() {
         File[] fs = carpeta().listFiles();
         if (fs == null) return null;
         String act = getContext().getSharedPreferences("jarvis_ia_local", 0).getString("activo", "");
         if (!act.isEmpty()) for (File f : fs) if (f.getName().equals(act) && esModelo(f)) return f;
         File mejor = null;
-        for (File f : fs) if ((f.getName().endsWith(".task") || f.getName().endsWith(".litertlm")) && f.length() > 50L * 1024 * 1024 && (mejor == null || f.lastModified() > mejor.lastModified())) mejor = f;
+        for (File f : fs) if (esModelo(f) && (mejor == null || f.lastModified() > mejor.lastModified())) mejor = f;
         return mejor;
     }
 
@@ -62,6 +65,7 @@ public class IALocalPlugin extends Plugin {
         hilo.execute(() -> {
             try {
                 File f = modelo();
+                if (f != null && f.getName().endsWith(".gguf")) { cargarGguf(f); usado(); JSObject r = new JSObject(); r.put("listo", true); call.resolve(r); return; }
                 if (f != null && f.getName().endsWith(".litertlm") && (gemma == null || !gemma.getRuta().equals(f.getAbsolutePath()))) {
                     cerrarMotor();
                     revisarMemoria(f);
@@ -158,7 +162,86 @@ public class IALocalPlugin extends Plugin {
     public void pararGrabacion(PluginCall call) { grabandoVoz = false; call.resolve(); }
 
     @PluginMethod
-    public void detener(PluginCall call) { GemmaMotor g = gemma; if (g != null) g.detener(); call.resolve(); }
+    public void detener(PluginCall call) { GemmaMotor g = gemma; if (g != null) g.detener(); ggufParar = true; if (ggufListo) co.jarvis.motores.Llama.detener(); call.resolve(); }
+
+    // ======================================================================== 3.29: modelos GGUF (llama.cpp, como PocketPal AI)
+    private boolean ggufListo = false;
+    private volatile boolean ggufParar = false;
+    private String ggufRuta = "";
+
+    private void cargarGguf(File f) throws Exception {
+        if (ggufListo && ggufRuta.equals(f.getAbsolutePath())) return;
+        cerrarMotor();
+        if (!co.jarvis.motores.Llama.iniciar(getContext().getApplicationInfo().nativeLibraryDir))
+            throw new Exception("Este celular no puede usar modelos GGUF (" + co.jarvis.motores.Llama.falla() + ").");
+        android.app.ActivityManager am = (android.app.ActivityManager) getContext().getSystemService(android.content.Context.ACTIVITY_SERVICE);
+        android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi);
+        long libre = mi.availMem / (1024 * 1024), necesita = f.length() / (1024 * 1024) + 500;
+        if (libre < necesita) throw new Exception("memoria_gguf:" + libre + ":" + necesita);
+        long total = totalMb();
+        int ctx = total >= 11000 ? 8192 : total >= 7000 ? 6144 : 4096;
+        JSObject ev = new JSObject(); ev.put("cargando", true); notifyListeners("estado", ev);
+        int r = co.jarvis.motores.Llama.cargar(f.getAbsolutePath(), ctx, 0);
+        if (r == 2) throw new Exception("No hay memoria suficiente para este modelo GGUF: cierra otras apps o usa uno más pequeño.");
+        if (r != 0) throw new Exception("No pude abrir ese modelo GGUF (¿archivo incompleto, o de un tipo que llama.cpp no conoce?).");
+        ggufListo = true; ggufRuta = f.getAbsolutePath(); motorRuta = ggufRuta;
+    }
+
+    private void generarGguf(PluginCall call, File f) throws Exception {
+        com.getcapacitor.JSArray im = call.getArray("imagenes", null);
+        if (im != null && im.length() > 0) { call.reject("Los modelos GGUF todavía no ven fotos en Jarvis: para fotos sin internet usa Gemma 4 o Qwen 3.5 con visión."); return; }
+        cargarGguf(f);
+        java.util.List<String> roles = new java.util.ArrayList<>(), textos = new java.util.ArrayList<>();
+        String sis = call.getString("sistema", "");
+        if (sis != null && !sis.trim().isEmpty()) { roles.add("system"); textos.add(sis); }
+        com.getcapacitor.JSArray ms = call.getArray("mensajes", null);
+        if (ms != null && ms.length() > 0) {
+            for (int k = 0; k < ms.length(); k++) {
+                org.json.JSONObject m = ms.getJSONObject(k);
+                String tx = m.optString("content", "");
+                if (tx.isEmpty()) continue;
+                String rol = "user".equals(m.optString("role")) ? "user" : "assistant";
+                // dos del mismo rol seguidos (algunas plantillas no lo aceptan): se juntan
+                if (!roles.isEmpty() && roles.get(roles.size() - 1).equals(rol)) { textos.set(textos.size() - 1, textos.get(textos.size() - 1) + "\n\n" + tx); continue; }
+                roles.add(rol); textos.add(tx);
+            }
+        } else { roles.add("user"); textos.add(call.getString("prompt", "")); }
+        if (roles.isEmpty() || !"user".equals(roles.get(roles.size() - 1))) { roles.add("user"); textos.add(call.getString("prompt", "Continúa.")); }
+        ggufParar = false;
+        final long[] ultEv = { 0 };
+        String t = co.jarvis.motores.Llama.generar(roles.toArray(new String[0]), textos.toArray(new String[0]),
+            call.getInt("maxTokens", 700), (float) (double) call.getDouble("temperatura", 0.7), false, (parcial) -> {
+                long ahora = System.currentTimeMillis();
+                if (ahora - ultEv[0] > 120) { ultEv[0] = ahora; JSObject e = new JSObject(); e.put("texto", sinPensar(parcial)); notifyListeners("parcial", e); }
+                return !ggufParar;
+            });
+        t = sinPensar(t == null ? "" : t);
+        if (t.isEmpty() && !ggufParar) { String err = co.jarvis.motores.Llama.error(); call.reject(err == null || err.isEmpty() ? "El modelo GGUF no devolvió texto." : "El modelo GGUF: " + err + "."); return; }
+        JSObject r = new JSObject(); r.put("texto", t); r.put("motor", f.getName().replace(".gguf", "") + " · GGUF"); r.put("ve", false);
+        call.resolve(r);
+    }
+
+    /** Quita el «pensamiento» (<think>…</think>) que algunos modelos escriben antes de la respuesta. */
+    private static String sinPensar(String t) {
+        String s = t.replaceAll("(?s)<think>.*?</think>", "");
+        int a = s.indexOf("<think>");
+        if (a >= 0) s = s.substring(0, a);
+        return s.trim();
+    }
+
+    /** Qué tan rápido va el modelo GGUF en este celular (palabras por segundo al leer y al escribir). */
+    @PluginMethod
+    public void velocidad(PluginCall call) {
+        hilo.execute(() -> {
+            try {
+                File f = modelo();
+                if (f == null || !f.getName().endsWith(".gguf")) { call.reject("La medición es para los modelos GGUF: escoge uno primero."); return; }
+                cargarGguf(f);
+                org.json.JSONObject j = new org.json.JSONObject(co.jarvis.motores.Llama.prueba(128, 32));
+                call.resolve(JSObject.fromJSONObject(j));
+            } catch (Throwable e) { call.reject("No pude medir: " + e.getMessage()); }
+        });
+    }
 
     /** 3.20: antes de cargar Gemma 4 12B se revisa la memoria libre: si no alcanza, se avisa en vez de que Android cierre la app. */
     private void revisarMemoria(File f) throws Exception {
@@ -317,6 +400,7 @@ public class IALocalPlugin extends Plugin {
                 if (f == null) { call.reject("La IA del celular no está descargada."); return; }
                 usado();
                 if (f.getName().endsWith(".litertlm")) { generarGemma(call, f); usado(); return; }
+                if (f.getName().endsWith(".gguf")) { generarGguf(call, f); usado(); return; }
                 if (motor == null || !motorRuta.equals(f.getAbsolutePath())) {
                     cerrarMotor();
                     LlmInference.LlmInferenceOptions op = LlmInference.LlmInferenceOptions.builder()
@@ -352,10 +436,10 @@ public class IALocalPlugin extends Plugin {
     /** 3.19: qué puede hacer cada modelo según su archivo (antes de cargarlo). */
     private static JSObject capacidades(File f) {
         String n = f.getName().toLowerCase();
-        boolean lt = n.endsWith(".litertlm"), gem = lt && n.contains("gemma"), qw35 = lt && n.contains("qwen3.5");
+        boolean lt = n.endsWith(".litertlm"), gem = lt && n.contains("gemma"), qw35 = lt && n.contains("qwen3.5"), gg = n.endsWith(".gguf");
         JSObject o = new JSObject();
         o.put("nombre", f.getName()); o.put("mb", f.length() / (1024 * 1024));
-        o.put("familia", gem ? "gemma" : qw35 ? "qwen35" : lt ? "litertlm" : "task");
+        o.put("familia", gg ? "gguf" : gem ? "gemma" : qw35 ? "qwen35" : lt ? "litertlm" : "task");
         o.put("ve", gem || (lt && n.contains("-vl"))); o.put("oye", gem);
         return o;
     }
@@ -385,6 +469,7 @@ public class IALocalPlugin extends Plugin {
     private void cerrarMotor() {
         if (motor != null) { try { motor.close(); } catch (Throwable e) { } motor = null; motorRuta = ""; }
         if (gemma != null) { try { gemma.cerrar(); } catch (Throwable e) { } gemma = null; motorRuta = ""; }
+        if (ggufListo) { try { co.jarvis.motores.Llama.liberar(); } catch (Throwable e) { } ggufListo = false; ggufRuta = ""; motorRuta = ""; }
     }
 
     @Override

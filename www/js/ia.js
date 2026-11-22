@@ -313,16 +313,17 @@
       (r.paginas || []).forEach((d) => imagenes.push({ data: d, mime: "image/jpeg" }));
       if (r.total > (r.paginas || []).length) notaPdf = `\n\n(Del PDF de ${r.total} páginas solo pude ver las primeras ${(r.paginas || []).length}.)`;
     }
-    const gemma = /\.litertlm$/.test(st.nombre || "");           // 3.12: Gemma 4 entiende instrucciones largas y la conversación completa
+    const gemma = /\.(?:litertlm|gguf)$/.test(st.nombre || "");      // 3.12: Gemma 4 (y 3.29: los GGUF) entienden instrucciones largas y la conversación completa
+    const gg = /\.gguf$/.test(st.nombre || "");                       // 3.29: los GGUF tienen menos contexto en celulares con poca memoria
     // 3.15: para Gemma, la instrucción fija va aparte (se reutiliza entre preguntas: responde más rápido) y lo que cambia
     // (la hora, lo que recuerdo de ti para esta pregunta) va junto a tu mensaje
     let fijo = String(system || ""), cambia = "";
     const k = fijo.indexOf("\u0001");
     if (k >= 0) { cambia = fijo.slice(k + 1).trim(); fijo = fijo.slice(0, k); }
     if (gemma) { const h = fijo.match(/\s*Hoy es [^\n]*?son las \d{1,2}:\d{2}(?:\s*[ap]\.\s?m\.)?\.*\s*/); if (h) { fijo = fijo.replace(h[0], " "); cambia = h[0].trim() + " " + cambia; } }
-    const sys = fijo.slice(0, gemma ? 5000 : 900) + (st.familia === "qwen35" ? " Responde directamente, sin mostrar tu razonamiento." : "") + " Responde en español" + (gemma ? ". Si te piden explicar algo, explícalo completo y en orden." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "") + (gemma ? "" : " " + cambia.slice(0, 400));
+    const sys = fijo.slice(0, gg ? 3500 : gemma ? 5000 : 900) + (st.familia === "qwen35" ? " Responde directamente, sin mostrar tu razonamiento." : "") + " Responde en español" + (gemma ? ". Si te piden explicar algo, explícalo completo y en orden." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "") + (gemma ? "" : " " + cambia.slice(0, 400));
     const prompt = L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
-    const mensajes = messages.slice(gemma ? -8 : -10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content || "").slice(0, gemma ? 1800 : 4000) }));
+    const mensajes = messages.slice(gg ? -6 : gemma ? -8 : -10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content || "").slice(0, gg ? 1200 : gemma ? 1800 : 4000) }));
     if (gemma && cambia && mensajes.length && mensajes[mensajes.length - 1].role === "user") mensajes[mensajes.length - 1].content = `(${cambia.slice(0, 1200)})\n\n${mensajes[mensajes.length - 1].content}`;
     if (gemma && maxTokens === 700) maxTokens = 1800;                // las explicaciones largas ya no se cortan
     const t0 = performance.now();
@@ -331,10 +332,12 @@
     if (onDelta) h = await window.JON(P, "parcial", (d) => { if (stopped || !d || !d.texto) return; if (!parcial) last = { ms: Math.round(performance.now() - t0), modelo: "IA del celular", prov: "local" }; parcial = L.cleanLocal(d.texto); onDelta("", parcial); });
     try {
       let r;
-      try { r = await P.generar({ prompt, sistema: sys, mensajes, imagenes, maxTokens: Math.min(Math.max(256, maxTokens), gemma ? 2048 : 1024), temperatura: json ? 0.3 : 0.7 }); }
+      try { r = await P.generar({ prompt, sistema: sys, mensajes, imagenes, maxTokens: Math.min(Math.max(256, maxTokens), gg ? 1024 : gemma ? 2048 : 1024), temperatura: json ? 0.3 : 0.7 }); }
       catch (e) {                                                     // 3.20: Gemma 4 12B sin memoria libre suficiente
         const mm = String((e && e.message) || "").match(/memoria:(\d+)/);
         if (mm) throw Object.assign(new Error(`Gemma 4 12B necesita unos 7 GB de memoria libre y ahora hay ${(mm[1] / 1024).toFixed(1).replace(".", ",")} GB. Cierra otras apps o di «usa Gemma E4B».`), { code: "sin_local" });
+        const mg = String((e && e.message) || "").match(/memoria_gguf:(\d+):(\d+)/);
+        if (mg) throw Object.assign(new Error(`Este modelo GGUF necesita unos ${(mg[2] / 1024).toFixed(1).replace(".", ",")} GB de memoria libre y ahora hay ${(mg[1] / 1024).toFixed(1).replace(".", ",")} GB. Cierra otras apps o usa uno más pequeño.`), { code: "sin_local" });
         throw e;
       }
       if (stopped) throw Object.assign(new Error("Detenido."), { code: "abort" });
