@@ -75,6 +75,14 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_jarvis_info" />
         </receiver>
         <!-- 3.4: «No molestar» en horario de clase -->
+        <!-- 3.34: rutinas (temas y precios en la mañana, choques de mañana en la noche, hora de dormir) -->
+        <receiver android:name=".RutinaPlugin$Alarma" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <service android:name=".RutinaPlugin$Trabajo" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
         <!-- 3.31: alertas de lluvia fuerte (Android revisa el pronóstico cada 2 horas) -->
         <service android:name=".ClimaPlugin$Revision" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
         <!-- 3.31: Health Connect exige explicar para qué se usan los datos de salud -->

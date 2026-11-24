@@ -18,6 +18,7 @@
 
   /** Día que se menciona: hoy, mañana, pasado mañana, el viernes, el 15 de diciembre, 15/12 → Date (00:00) o null. */
   function diaDe(t, now) {
+    t = String(t || "").replace(/\b(?:de|en|por|a) la manana\b/g, " ");          // «a las 6 de la mañana» no es «mañana»
     const h = dia0(now || Date.now()); let m;
     if (/\bpasado manana\b/.test(t)) { h.setDate(h.getDate() + 2); return h; }
     if (/\bmanana\b/.test(t)) { h.setDate(h.getDate() + 1); return h; }

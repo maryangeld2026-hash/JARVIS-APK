@@ -14,7 +14,7 @@
     return fetchX(url, Object.assign({}, opts, { signal: c.signal })).finally(() => clearTimeout(t));
   }
   /** 3.33: las API que no aceptan llamadas desde la vista web (Numes) van por la vía nativa de Android (CapacitorHttp). */
-  const NATIVO = /^https:\/\/api\.numes\.ai\//;
+  const NATIVO = /^https:\/\/api\.(?:numes\.ai|notion\.com)\//;                   // 3.34: también Notion
   function fetchX(url, init) {
     const C = window.Capacitor, H = C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.CapacitorHttp;
     if (!H || !NATIVO.test(url)) return fetch(url, init);
@@ -440,5 +440,5 @@
     const t = await via(c, { system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: c.prov === "local" ? 256 : 20 }, 1);
     return { ok: true, texto: t.trim(), ms: Math.round(performance.now() - t0), modelo: await model(c) };
   }
-  window.JIA = { backupCfgs, chat, json, test, probarModelo, modelosCuenta, sinCupo: () => Object.assign({}, sinCupo), rotacion: (prov) => rotacion(cfgFor(prov || cfg().prov, false)), stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor, plan: (o) => plan(o || {}).map((x) => x.prov), ruta: () => Object.assign({}, ruta) };
+  window.JIA = { fetchX, backupCfgs, chat, json, test, probarModelo, modelosCuenta, sinCupo: () => Object.assign({}, sinCupo), rotacion: (prov) => rotacion(cfgFor(prov || cfg().prov, false)), stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor, plan: (o) => plan(o || {}).map((x) => x.prov), ruta: () => Object.assign({}, ruta) };
 })();
