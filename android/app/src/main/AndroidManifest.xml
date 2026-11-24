@@ -84,6 +84,7 @@
         </receiver>
         <service android:name=".RutinaPlugin$Trabajo" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
         <!-- 3.31: alertas de lluvia fuerte (Android revisa el pronóstico cada 2 horas) -->
+        <service android:name=".UsoPlugin$Revision" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
         <service android:name=".ClimaPlugin$Revision" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
         <!-- 3.31: Health Connect exige explicar para qué se usan los datos de salud -->
         <activity android:name=".SaludPrivacidad" android:exported="true" android:label="Jarvis y tu salud">
@@ -222,6 +223,8 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 3.35: tiempo de pantalla (permiso especial que la persona da a mano en Ajustes › Acceso al uso) -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <!-- 3.31: Health Connect (solo lectura: pasos, sueño y pulso) -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />

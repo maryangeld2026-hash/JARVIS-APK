@@ -200,6 +200,9 @@ public class NotiServicio extends NotificationListenerService {
             if (ms != null && ms.length > 0 && ms[ms.length - 1] instanceof Bundle) {
                 Bundle ult = (Bundle) ms[ms.length - 1];
                 CharSequence t = ult.getCharSequence("text"); if (t != null) texto = t;
+                // 3.35: en los grupos, «Grupo: Persona» (para poder resumir lo que dijeron en un grupo)
+                CharSequence conv = x.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE), quien = ult.getCharSequence("sender");
+                if (conv != null && quien != null && conv.length() > 0 && titulo != null && !titulo.toString().contains(":")) titulo = conv.toString().replaceAll("\\s*\\(\\d+ (?:mensajes|messages)\\)$", "") + ": " + quien;
             } else if (grande != null) texto = grande;
             if (titulo == null || texto == null) return;
             String tx = texto.toString().trim();

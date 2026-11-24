@@ -48,6 +48,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(SaludPlugin.class);                   // 3.31: Health Connect
         registerPlugin(ClimaPlugin.class);                   // 3.31: alertas de lluvia fuerte
         registerPlugin(RutinaPlugin.class);                  // 3.34: temas, precios, choques y hora de dormir
+        registerPlugin(UsoPlugin.class);                     // 3.35: tiempo de pantalla y límites por app
         super.onCreate(savedInstanceState);
         Apagado.marcar(this, false);                                           // 3.16: al abrir Jarvis, vuelve a estar encendido
         // 3.0.2: con la letra del celular muy grande, la barra de arriba no cabía y el botón de Ajustes quedaba por fuera
