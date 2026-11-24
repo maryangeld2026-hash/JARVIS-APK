@@ -27,13 +27,13 @@
   const compartir = (o) => window.JN && window.JN.share ? window.JN.share(o).catch(() => {}) : null;
   const hoyIso = () => L22.iso(new Date());
   const idDe = (s, base, n) => base + (Math.abs([...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % (n || 200)) * 4;
-  async function eventos(desde, hasta) { const C = plug("Calendario"); if (!C) return []; try { return ((await C.eventos({ desde, hasta })) || {}).lista || []; } catch (e) { return []; } }
+  async function eventos(desde, hasta) { const C = plug("Calendario"); if (!C || typeof C.eventos !== "function") return []; try { return ((await C.eventos({ desde, hasta })) || {}).lista || []; } catch (e) { return []; } }
   const dia = (iso) => { const a = new Date(iso + "T00:00:00").getTime(); return [a, a + 864e5]; };
   function foto() { return new Promise((ok) => { const i = mk("input"); i.type = "file"; i.accept = "image/*"; i.setAttribute("capture", "environment"); i.style.display = "none"; i.addEventListener("change", () => { ok(i.files && i.files[0]); i.remove(); }); document.body.append(i); i.click(); }); }
   function achicar(file) { return new Promise((ok, no) => { const img = new Image(); img.onload = () => { const k = Math.min(1, 1400 / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src); ok(c.toDataURL("image/jpeg", 0.85)); }; img.onerror = () => no(new Error("No pude abrir la foto.")); img.src = URL.createObjectURL(file); }); }
   /** Las órdenes que tienen que seguir aunque Jarvis esté cerrado, para Android. */
   function rutina() {
-    const P = plug("Rutina"); if (!P) return;
+    const P = plug("Rutina"); if (!P || typeof P.config !== "function") return;
     const rot = IA && IA.rotacion ? IA.rotacion("gemini") : [];
     const nube = (D.temas || []).length || (D.precios || []).length;
     P.config({ temas: (D.temas || []).map((x) => x.q), precios: (D.precios || []).map((x) => ({ q: x.q, max: x.max })), key: nube ? claveGemini() : "", modelo: rot[0] || "",
