@@ -7,14 +7,26 @@ const L0 = require("../www/js/logica.js");
 test("respaldos en orden", () => {
   assert.deepEqual(L.respaldos({ proveedor: "gemini", respaldo: "groq", respaldo2: "openrouter" }), ["groq", "openrouter"]);
   assert.deepEqual(L.respaldos({ proveedor: "gemini", respaldo: "gemini", respaldo2: "groq" }), ["groq"]);
-  assert.deepEqual(L.ponerRespaldo({ proveedor: "gemini", respaldo: "deepseek" }, "groq"), { respaldo: "groq", respaldo2: "deepseek" });
-  assert.deepEqual(L.ponerRespaldo({ proveedor: "gemini", respaldo: "local" }, "groq"), { respaldo: "groq", respaldo2: "" });
-  assert.deepEqual(L.ponerRespaldo({ proveedor: "gemini", respaldo: "groq" }, "openrouter", 2), { respaldo: "groq", respaldo2: "openrouter" });
+  assert.deepEqual(L.ponerRespaldo({ proveedor: "gemini", respaldo: "deepseek" }, "groq"), { respaldo: "groq", respaldo2: "deepseek", respaldo3: "" });
+  assert.deepEqual(L.ponerRespaldo({ proveedor: "gemini", respaldo: "local" }, "groq"), { respaldo: "groq", respaldo2: "", respaldo3: "" });
+  assert.deepEqual(L.ponerRespaldo({ proveedor: "gemini", respaldo: "groq" }, "openrouter", 2), { respaldo: "groq", respaldo2: "openrouter", respaldo3: "" });
   const c = L.cadena({ proveedor: "gemini", respaldo: "groq", respaldo2: "openrouter" }, { gemini: "Gemini", groq: "Groq", openrouter: "OpenRouter", local: "IA del celular" }, true);
   assert.deepEqual(c.map((x) => x.prov + ":" + x.papel), ["gemini:principal", "groq:respaldo 1", "openrouter:respaldo 2", "local:sin internet"]);
   const t = L.cadenaTexto({ proveedor: "gemini", respaldo: "groq" }, { gemini: "Gemini", groq: "Groq", local: "IA del celular" }, { gemini: "falla", groq: "ok" }, false);
   assert.match(t, /1\. ⚠️ \*\*Gemini\*\*[\s\S]*2\. ✅ \*\*Groq\*\*/);
   assert.match(t, /descarga la IA del celular/);
+});
+
+test("tres respaldos y Numes", () => {
+  assert.deepEqual(L.ponerRespaldo({ proveedor: "gemini", respaldo: "groq", respaldo2: "openrouter" }, "numes", 3), { respaldo: "groq", respaldo2: "openrouter", respaldo3: "numes" });
+  assert.deepEqual(L.respaldos({ proveedor: "gemini", respaldo: "groq", respaldo2: "openrouter", respaldo3: "numes" }), ["groq", "openrouter", "numes"]);
+  assert.deepEqual(L.respaldoIntent("usa Numes de tercer respaldo"), { rs: "poner", prov: "numes", pos: 3 });
+  assert.ok(L.GRATIS.some((g) => g.prov === "numes"));
+  assert.equal(L0.pickModel("numes", ["moonshotai/kimi-k3.1-pro", "z-ai/glm-5.3:free", "z-ai/glm-5.3-flash:free", "qwen/qwen3.8-27b:free"]), "z-ai/glm-5.3-flash:free");
+  const r = L0.chatRequest("numes", { key: "k", model: "z-ai/glm-5.3-flash:free", system: "s", messages: [{ role: "user", content: "hola" }], stream: true });
+  assert.equal(r.url, "https://api.numes.ai/api/v1/chat/completions");
+  assert.equal(r.body.stream, false); assert.deepEqual(r.body.provider, { max_price: { prompt: 0, completion: 0 } });
+  assert.equal(r.headers.Authorization, "Bearer k");
 });
 
 test("órdenes por voz", () => {

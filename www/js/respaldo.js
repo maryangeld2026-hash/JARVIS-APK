@@ -45,7 +45,7 @@
     A.toast(`Probando ${p.nombre}…`, 2500);
     let ok = false; try { ok = !!(await IA.test(prov)).ok; } catch (e) { /* abajo */ }
     const hayLocal = await localListo();
-    return R(`${ok ? "✅" : "⚠️"} **${p.nombre}** queda de ${pos === 2 ? "segundo" : "primer"} respaldo${ok ? " y respondió bien" : ", pero no respondió ahora (revisa la clave)"}.\n\n` + L21.cadenaTexto(aj(), nombres(), { [prov]: ok ? "ok" : "falla" }, hayLocal));
+    return R(`${ok ? "✅" : "⚠️"} **${p.nombre}** queda de ${["primer", "segundo", "tercer"][(pos || 1) - 1] || "primer"} respaldo${ok ? " y respondió bien" : ", pero no respondió ahora (revisa la clave)"}.\n\n` + L21.cadenaTexto(aj(), nombres(), { [prov]: ok ? "ok" : "falla" }, hayLocal));
   }
   function abrirAjustes() {
     const b = $("#btn-ajustes"); if (b) b.click();
@@ -75,7 +75,7 @@
         if (!inp.value.trim()) { A.toast("Primero pega la clave."); return; }
         usar.disabled = true; usar.textContent = "Probando…";
         let ok = false, err = ""; try { ok = !!(await IA.test(g.prov)).ok; } catch (e) { err = e.message || String(e); }
-        if (ok && !L21.respaldos(aj()).includes(g.prov)) { Object.assign(aj(), L21.ponerRespaldo(aj(), g.prov, L21.respaldos(aj()).filter((x) => x !== "local").length ? 2 : 1)); save(); }
+        if (ok && !L21.respaldos(aj()).includes(g.prov)) { Object.assign(aj(), L21.ponerRespaldo(aj(), g.prov, L21.respaldos(aj()).filter((x) => x !== "local").length + 1)); save(); }
         usar.disabled = false; usar.textContent = ok ? "✓ En la cadena · probar" : "Probar y usar de respaldo";
         A.toast(ok ? `✅ ${p.nombre} respondió: queda en la cadena.` : `⚠️ ${p.nombre} no respondió: ${err.slice(0, 120)}`, 5000);
         pintar({ [g.prov]: ok ? "ok" : "falla" });
@@ -85,7 +85,7 @@
     const probar = mk("button", "btn small", "🧪 Probar toda la cadena"); probar.type = "button";
     probar.addEventListener("click", async () => { probar.disabled = true; await probarCadena((e) => pintar(e)).then((r) => pintar(r.est)).catch(() => {}); probar.disabled = false; });
     const quitar = mk("button", "btn small ghost", "Quitar los respaldos de la nube"); quitar.type = "button";
-    quitar.addEventListener("click", () => { const l = L21.respaldos(aj()); aj().respaldo = l.includes("local") ? "local" : ""; aj().respaldo2 = ""; save(); pintar(); });
+    quitar.addEventListener("click", () => { const l = L21.respaldos(aj()); aj().respaldo = l.includes("local") ? "local" : ""; aj().respaldo2 = ""; aj().respaldo3 = ""; save(); pintar(); });
     const f2 = mk("div", "row wrap"); f2.append(probar, quitar); s.append(f2);
     box.append(s);
   }

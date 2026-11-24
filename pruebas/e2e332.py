@@ -15,11 +15,21 @@ const P = {
     generar: async (o) => { log('local'); return { texto: 'Te respondo desde la IA del celular.', motor: 'Gemma 4 · CPU' }; } }),
   Llavero: { obtener: async () => ({ llave: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=' }) },
   Ventana: anyP({ addListener: on, pendientes: async () => ({ lista: [] }), abrir: async (o) => log('url ' + o.url) }),
+  CapacitorHttp: { request: async (o) => { log('nativo ' + o.method + ' ' + o.url); const r = await fetch(o.url, { method: o.method, headers: o.headers, body: o.data ? JSON.stringify(o.data) : undefined }); let d = null; try { d = await r.json(); } catch (e) { /* nada */ } return { status: r.status, data: d }; } },
 };
 window.Capacitor = { isNativePlatform: () => true, Plugins: new Proxy({}, { get: (t, n) => P[n] || (n === 'SpeechRecognition' || n === 'Escaner' || n === 'Calendario' || n === 'Oido' ? undefined : generic2) }) };
 """
-ESTADO = {"gemini": 200, "groq": 200}
+ESTADO = {"gemini": 200, "groq": 200, "numes": 200}
 GROQ = []
+NUMES = []
+
+def numes(route):
+    u = route.request.url; h = {"access-control-allow-origin": "*", "access-control-allow-headers": "*"}
+    if route.request.method == "OPTIONS": return route.fulfill(status=204, headers=h)
+    if u.endswith("/models"): return route.fulfill(json={"data": [{"id": "moonshotai/kimi-k3.1-pro"}, {"id": "z-ai/glm-5.3-flash:free"}, {"id": "qwen/qwen3.8-27b:free"}]}, headers=h)
+    body = json.loads(route.request.post_data or "{}"); NUMES.append(body)
+    if ESTADO["numes"] != 200: return route.fulfill(status=ESTADO["numes"], json={"error": {"message": "busy"}}, headers=h)
+    return route.fulfill(json={"choices": [{"message": {"content": "Te respondo con Numes, señor."}}]}, headers=h)
 
 def gem(route):
     u = route.request.url
@@ -51,6 +61,7 @@ def main():
         ctx.add_init_script(e2e.FAKE_VOICE); ctx.add_init_script(NATIVE)
         ctx.route("https://generativelanguage.googleapis.com/**", gem)
         ctx.route("https://api.groq.com/**", groq)
+        ctx.route("https://api.numes.ai/**", numes)
         pg = ctx.new_page(); errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("dialog", lambda d: d.accept())
@@ -89,6 +100,17 @@ def main():
         ESTADO["groq"] = 429
         say("¿qué es un átomo?", 6000)
         check("IA del celular" in last() or "desde la IA del celular" in last(), "Groq sin cupo: responde la IA del celular · " + last()[:60])
+        # 4) Numes de segundo respaldo (por la vía nativa, solo modelos gratis)
+        pg.evaluate("(() => { const a = JD.load().ajustes; a.claves.numes = 'nm-prueba'; Object.assign(a, JL21.ponerRespaldo(a, 'numes', 2)); JD.save(); })()")
+        pg.evaluate("window.__log.length = 0")
+        say("¿qué es la luna?", 6000)
+        check("con Numes" in last(), "Gemini caída y Groq sin cupo: responde Numes · " + last()[:60])
+        nb = NUMES[-1] if NUMES else {}
+        check(nb.get("model", "").endswith(":free") and nb.get("provider") == {"max_price": {"prompt": 0, "completion": 0}} and nb.get("stream") is False, "a Numes solo le pide modelos gratis (nunca de pago) · " + str(nb.get("model")))
+        check(any(x.startswith("nativo POST https://api.numes.ai/api/v1/chat/completions") for x in pg.evaluate("window.__log")), "Numes va por la vía nativa de Android (su API no acepta la vista web)")
+        ESTADO["numes"] = 503
+        say("¿qué es un cometa?", 6000)
+        check("IA del celular" in last(), "y si Numes tampoco: la IA del celular")
         say("¿cuál es mi respaldo?", 1000)
         check(last().find("Gemini") < last().find("Groq") < last().find("celular") and last().find("Gemini") >= 0, "la cadena: Gemini → Groq → IA del celular")
         check(not errs, "sin errores de JavaScript " + str(errs[:3]))

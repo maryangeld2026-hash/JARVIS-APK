@@ -247,6 +247,10 @@
       prefer: [/^deepseek-flash$/, /^deepseek-v[\d.]+-flash$/, /^deepseek-chat$/], clave: "https://platform.deepseek.com/api_keys", pista: "sk-…" },
     mistral: { nombre: "Mistral", tipo: "openai", modelo: "mistral-small-latest", base: "https://api.mistral.ai/v1", nota: "con nivel gratuito",
       prefer: [/^mistral-small-latest$/, /^ministral-8b-latest$/, /small/], clave: "https://console.mistral.ai/api-keys", pista: "…" },
+    // 3.33: Numes (numes.ai): muchos proveedores detrás de una API tipo OpenAI; sus modelos abiertos «:free» son gratis.
+    // Solo acepta llamadas desde un servidor (no desde la vista web): Jarvis la llama por la vía nativa de Android, sin streaming.
+    numes: { nombre: "Numes", tipo: "openai", modelo: "", base: "https://api.numes.ai/api/v1", nota: "modelos abiertos gratis (pueden tardar)", nativo: true, sinStream: true, lento: true,
+      prefer: [/glm-[\d.]+-flash[\w.-]*:free$/, /glm[\w.-]*:free$/, /qwen[\w.-]*:free$/, /deepseek[\w.-]*:free$/, /gemma[\w.-]*:free$/, /nemotron[\w.-]*:free$/, /:free$/], clave: "https://numes.ai/dashboard/keys", pista: "clave de inferencia" },
     propio: { nombre: "Servidor propio (Ollama o LM Studio en tu PC)", tipo: "openai", modelo: "", base: "", propio: true, sinClave: true, nota: "en tu wifi, sin costo",
       prefer: [/qwen|llama|gemma|mistral|phi/i], clave: "https://ollama.com/download", pista: "(no necesita clave)" },
     local: { nombre: "IA del celular (sin internet)", tipo: "local", modelo: "", base: "", sinClave: true, nota: "funciona sin internet; más lenta y sencilla",
@@ -320,6 +324,7 @@
       const msgs = (system ? [{ role: "system", content: system }] : []).concat(messages.map((m) => ({ role: m.role,
         content: m.image ? [{ type: "text", text: String(m.content || "") }, { type: "image_url", image_url: { url: `data:${m.image.mime};base64,${m.image.data}` } }] : String(m.content || "") })));
       const body = { model, messages: msgs, stream, max_tokens: maxTokens, temperature };
+      if (provider === "numes") { body.stream = false; body.provider = { max_price: { prompt: 0, completion: 0 } }; }   // 3.33: nunca un modelo de pago
       if (json) body.response_format = { type: "json_object" };
       const headers = { "content-type": "application/json" };
       if (key) headers.Authorization = `Bearer ${key}`;

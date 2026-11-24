@@ -11,7 +11,18 @@
   /** fetch con tiempo límite: en el celular una conexión puede quedarse colgada sin avisar. */
   function fetchT(url, opts, ms) {
     const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
-    return fetch(url, Object.assign({}, opts, { signal: c.signal })).finally(() => clearTimeout(t));
+    return fetchX(url, Object.assign({}, opts, { signal: c.signal })).finally(() => clearTimeout(t));
+  }
+  /** 3.33: las API que no aceptan llamadas desde la vista web (Numes) van por la vía nativa de Android (CapacitorHttp). */
+  const NATIVO = /^https:\/\/api\.numes\.ai\//;
+  function fetchX(url, init) {
+    const C = window.Capacitor, H = C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.CapacitorHttp;
+    if (!H || !NATIVO.test(url)) return fetch(url, init);
+    const sig = init && init.signal;
+    const p = H.request({ method: (init && init.method) || "GET", url, headers: (init && init.headers) || {}, data: init && init.body ? JSON.parse(init.body) : undefined, readTimeout: 120000, connectTimeout: 20000, responseType: "json" })
+      .then((r) => { let d = r.data; if (typeof d === "string") { try { d = JSON.parse(d); } catch (e) { /* texto */ } } return { ok: r.status >= 200 && r.status < 300, status: r.status, body: null, json: async () => d, text: async () => (typeof d === "string" ? d : JSON.stringify(d)) }; });
+    if (!sig) return p;
+    return Promise.race([p, new Promise((_, no) => { const f = () => no(Object.assign(new Error("abort"), { name: "AbortError" })); if (sig.aborted) f(); else sig.addEventListener("abort", f); })]);
   }
   /** La configuración de un proveedor. principal: el de Ajustes (con su modelo escrito a mano, si lo hay). */
   function cfgFor(prov, principal) {
@@ -216,6 +227,7 @@
     if (!c.key && !c.p.sinClave) { const e = new Error(`Falta la clave de ${c.p.nombre}. Ponla en Ajustes (el engranaje de arriba).`); e.code = "sin_clave"; throw e; }
     if (c.prov === "propio" && !c.base) { const e = new Error("Falta la dirección de tu servidor (Ollama o LM Studio). Ponla en Ajustes."); e.code = "sin_clave"; throw e; }
     if (!navigator.onLine && c.prov !== "propio") { const e = new Error("No hay internet. Las órdenes de la app siguen funcionando; para la IA sin internet, descarga la IA del celular en Ajustes."); e.code = "sin_internet"; throw e; }
+    if (c.p.sinStream) stream = false;                                                // 3.33: Numes responde de una vez
     const m = modelo || await model(c);
     if (!m) { const e = new Error(`No encontré un modelo en ${c.p.nombre}. Escríbelo en Ajustes › Modelo.`); e.code = "sin_clave"; throw e; }
     const req = L.chatRequest(c.prov, { key: c.key, model: m, system, messages, stream, json, maxTokens, temperature, fast, base: c.base });
@@ -235,12 +247,12 @@
     // vigilante: si no llega nada a tiempo, o la respuesta se queda quieta 20 s, se corta (y se reintenta o pasa a la de respaldo)
     let wd = null;
     const watch = (ms) => { clearTimeout(wd); wd = setTimeout(() => my.abort("lento"), ms); };
-    const first = c.prov === "propio" ? 60000 : buscar ? 25000 : stream ? (rapidoFalla ? 7000 : 15000) : Math.max(25000, maxTokens * 12);   // 3.21: con el celular de respaldo, se espera menos
+    const first = c.p.lento ? 90000 : c.prov === "propio" ? 60000 : buscar ? 25000 : stream ? (rapidoFalla ? 7000 : 15000) : Math.max(25000, maxTokens * 12);   // 3.21: con el celular de respaldo, se espera menos
     watch(first);
     const tmo = setTimeout(() => my.abort("tiempo"), 120000);
     let res;
     try {
-      res = await fetch(req.url, { method: "POST", headers: req.headers, body: JSON.stringify(req.body), signal: my.signal });
+      res = await fetchX(req.url, { method: "POST", headers: req.headers, body: JSON.stringify(req.body), signal: my.signal });
     } catch (e) {
       clearTimeout(tmo); clearTimeout(wd);
       if (ctrl === my) ctrl = null;
