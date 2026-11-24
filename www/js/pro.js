@@ -200,7 +200,9 @@
       const { E, msgs } = await reunir();
       let extra = [];
       if (hayIA() && navigator.onLine) { try { const j = await Promise.race([IA.json({ system: "Respondes solo JSON.", messages: [{ role: "user", content: L13.expandirPrompt(sinNombres(it.q)) }], maxTokens: 200 }), espera(5000).then(() => null)]); extra = ((j && j.palabras) || []).slice(0, 10).map(String); } catch (e) { /* sin sinónimos */ } }
-      const r = L13.buscarMem(E, it.q, { persona: it.persona, ventana: it.ventana, extra, max: 10 });
+      let r = L13.buscarMem(E, it.q, { persona: it.persona, ventana: it.ventana, extra, max: 10 });
+      // 3.30: si está la búsqueda por significado, también encuentra lo que dijiste con otras palabras (dentro del celular)
+      if (X._a330 && X._a330.semantico && !it.persona) { try { r = await X._a330.semantico(E, it.q, r, 10, it.ventana); } catch (e) { /* sigue con lo de palabras */ } }
       const nota = !msgs && plug("Mensajes") ? "\n\n_Si quieres que también recuerde tus mensajes de WhatsApp y otros chats (30 días, solo en el celular), actívalo en Ajustes › Memoria._" : "";
       if (!r.length) return R(`No encontré nada sobre eso en lo que tengo guardado, ${A.trato()}.${nota}`);
       const items = r.map((x) => Object.assign({}, x, { texto: sinNombres(x.texto) })).filter((x) => x.texto.trim());

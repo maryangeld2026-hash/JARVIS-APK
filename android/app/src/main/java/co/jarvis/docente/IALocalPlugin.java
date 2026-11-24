@@ -34,11 +34,14 @@ public class IALocalPlugin extends Plugin {
     private String motorRuta = "";
     private volatile boolean cancelar = false;
 
+    static final String NANO = "gemini-nano.nano";
+    private volatile boolean nanoParar = false;
     private File carpeta() { File d = new File(getContext().getFilesDir(), "ia-local"); if (!d.exists()) d.mkdirs(); return d; }
 
     /** 3.19: varios modelos descargados a la vez; se usa el que escogiste (o el último que bajaste). */
     private static boolean esModelo(File f) {
         String n = f.getName();
+        if (n.equals(NANO)) return true;                                               // 3.30: Gemini Nano (lo pone Android; aquí solo una marca)
         return (n.endsWith(".task") || n.endsWith(".litertlm") || (n.endsWith(".gguf") && !n.toLowerCase().startsWith("mmproj"))) && f.length() > 50L * 1024 * 1024;   // 3.29: GGUF (llama.cpp)
     }
     private File modelo() {
@@ -162,7 +165,7 @@ public class IALocalPlugin extends Plugin {
     public void pararGrabacion(PluginCall call) { grabandoVoz = false; call.resolve(); }
 
     @PluginMethod
-    public void detener(PluginCall call) { GemmaMotor g = gemma; if (g != null) g.detener(); ggufParar = true; if (ggufListo) co.jarvis.motores.Llama.detener(); call.resolve(); }
+    public void detener(PluginCall call) { GemmaMotor g = gemma; if (g != null) g.detener(); ggufParar = true; nanoParar = true; if (ggufListo) co.jarvis.motores.Llama.detener(); call.resolve(); }
 
     // ======================================================================== 3.29: modelos GGUF (llama.cpp, como PocketPal AI)
     private boolean ggufListo = false;
@@ -401,6 +404,7 @@ public class IALocalPlugin extends Plugin {
                 usado();
                 if (f.getName().endsWith(".litertlm")) { generarGemma(call, f); usado(); return; }
                 if (f.getName().endsWith(".gguf")) { generarGguf(call, f); usado(); return; }
+                if (f.getName().equals(NANO)) { generarNano(call); return; }
                 if (motor == null || !motorRuta.equals(f.getAbsolutePath())) {
                     cerrarMotor();
                     LlmInference.LlmInferenceOptions op = LlmInference.LlmInferenceOptions.builder()
@@ -436,10 +440,10 @@ public class IALocalPlugin extends Plugin {
     /** 3.19: qué puede hacer cada modelo según su archivo (antes de cargarlo). */
     private static JSObject capacidades(File f) {
         String n = f.getName().toLowerCase();
-        boolean lt = n.endsWith(".litertlm"), gem = lt && n.contains("gemma"), qw35 = lt && n.contains("qwen3.5"), gg = n.endsWith(".gguf");
+        boolean lt = n.endsWith(".litertlm"), gem = lt && n.contains("gemma"), qw35 = lt && n.contains("qwen3.5"), gg = n.endsWith(".gguf"), nano = n.equals(NANO);
         JSObject o = new JSObject();
         o.put("nombre", f.getName()); o.put("mb", f.length() / (1024 * 1024));
-        o.put("familia", gg ? "gguf" : gem ? "gemma" : qw35 ? "qwen35" : lt ? "litertlm" : "task");
+        o.put("familia", nano ? "nano" : gg ? "gguf" : gem ? "gemma" : qw35 ? "qwen35" : lt ? "litertlm" : "task");
         o.put("ve", gem || (lt && n.contains("-vl"))); o.put("oye", gem);
         return o;
     }
@@ -464,6 +468,49 @@ public class IALocalPlugin extends Plugin {
             getContext().getSharedPreferences("jarvis_ia_local", 0).edit().putString("activo", f.getName()).apply();
             call.resolve(capacidades(f));
         });
+    }
+
+    // ======================================================================== 3.30: Gemini Nano (AICore)
+    /** → {estado: disponible|descargable|descargando|no, sdk} */
+    @PluginMethod
+    public void nanoEstado(PluginCall call) {
+        new Thread(() -> {
+            JSObject r = new JSObject();
+            r.put("estado", android.os.Build.VERSION.SDK_INT >= 26 ? NanoMotor.estado() : "no");
+            r.put("activo", NANO.equals(getContext().getSharedPreferences("jarvis_ia_local", 0).getString("activo", "")));
+            call.resolve(r);
+        }).start();
+    }
+    /** Pide a Android que baje Gemini Nano (si hace falta) y lo deja como la IA del celular. */
+    @PluginMethod
+    public void nanoPreparar(PluginCall call) {
+        bajada.execute(() -> {
+            String e = NanoMotor.estado();
+            if ("no".equals(e)) { call.reject("Este celular no tiene Gemini Nano."); return; }
+            if (!"disponible".equals(e)) {
+                String err = NanoMotor.descargar((b) -> { JSObject ev = new JSObject(); ev.put("p", -1); ev.put("mb", b / (1024 * 1024)); notifyListeners("progreso", ev); });
+                if (!err.isEmpty() && !"disponible".equals(NanoMotor.estado())) { call.reject("Android no pudo bajar Gemini Nano: " + err); return; }
+            }
+            try { new File(carpeta(), NANO).createNewFile(); } catch (Exception ignored) { }
+            getContext().getSharedPreferences("jarvis_ia_local", 0).edit().putString("activo", NANO).apply();
+            JSObject r = new JSObject(); r.put("ok", true); call.resolve(r);
+        });
+    }
+    private void generarNano(PluginCall call) {
+        com.getcapacitor.JSArray im = call.getArray("imagenes", null);
+        if (im != null && im.length() > 0) { call.reject("Gemini Nano en Jarvis todavía no ve fotos: para fotos sin internet usa Gemma 4."); return; }
+        String prompt = call.getString("prompt", "");
+        if (prompt == null || prompt.isEmpty()) prompt = call.getString("nano", "");
+        nanoParar = false;
+        final long[] ult = { 0 };
+        String t = NanoMotor.generar(prompt, (parcial) -> {
+            long ahora = System.currentTimeMillis();
+            if (ahora - ult[0] > 120) { ult[0] = ahora; JSObject e = new JSObject(); e.put("texto", parcial); notifyListeners("parcial", e); }
+            return !nanoParar;
+        });
+        if (t.isEmpty() && !nanoParar) { call.reject("Gemini Nano no respondió (puede estar ocupado o sin cupo: Android limita cuántas preguntas por minuto)."); return; }
+        JSObject r = new JSObject(); r.put("texto", t); r.put("motor", "Gemini Nano · AICore"); r.put("ve", false);
+        call.resolve(r);
     }
 
     private void cerrarMotor() {

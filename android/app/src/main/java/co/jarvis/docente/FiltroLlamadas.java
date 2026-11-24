@@ -42,7 +42,31 @@ public class FiltroLlamadas extends CallScreeningService {
             else if ("silenciar".equals(que) && Build.VERSION.SDK_INT >= 29) r.setSilenceCall(true);
             respondToCall(d, r.build());
             if (!"pasa".equals(que)) { guardar(p, num, que); avisar(num, que); }
+            if ("silenciar".equals(que) && !oculto && !negra) contestar(p, num, limpio);
         } catch (Exception e) { try { respondToCall(d, new CallResponse.Builder().build()); } catch (Exception ignored) { } }
+    }
+
+    /**
+     * 3.30 · contestador por mensaje (solo si lo activaste con tu voz): a quien no está en tus contactos y Jarvis le silenció
+     * la llamada, le manda un SMS con tu mensaje. Una vez por número cada 12 horas. Android no deja que una app conteste
+     * la llamada hablando (eso solo lo puede hacer la app de Teléfono del fabricante), así que esto es lo más cercano.
+     */
+    private void contestar(SharedPreferences p, String num, String limpio) {
+        try {
+            if (!p.getBoolean("contestador", false) || limpio.length() < 7) return;
+            if (checkSelfPermission(android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+            JSONObject ult = new JSONObject(p.getString("contestados", "{}"));
+            long ahora = System.currentTimeMillis();
+            if (ahora - ult.optLong(limpio, 0) < 12 * 3600_000L) return;
+            ult.put(limpio, ahora);
+            String texto = p.getString("contestadorTexto", "Hola, ahora no puedo contestar. Si es importante, escríbeme por aquí el motivo de tu llamada.");
+            android.telephony.SmsManager sm = Build.VERSION.SDK_INT >= 31 ? getSystemService(android.telephony.SmsManager.class) : android.telephony.SmsManager.getDefault();
+            if (sm == null) return;
+            java.util.ArrayList<String> partes = sm.divideMessage(texto);
+            sm.sendMultipartTextMessage(num, null, partes, null, null);
+            p.edit().putString("contestados", ult.toString()).apply();
+            guardar(p, num, "contestado");
+        } catch (Exception ignored) { }
     }
 
     private boolean esContacto(String num) {

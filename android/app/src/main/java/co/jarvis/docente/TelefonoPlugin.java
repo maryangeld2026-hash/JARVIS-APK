@@ -122,6 +122,20 @@ public class TelefonoPlugin extends Plugin {
         } else r.put("activo", false);
         call.resolve(r);
     }
+    /** 3.30 · contestador por mensaje para las llamadas silenciadas de números desconocidos ({on, texto}). */
+    @PluginMethod
+    public void contestador(PluginCall call) {
+        boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        android.content.SharedPreferences.Editor e = getContext().getSharedPreferences("jarvis_llamadas", 0).edit().putBoolean("contestador", on);
+        String t = call.getString("texto", ""); if (t != null && !t.trim().isEmpty()) e.putString("contestadorTexto", t.trim());
+        e.apply();
+        if (on && getPermissionState("sms") != PermissionState.GRANTED) { requestPermissionForAlias("sms", call, "contestadorListo"); return; }
+        contestadorListo(call);
+    }
+    @PermissionCallback
+    private void contestadorListo(PluginCall call) {
+        JSObject r = new JSObject(); r.put("sms", getPermissionState("sms") == PermissionState.GRANTED); call.resolve(r);
+    }
     @PluginMethod
     public void llamadasFiltradas(PluginCall call) {
         JSObject r = new JSObject();

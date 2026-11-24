@@ -27,7 +27,8 @@
   }
   /** ¿Este botón ya es pagar, confirmar o enviar? → el agente se detiene y te deja a ti el último toque. */
   function riesgo(label) {
-    return /\b(?:pagar|paga|pago|comprar|compra ahora|confirmar|confirma|realizar pedido|hacer pedido|pedir ahora|ordenar|finalizar|checkout|place order|pay|buy now|transferir|enviar dinero|solicitar|request|book|reservar ahora|reserva ahora|suscribir|suscribete|subscribe|aceptar y pagar|continuar al pago|ir a pagar|enviar|send|publicar|post|eliminar|borrar|delete)\b/.test(norm(label));
+    return /\b(?:pagar|paga|pago|comprar|compra ahora|confirmar|confirma|realizar pedido|hacer pedido|pedir ahora|ordenar|finalizar|checkout|place order|pay|buy now|transferir|enviar dinero|solicitar|request|book|reservar ahora|reserva ahora|suscribir|suscribete|subscribe|aceptar y pagar|continuar al pago|ir a pagar|enviar|send|publicar|post|eliminar|borrar|delete)\b/.test(norm(label)) ||
+      !!(root.JL19 && root.JL19.riesgoExtra(label));                       // 3.30: «buscar conductor», «confirmar recogida», «desliza para pagar»…
   }
   function uiTexto(nodos) {
     return (nodos || []).slice(0, 150).map((n) => `[${n.i}] ${n.t || "(sin texto)"}${n.c ? " ·toca" : ""}${n.e ? " ·escribe" : ""}${n.s ? " ·desliza" : ""}${n.p ? " ·CONTRASEÑA" : ""}`).join("\n");

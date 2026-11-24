@@ -74,6 +74,8 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_jarvis_info" />
         </receiver>
         <!-- 3.4: «No molestar» en horario de clase -->
+        <!-- 3.30: al terminar el «No molestar» con excepciones, vuelve como estaba -->
+        <receiver android:name=".CelularPlugin$Fin" android:exported="false" />
         <receiver android:name=".SilencioReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

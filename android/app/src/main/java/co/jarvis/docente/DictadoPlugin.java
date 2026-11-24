@@ -130,6 +130,36 @@ public class DictadoPlugin extends Plugin {
         });
     }
 
+    /**
+     * 3.30 · dictado largo para Gemini (como Rambler): graba hasta que terminas (o tocas «Listo») y devuelve el audio
+     * en WAV (base64) para que Gemini lo transcriba ya ordenado. No necesita el modelo de Whisper.
+     *   grabarAudio({espera, silencio, maximo}) → {wav, seg, nivel} (eventos «estado»: listo, habla)
+     */
+    @PluginMethod
+    public void grabarAudio(PluginCall call) {
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { call.reject("permiso", "permiso"); return; }
+        final int espera = call.getInt("espera", 12000), silencio = call.getInt("silencio", 4000), maximo = Math.min(call.getInt("maximo", 180000), 300000);
+        terminar = false; cancelado = false;
+        hilo.execute(() -> {
+            float[] maxDb = { -120 };
+            float[] pcm = grabar(espera, silencio, maximo, maxDb);
+            JSObject r = new JSObject(); r.put("nivel", Math.round(maxDb[0]));
+            if (cancelado || pcm == null || pcm.length < 16000 / 2) { r.put("wav", ""); r.put("seg", 0); call.resolve(r); return; }
+            r.put("wav", android.util.Base64.encodeToString(wav(pcm, 16000), android.util.Base64.NO_WRAP));
+            r.put("seg", pcm.length / 16000.0);
+            call.resolve(r);
+        });
+    }
+    /** PCM en [-1, 1] → archivo WAV de 16 bits, mono. */
+    static byte[] wav(float[] pcm, int sr) {
+        int datos = pcm.length * 2;
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(44 + datos).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        b.put("RIFF".getBytes()).putInt(36 + datos).put("WAVE".getBytes()).put("fmt ".getBytes()).putInt(16).putShort((short) 1).putShort((short) 1)
+         .putInt(sr).putInt(sr * 2).putShort((short) 2).putShort((short) 16).put("data".getBytes()).putInt(datos);
+        for (float v : pcm) b.putShort((short) Math.max(-32768, Math.min(32767, Math.round(v * 32767f))));
+        return b.array();
+    }
+
     /** Graba hasta que dejas de hablar. → audio 16 kHz en [-1, 1], o null si no hablaste. */
     private float[] grabar(int espera, int silencio, int maximo, float[] maxDb) {
         final int SR = 16000;

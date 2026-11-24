@@ -106,6 +106,7 @@ public class NotiServicio extends NotificationListenerService {
                 }
             }
         }
+        if (p.getBoolean("sugerencias", false)) { try { sugerir(m); } catch (Exception ignored) { } }   // 3.30
         if (p.getBoolean("autoResp", false) && m.responder != null) {
             long hasta = p.getLong("autoHasta", 0), ahora = System.currentTimeMillis();
             if (hasta != 0 && ahora > hasta) { p.edit().putBoolean("autoResp", false).apply(); return; }
@@ -118,6 +119,40 @@ public class NotiServicio extends NotificationListenerService {
             }
         }
     }
+    // ======================================================================== 3.30: sugerencias desde tus mensajes
+    static final java.util.regex.Pattern SUG_HORA = java.util.regex.Pattern.compile("\\ba las? \\d{1,2}(:\\d{2})?\\b");
+    static final java.util.regex.Pattern SUG_EVENTO = java.util.regex.Pattern.compile("\\b(hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|reunion|cita|consulta|clase|entrevista|cumpleanos|fiesta|almuerzo|cena|partido|ensayo|examen|entrega|nos vemos|te espero|quedamos)\\b");
+    static final java.util.regex.Pattern SUG_DIR = java.util.regex.Pattern.compile("\\b(calle|cll|cl|carrera|cra|kr|cr|avenida|av|diagonal|dg|transversal|tv)\\.?\\s*\\d+[a-z]?\\s*(bis\\s*)?(#|no\\.?|numero)\\s*\\d+");
+    static final java.util.regex.Pattern SUG_LISTA = java.util.regex.Pattern.compile("\\b(compra|compras|comprar|comprame|trae|traer|traeme|hace falta|se acabo|se acabaron)\\b[^.?!]{3,}(,| y )");
+    static final java.util.regex.Pattern SUG_NO = java.util.regex.Pattern.compile("\\b(codigo|clave|contrasena|otp|verificacion|pin|transferencia|consignacion|saldo|token)\\b");
+    private long sugUltima = 0;
+    /**
+     * Si el mensaje trae una cita con hora, una dirección o una lista de compras, Jarvis avisa (sin sonar) y, al tocarlo,
+     * muestra qué puede hacer: agendar, cómo llegar, agregar a la lista. Nunca lo hace solo: siempre pregunta.
+     */
+    private void sugerir(Msg m) {
+        String t = java.text.Normalizer.normalize(m.texto, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase();
+        if (SUG_NO.matcher(t).find() || estafa(m.texto) >= 3) return;
+        String que = null;
+        if (SUG_HORA.matcher(t).find() && SUG_EVENTO.matcher(t).find()) que = "📅 ¿Lo agendo?";
+        else if (SUG_DIR.matcher(t).find()) que = "📍 ¿Te digo cómo llegar?";
+        else if (SUG_LISTA.matcher(t).find()) que = "🛒 ¿Lo agrego a la lista?";
+        if (que == null) return;
+        long ahora = System.currentTimeMillis();
+        if (ahora - sugUltima < 20_000) return;                                   // no llenar de avisos si llegan muchos seguidos
+        sugUltima = ahora;
+        android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(new android.app.NotificationChannel("jarvis_sugerencias", "Sugerencias de tus mensajes", android.app.NotificationManager.IMPORTANCE_LOW));
+        int fl = android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE;
+        android.content.Intent abrir = new android.content.Intent(this, MainActivity.class).putExtra("atajo", "orden:sugerencias de mis mensajes")
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Notification.Builder b = android.os.Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, "jarvis_sugerencias") : new Notification.Builder(this);
+        b.setSmallIcon(R.mipmap.ic_launcher_foreground).setContentTitle(que + " · mensaje de " + m.de).setContentText(m.texto.length() > 90 ? m.texto.substring(0, 90) + "…" : m.texto)
+            .setContentIntent(android.app.PendingIntent.getActivity(this, 7302, abrir, fl)).setAutoCancel(true).setOnlyAlertOnce(true);
+        try { nm.notify(7302, b.build()); } catch (Exception ignored) { }
+    }
+
     static boolean responder(android.content.Context c, Msg m, String texto) {
         if (m == null || m.responder == null) return false;
         try {

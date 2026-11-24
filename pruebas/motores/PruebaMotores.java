@@ -9,7 +9,8 @@ import java.text.Normalizer;
  *   1) GGUF (llama.cpp): una pregunta en español con un modelo pequeño.
  *   2) Voz neural (Supertonic 3): «Hola, soy Jarvis…» en español.
  *   3) Dictado (whisper.cpp): transcribe ese mismo audio → debe entender lo que dijo la voz.
- * Uso: java PruebaMotores <libjarvis_llama.so> <modelo.gguf> <libjarvis_whisper.so> <ggml-base.bin> <carpeta supertonic>
+ *   4) 3.30: búsqueda por significado (EmbeddingGemma): lo del paseo encuentra la salida al museo.
+ * Uso: java PruebaMotores <libjarvis_llama.so> <modelo.gguf> <libjarvis_whisper.so> <ggml-base.bin> <carpeta supertonic> [busqueda.gguf]
  */
 public class PruebaMotores {
     static int fallas = 0;
@@ -73,7 +74,38 @@ public class PruebaMotores {
         Whisper.liberar();
         voz.close();
 
-        System.out.println(fallas == 0 ? "\nTodo bien (motores 3.29)." : "\nFALLARON " + fallas);
+        // ---------------- 4) 3.30: búsqueda por significado (EmbeddingGemma por el mismo motor GGUF)
+        if (a.length > 5) {
+            t0 = System.currentTimeMillis();
+            int e = Llama.cargarEmb(a[5], 4);
+            check(e == 0, "carga el modelo de búsqueda (" + (System.currentTimeMillis() - t0) + " ms)");
+            String[] docs = {
+                "title: Circular | text: La salida pedagógica al museo de ciencias es el viernes; traer el permiso firmado.",
+                "title: Recibo | text: La factura de la luz llega el 15 y se paga en el banco.",
+                "title: Receta | text: Arepas: harina de maíz, agua, sal y queso; se asan en el budare.",
+            };
+            float[][] v = new float[docs.length][];
+            t0 = System.currentTimeMillis();
+            for (int k = 0; k < docs.length; k++) v[k] = Llama.embeber(docs[k]);
+            System.out.println("   " + docs.length + " vectores de " + (v[0] == null ? 0 : v[0].length) + " números en " + (System.currentTimeMillis() - t0) + " ms");
+            check(v[0] != null && v[0].length >= 256, "convierte un texto en vector");
+            double largo = 0; for (float x : v[0]) largo += x * x;
+            check(Math.abs(Math.sqrt(largo) - 1) < 0.01, "el vector viene normalizado (largo 1)");
+            String[][] qs = { { "task: search result | query: ¿cuándo es el paseo del colegio?", "0" }, { "task: search result | query: cuánto debo de energía eléctrica", "1" }, { "task: search result | query: qué cocino con maíz", "2" } };
+            for (String[] q : qs) {
+                float[] w = Llama.embeber(q[0]);
+                int mejor = -1; double mp = -2; StringBuilder ps = new StringBuilder();
+                for (int k = 0; k < docs.length; k++) { double p = 0; for (int j = 0; j < w.length; j++) p += w[j] * v[k][j]; ps.append(String.format(" %.2f", p)); if (p > mp) { mp = p; mejor = k; } }
+                System.out.println("   «" + q[0].substring(29) + "» →" + ps);
+                check(mejor == Integer.parseInt(q[1]), "encuentra por significado: «" + q[0].substring(29) + "»");
+            }
+            // los dos modelos a la vez (conversación y búsqueda), como en el celular
+            check(Llama.cargar(a[1], 1024, 4) == 0 && Llama.embeber("hola") != null, "funciona junto al modelo de conversación");
+            Llama.liberar();
+            Llama.liberarEmb();
+        }
+
+        System.out.println(fallas == 0 ? "\nTodo bien (motores 3.30)." : "\nFALLARON " + fallas);
         System.exit(fallas == 0 ? 0 : 1);
     }
 

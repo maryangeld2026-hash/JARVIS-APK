@@ -41,6 +41,7 @@ public class MensajesPlugin extends Plugin {
         if (call.hasOption("estafas")) e.putBoolean("estafas", call.getBoolean("estafas", true));
         if (call.hasOption("autoResp")) e.putBoolean("autoResp", call.getBoolean("autoResp", false));
         if (call.hasOption("archivar")) { boolean on = call.getBoolean("archivar", false); e.putBoolean("archivar", on); if (!on) Archivo.borrar(getContext()); }   // 3.18
+        if (call.hasOption("sugerencias")) e.putBoolean("sugerencias", call.getBoolean("sugerencias", false));    // 3.30
         if (call.hasOption("autoTexto")) e.putString("autoTexto", call.getString("autoTexto", ""));
         if (call.hasOption("autoHasta")) e.putLong("autoHasta", (long) (double) call.getDouble("autoHasta", 0d));
         e.apply(); call.resolve();

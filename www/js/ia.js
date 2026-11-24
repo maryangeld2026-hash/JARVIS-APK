@@ -322,7 +322,8 @@
     if (k >= 0) { cambia = fijo.slice(k + 1).trim(); fijo = fijo.slice(0, k); }
     if (gemma) { const h = fijo.match(/\s*Hoy es [^\n]*?son las \d{1,2}:\d{2}(?:\s*[ap]\.\s?m\.)?\.*\s*/); if (h) { fijo = fijo.replace(h[0], " "); cambia = h[0].trim() + " " + cambia; } }
     const sys = fijo.slice(0, gg ? 3500 : gemma ? 5000 : 900) + (st.familia === "qwen35" ? " Responde directamente, sin mostrar tu razonamiento." : "") + " Responde en español" + (gemma ? ". Si te piden explicar algo, explícalo completo y en orden." : ", breve.") + (json ? " Responde SOLO con el objeto JSON pedido, sin texto antes ni después." : "") + (gemma ? "" : " " + cambia.slice(0, 400));
-    const prompt = L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
+    // 3.30: Gemini Nano (la IA de Android) tiene unos 4000 tokens: una instrucción corta con lo último de la conversación
+    const prompt = st.familia === "nano" && window.JL19 ? window.JL19.promptNano(sys, messages.map((m) => ({ role: m.role, content: m.content }))) : L.localPrompt(sys, messages.map((m) => ({ role: m.role, content: m.content })));
     const mensajes = messages.slice(gg ? -6 : gemma ? -8 : -10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content || "").slice(0, gg ? 1200 : gemma ? 1800 : 4000) }));
     if (gemma && cambia && mensajes.length && mensajes[mensajes.length - 1].role === "user") mensajes[mensajes.length - 1].content = `(${cambia.slice(0, 1200)})\n\n${mensajes[mensajes.length - 1].content}`;
     if (gemma && maxTokens === 700) maxTokens = 1800;                // las explicaciones largas ya no se cortan

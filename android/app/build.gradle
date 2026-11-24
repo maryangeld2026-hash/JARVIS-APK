@@ -9,8 +9,8 @@ android {
         applicationId "co.jarvis.docente"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 43
-        versionName "3.29.0"
+        versionCode 44
+        versionName "3.30.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // solo los procesadores de los celulares Android (el motor de voz pesa ~10 MB por cada uno)
         ndk { abiFilters 'arm64-v8a' }   // 3.14: solo celulares de 64 bits (Gemma solo corre en ellos): APK mucho más liviano
@@ -62,6 +62,8 @@ dependencies {
     implementation project(':motor-llama')
     implementation project(':motor-whisper')
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:latest.release'
+    implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'                           // 3.30: Gemini Nano (la IA que trae Android en algunos celulares)
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     // 2.2: reconocimiento de voz sin internet para «Jarvis» en segundo plano (el mismo motor del Jarvis del computador)
     implementation 'com.alphacephei:vosk-android:0.3.47@aar'
     implementation 'net.java.dev.jna:jna:5.13.0@aar'

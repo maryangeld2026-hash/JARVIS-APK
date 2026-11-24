@@ -12,12 +12,16 @@
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
   /** El modelo «en vivo» de la cuenta (los que aceptan bidiGenerateContent). */
+  let liveModelos = [];
   async function liveModel(key) {
     if (D.ajustes.liveModelo) return D.ajustes.liveModelo;
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(key)}`);
     if (!r.ok) throw new Error(r.status === 400 || r.status === 403 ? "La clave de Gemini no sirve. Revísala en Ajustes." : "No pude ver los modelos de tu cuenta.");
     const ms = ((await r.json()).models || []).filter((m) => (m.supportedGenerationMethods || []).includes("bidiGenerateContent")).map((m) => String(m.name).replace(/^models\//, ""));
     if (!ms.length) throw new Error("Tu cuenta de Gemini no tiene un modelo de voz en vivo disponible.");
+    liveModelos = ms;
+    // 3.30: el más nuevo (Gemini 3.8 Live), y «Extended Thinking» solo si lo escogiste (piensa más, responde más lento)
+    if (window.JL19) { const l = window.JL19.rankLive(ms, D.ajustes.livePensar ? "pensar" : ""); if (l.length) return l[0]; }
     const rank = (x) => (/native-audio/.test(x) ? 0 : 1) + (/flash/.test(x) ? 0 : 2) + (/exp/.test(x) ? 1 : 0);
     return ms.sort((a, b) => rank(a) - rank(b) || b.localeCompare(a))[0];
   }
@@ -45,6 +49,8 @@
     try {
       const model = await liveModel(key);
       S.model = model;
+      // 3.30: los modelos nuevos siguen conversando mientras Jarvis hace la orden (si alguna vez no arrancó así, ya no se intenta)
+      S.asinc = !!(window.JL19 && window.JL19.liveAsincrono(model) && D.ajustes.liveSinAsinc !== model && D.ajustes.liveAsinc !== false);
       S.ctxIn = new AudioContext();
       S.ctxOut = new AudioContext({ sampleRate: 24000 });
       S.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
@@ -69,13 +75,14 @@
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre && !/^[a-z]/.test(D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : "Charon" } } } },
           systemInstruction: { parts: [{ text: sys }] },
           inputAudioTranscription: {}, outputAudioTranscription: {},
-          tools: [{ googleSearch: {} }, { functionDeclarations: [{ name: "jarvis_orden", description: "Hace una orden de la app Jarvis del celular (recordatorios, alarmas, temporizador, clima, abrir una app, llamar o escribir a un contacto, linterna, volumen; y de clase: escoger estudiante, grupos, pasar lista, quiz…). Devuelve lo que respondió la app.",
+          tools: [{ googleSearch: {} }, { functionDeclarations: [window.JL19 ? window.JL19.herramientaLive(S.asinc) : { name: "jarvis_orden", description: "Hace una orden de la app Jarvis del celular (recordatorios, alarmas, temporizador, clima, abrir una app, llamar o escribir a un contacto, linterna, volumen; y de clase: escoger estudiante, grupos, pasar lista, quiz…). Devuelve lo que respondió la app.",
             parameters: { type: "OBJECT", properties: { orden: { type: "STRING", description: "La orden en español, como la diría la persona. Ej.: «pon 5 minutos», «escoge un estudiante de 7A»." } }, required: ["orden"] } }] }] } });
       };
       ws.onmessage = async (ev) => { let j; try { j = JSON.parse(typeof ev.data === "string" ? ev.data : await ev.data.text()); } catch (e) { return; } onMsg(j); };
       ws.onerror = () => estado("Se perdió la conexión.");
       ws.onclose = (ev) => {
         if (!(S && S.ws === ws)) return;
+        if (!S.listo && S.asinc) { D.ajustes.liveSinAsinc = S.model; try { window.JD.save(); } catch (e) { /* nada */ } }   // 3.30: la próxima vez, sin lo asíncrono
         const motivo = ev.reason ? ` (${ev.reason.slice(0, 120)})` : "";
         if (!S.listo && S.opts.respaldo) { const r = S.opts.respaldo; stop(""); D.ajustes.vivoFallaT = Date.now(); r("No arrancó la conversación en vivo" + motivo + "."); return; }   // 3.23: sigue con la escucha normal
         stop(ev.code === 1000 ? "" : "La conversación en vivo se cerró" + motivo + ".");
@@ -115,7 +122,7 @@
           const nuevos = (D.chat || []).slice(antes).filter((m) => m.role === "assistant").map((m) => m.content);
           res = nuevos.join("\n").slice(0, 1500) || "Hecho.";
         } catch (e) { res = "No se pudo: " + (e.message || e); }
-        out.push({ id: fc.id, name: fc.name, response: { resultado: res } });
+        out.push(window.JL19 ? window.JL19.respuestaLive(fc, res, S && S.asinc) : { id: fc.id, name: fc.name, response: { resultado: res } });
       }
       send({ toolResponse: { functionResponses: out } });
     }
@@ -210,5 +217,5 @@
       send.before(b);
     }
   };
-  X._live = { start, stop, onMsg, liveModel, estado: () => S };
+  X._live = { start, stop, onMsg, liveModel, estado: () => S, modelos: () => liveModelos.slice() };
 })();

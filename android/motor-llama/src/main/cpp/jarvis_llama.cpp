@@ -275,3 +275,70 @@ Java_co_jarvis_motores_Llama_liberar(JNIEnv *, jclass) {
     std::lock_guard<std::mutex> lk(g_mx);
     liberar_todo();
 }
+
+// ============================================================================ 3.30 · BÚSQUEDA POR SIGNIFICADO
+// Un segundo modelo, solo para «embeddings» (EmbeddingGemma 300M): convierte un texto en un vector de números;
+// textos que dicen lo mismo con otras palabras quedan cerca. Va aparte del modelo de conversación.
+static llama_model   * g_emodel = nullptr;
+static llama_context * g_ectx = nullptr;
+static std::mutex      g_emx;
+static int             g_ectx_n = 1024;
+
+static void liberar_emb() {
+    if (g_ectx) { llama_free(g_ectx); g_ectx = nullptr; }
+    if (g_emodel) { llama_model_free(g_emodel); g_emodel = nullptr; }
+}
+
+/** → 0 bien; 1 no cargó el modelo; 2 sin memoria; 3 el modelo no sirve para embeddings. */
+extern "C" JNIEXPORT jint JNICALL
+Java_co_jarvis_motores_Llama_cargarEmb(JNIEnv * env, jclass, jstring jruta, jint hilos) {
+    std::lock_guard<std::mutex> lk(g_emx);
+    liberar_emb();
+    llama_model_params mp = llama_model_default_params();
+    mp.n_gpu_layers = 0;
+    const std::string ruta = jstr(env, jruta);
+    g_emodel = llama_model_load_from_file(ruta.c_str(), mp);
+    if (!g_emodel) return 1;
+    const int entrenado = llama_model_n_ctx_train(g_emodel);
+    g_ectx_n = std::max(256, std::min(1024, entrenado > 0 ? entrenado : 1024));
+    llama_context_params cp = llama_context_default_params();
+    int nh = hilos > 0 ? hilos : std::max(2, std::min(4, (int) sysconf(_SC_NPROCESSORS_ONLN) - 2));
+    cp.n_ctx = g_ectx_n;
+    cp.n_batch = g_ectx_n;
+    cp.n_ubatch = g_ectx_n;                                  // sin causalidad: toda la frase en un solo lote
+    cp.n_seq_max = 1;
+    cp.n_threads = nh;
+    cp.n_threads_batch = nh;
+    cp.embeddings = true;
+    g_ectx = llama_init_from_model(g_emodel, cp);
+    if (!g_ectx) { liberar_emb(); return 2; }
+    if (llama_pooling_type(g_ectx) == LLAMA_POOLING_TYPE_NONE) { liberar_emb(); return 3; }
+    LOGI("modelo de búsqueda cargado: ctx %d, %d dimensiones", g_ectx_n, llama_model_n_embd_out(g_emodel));
+    return 0;
+}
+
+/** El vector (normalizado, largo 1) de un texto; null si falla. */
+extern "C" JNIEXPORT jfloatArray JNICALL
+Java_co_jarvis_motores_Llama_embeber(JNIEnv * env, jclass, jstring jtexto) {
+    std::lock_guard<std::mutex> lk(g_emx);
+    if (!g_ectx) return nullptr;
+    std::vector<llama_token> toks = common_tokenize(g_ectx, jstr(env, jtexto), true, true);
+    if (toks.empty()) return nullptr;
+    if ((int) toks.size() > g_ectx_n) toks.resize(g_ectx_n);
+    llama_memory_clear(llama_get_memory(g_ectx), true);
+    common_batch batch(g_ectx);
+    batch.clear();
+    for (int i = 0; i < (int) toks.size(); i++) batch.add(toks[i], i, 0, true);
+    if (llama_process(g_ectx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) < 0) return nullptr;
+    const float * e = llama_get_embeddings_seq(g_ectx, 0);
+    if (!e) return nullptr;
+    const int n = llama_model_n_embd_out(g_emodel);
+    std::vector<float> out(n);
+    common_embd_normalize(e, out.data(), n, 2);
+    jfloatArray r = env->NewFloatArray(n);
+    env->SetFloatArrayRegion(r, 0, n, out.data());
+    return r;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_co_jarvis_motores_Llama_liberarEmb(JNIEnv *, jclass) { std::lock_guard<std::mutex> lk(g_emx); liberar_emb(); }

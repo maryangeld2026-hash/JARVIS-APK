@@ -41,4 +41,11 @@ public final class Llama {
     public static native String info();
     public static native String error();
     public static native void liberar();
+
+    // 3.30 · búsqueda por significado: un segundo modelo, solo para convertir textos en vectores
+    /** → 0 bien; 1 no cargó; 2 sin memoria; 3 no es un modelo de embeddings. */
+    public static native int cargarEmb(String ruta, int hilos);
+    /** El vector normalizado de un texto (o null). */
+    public static native float[] embeber(String texto);
+    public static native void liberarEmb();
 }
