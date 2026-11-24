@@ -345,7 +345,7 @@
     const sp = mk("select", "inp");
     [[3000, "Termina tras 3 s de silencio"], [5000, "Termina tras 5 s de silencio"], [8000, "Termina tras 8 s de silencio (pensando en voz alta)"]].forEach(([v, t]) => sp.append(new Option(t, v)));
     sp.value = String(aj().dictadoPausa || 5000); sp.addEventListener("change", () => { aj().dictadoPausa = +sp.value; save(); }); s.append(sp);
-    s.append(mk("p", "hint", "Di «voy a dictar» o «toma dictado de un acta» y habla como te salga: Jarvis quita las muletillas («eh», «este»), lo que corriges («el martes, perdón, el miércoles») y lo deja en párrafos y listas. También entiende «punto y aparte» y «nueva línea». En modo docente el audio nunca va a la nube (puede tener nombres de estudiantes)."));
+    s.append(mk("p", "hint", "Di «dictado ordenado» o «toma dictado de un acta» y habla como te salga: Jarvis quita las muletillas («eh», «este»), lo que corriges («el martes, perdón, el miércoles») y lo deja en párrafos y listas. También entiende «punto y aparte» y «nueva línea». En modo docente el audio nunca va a la nube (puede tener nombres de estudiantes)."));
 
     s.append(mk("h3", "sub", "Búsqueda por significado"));
     const eb = mk("p", "hint", "Busca en tus notas, documentos, dictados, recordatorios y conversaciones aunque uses otras palabras («¿dónde guardé lo del paseo?» encuentra «salida pedagógica»). Usa un modelo pequeño dentro del celular (EmbeddingGemma, unos 280 MB): nada sale del celular."); s.append(eb);
@@ -425,7 +425,7 @@
     document.addEventListener("visibilitychange", () => { if (document.hidden && aj().widgetSpec && !aj().widgetFuente) widgetPintar(false); });
     if (aj().silencioJarvis && aj().silencioJarvis < Date.now()) { aj().silencioJarvis = 0; save(); }
     const C = window.JL11 && window.JL11.CATALOGO;
-    if (C && !C.some((x) => /Dictado ordenado/.test(x[0]))) C.push(["📝 Dictado ordenado, widgets y cuidar el celular", ["Voy a dictar", "Toma dictado de un acta", "Crea un widget con la cuenta regresiva para vacaciones el 12 de diciembre", "Libera espacio", "¿Qué apps ven mi ubicación?", "Silencia todo menos las llamadas de mi familia", "¿Dónde guardé lo de la salida al museo?", "Sugerencias de mis mensajes", "Pídeme un domicilio de hamburguesa", "Activa el contestador de llamadas", "¿Tengo Gemini Nano?"]]);
+    if (C && !C.some((x) => /Dictado ordenado/.test(x[0]))) C.push(["📝 Dictado ordenado, widgets y cuidar el celular", ["Dictado ordenado", "Toma dictado de un acta", "Crea un widget con la cuenta regresiva para vacaciones el 12 de diciembre", "Libera espacio", "¿Qué apps ven mi ubicación?", "Silencia todo menos las llamadas de mi familia", "¿Dónde guardé lo de la salida al museo?", "Sugerencias de mis mensajes", "Pídeme un domicilio de hamburguesa", "Activa el contestador de llamadas", "¿Tengo Gemini Nano?"]]);
   };
   X._a330 = { semantico, dictadoLargo, widgetLibre, widgetPintar, celular, sugerencias, buscar, activarBusqueda, contestador, nano, fuentes };
 })();

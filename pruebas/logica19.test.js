@@ -19,7 +19,9 @@ test("1 · Gemini 3.8 Live gana a los modelos viejos de audio nativo", () => {
 });
 
 test("2 · dictado ordenado", () => {
-  assert.deepEqual(L.dictadoLargoIntent("voy a dictar"), { dl: true, tipo: "texto" });
+  assert.deepEqual(L.dictadoLargoIntent("dictado ordenado"), { dl: true, tipo: "texto" });
+  assert.equal(L.dictadoLargoIntent("voy a dictar"), null);          // el dictado con puntuación de siempre
+  assert.equal(L.dictadoLargoIntent("modo dictado"), null);
   assert.deepEqual(L.dictadoLargoIntent("Jarvis, toma dictado de un acta"), { dl: true, tipo: "acta" });
   assert.equal(L.dictadoLargoIntent("dicta mis observaciones").tipo, "observaciones");
   assert.equal(L.dictadoLargoIntent("dictame un mensaje para Ana"), null);    // ese es el dictado pulido de siempre

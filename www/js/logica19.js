@@ -57,8 +57,9 @@
   function dictadoLargoIntent(text) {
     const t = lead(norm(text));
     let m;
-    if (/^(?:modo dictado|dictado largo|dictado ordenado|voy a dictar(?: algo)?|quiero dictar(?: algo)?|toma(?:me)? dictado|empieza (?:el )?dictado)$/.test(t)) return { dl: true, tipo: "texto" };
-    if ((m = t.match(/^(?:toma(?:me)? dictado|voy a dictar|quiero dictar|dicta(?:r)?|dictado largo|modo dictado)\s+(?:de\s+|para\s+)?(?:un|una|el|la|mis|mi|las|los)?\s*(acta|observaciones?|notas?(?: de clase)?|informe|correo|carta|resumen|lista|reporte|planeacion|texto|mensaje)\b/))) return { dl: true, tipo: m[1] };
+    // («dictado», «modo dictado», «voy a dictar» son el dictado con puntuación de siempre: se quedan como estaban)
+    if (/^(?:dictado largo|dictado ordenado|(?:modo|haz(?:me)? un|empieza (?:el|un)?) dictado (?:largo|ordenado)|quiero dictar(?: algo)?|toma(?:me)? dictado)$/.test(t)) return { dl: true, tipo: "texto" };
+    if ((m = t.match(/^(?:toma(?:me)? dictado|voy a dictar|quiero dictar|dicta(?:r)?|dictado largo|dictado ordenado)\s+(?:de\s+|para\s+)?(?:un|una|el|la|mis|mi|las|los)?\s*(acta|observaciones?|notas?(?: de clase)?|informe|correo|carta|resumen|lista|reporte|planeacion|texto|mensaje)\b/))) return { dl: true, tipo: m[1] };
     return null;
   }
   /** «punto y aparte», «nuevo párrafo», «nueva línea», «punto y seguido», «punto final» dichos en voz alta. */
