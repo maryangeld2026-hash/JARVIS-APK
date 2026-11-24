@@ -150,6 +150,92 @@ public class DictadoPlugin extends Plugin {
             call.resolve(r);
         });
     }
+    /**
+     * 3.31 · una nota de voz compartida (WhatsApp manda .opus): se decodifica con Android y Whisper la pasa a texto,
+     * dentro del celular. transcribirAudio({base64, idioma}) → {texto, seg}
+     */
+    @PluginMethod
+    public void transcribirAudio(PluginCall call) {
+        final String b64 = call.getString("base64", "");
+        final String idioma = call.getString("idioma", "es");
+        File f = modelo();
+        if (f == null) { call.reject("El dictado sin internet no está descargado.", "sin_modelo"); return; }
+        if (!co.jarvis.motores.Whisper.iniciar()) { call.reject("Este celular no puede usar Whisper (" + co.jarvis.motores.Whisper.falla() + ")."); return; }
+        main.removeCallbacks(soltar);
+        hilo.execute(() -> {
+            File tmp = null;
+            try {
+                tmp = File.createTempFile("nota", ".audio", getContext().getCacheDir());
+                try (java.io.FileOutputStream o = new java.io.FileOutputStream(tmp)) { o.write(android.util.Base64.decode(b64, android.util.Base64.DEFAULT)); }
+                float[] pcm = decodificar(tmp.getAbsolutePath(), 16000, 600);
+                if (pcm == null || pcm.length < 1600) { call.reject("No pude abrir el audio."); return; }
+                if (!cargado.equals(f.getAbsolutePath())) {
+                    if (co.jarvis.motores.Whisper.cargar(f.getAbsolutePath()) != 0) { call.reject("No pude abrir el modelo de dictado."); return; }
+                    cargado = f.getAbsolutePath();
+                }
+                String t = co.jarvis.motores.Whisper.transcribir(pcm, idioma.length() >= 2 ? idioma.substring(0, 2) : "es", 0, "");
+                t = t.replaceAll("\\[[^\\]]*\\]|\\([^)]*(?:música|music|aplausos|risas)[^)]*\\)", "").trim();
+                JSObject r = new JSObject(); r.put("texto", t); r.put("seg", pcm.length / 16000.0); call.resolve(r);
+            } catch (Throwable e) { call.reject("No pude transcribir el audio: " + e.getMessage()); }
+            finally { if (tmp != null) tmp.delete(); main.postDelayed(soltar, 5 * 60_000); }
+        });
+    }
+
+    /** Cualquier audio que Android sepa abrir (opus, ogg, m4a, mp3, amr…) → mono a «sr» Hz en [-1, 1] (máximo «maxSeg» segundos). */
+    static float[] decodificar(String ruta, int sr, int maxSeg) throws Exception {
+        android.media.MediaExtractor ex = new android.media.MediaExtractor();
+        ex.setDataSource(ruta);
+        int pista = -1; android.media.MediaFormat fmt = null;
+        for (int i = 0; i < ex.getTrackCount(); i++) { android.media.MediaFormat f = ex.getTrackFormat(i); String m = f.getString(android.media.MediaFormat.KEY_MIME); if (m != null && m.startsWith("audio/")) { pista = i; fmt = f; break; } }
+        if (pista < 0) { ex.release(); return null; }
+        ex.selectTrack(pista);
+        int srIn = fmt.getInteger(android.media.MediaFormat.KEY_SAMPLE_RATE), canales = fmt.getInteger(android.media.MediaFormat.KEY_CHANNEL_COUNT);
+        boolean flotante = false;
+        android.media.MediaCodec dec = android.media.MediaCodec.createDecoderByType(fmt.getString(android.media.MediaFormat.KEY_MIME));
+        dec.configure(fmt, null, null, 0); dec.start();
+        float[] mono = new float[srIn * 60]; int n = 0; long limite = (long) srIn * maxSeg;
+        android.media.MediaCodec.BufferInfo info = new android.media.MediaCodec.BufferInfo();
+        boolean finEntrada = false, fin = false;
+        try {
+            while (!fin && n < limite) {
+                if (!finEntrada) {
+                    int ib = dec.dequeueInputBuffer(10000);
+                    if (ib >= 0) {
+                        java.nio.ByteBuffer buf = dec.getInputBuffer(ib);
+                        int s = ex.readSampleData(buf, 0);
+                        if (s < 0) { dec.queueInputBuffer(ib, 0, 0, 0, android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM); finEntrada = true; }
+                        else { dec.queueInputBuffer(ib, 0, s, ex.getSampleTime(), 0); ex.advance(); }
+                    }
+                }
+                int ob = dec.dequeueOutputBuffer(info, 10000);
+                if (ob == android.media.MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    android.media.MediaFormat of = dec.getOutputFormat();
+                    srIn = of.getInteger(android.media.MediaFormat.KEY_SAMPLE_RATE); canales = of.getInteger(android.media.MediaFormat.KEY_CHANNEL_COUNT);
+                    flotante = of.containsKey(android.media.MediaFormat.KEY_PCM_ENCODING) && of.getInteger(android.media.MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT;
+                    limite = (long) srIn * maxSeg;
+                } else if (ob >= 0) {
+                    java.nio.ByteBuffer b = dec.getOutputBuffer(ob);
+                    if (b != null && info.size > 0) {
+                        b.position(info.offset); b.limit(info.offset + info.size); b.order(java.nio.ByteOrder.LITTLE_ENDIAN);
+                        int muestras = info.size / (flotante ? 4 : 2) / Math.max(1, canales);
+                        if (n + muestras > mono.length) mono = java.util.Arrays.copyOf(mono, Math.max(mono.length * 2, n + muestras));
+                        for (int k = 0; k < muestras; k++) {
+                            float s = 0;
+                            for (int c = 0; c < canales; c++) s += flotante ? b.getFloat() : b.getShort() / 32768f;
+                            mono[n++] = s / canales;
+                        }
+                    }
+                    dec.releaseOutputBuffer(ob, false);
+                    if ((info.flags & android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) fin = true;
+                }
+            }
+        } finally { try { dec.stop(); } catch (Exception ignored) { } dec.release(); ex.release(); }
+        // a 16 kHz (interpolación lineal)
+        int m = (int) ((long) n * sr / srIn); float[] y = new float[m]; double k = srIn / (double) sr;
+        for (int i = 0; i < m; i++) { double p = i * k; int j = (int) p; double f = p - j; float u = mono[Math.min(j, n - 1)], v = mono[Math.min(j + 1, n - 1)]; y[i] = (float) (u + (v - u) * f); }
+        return y;
+    }
+
     /** PCM en [-1, 1] → archivo WAV de 16 bits, mono. */
     static byte[] wav(float[] pcm, int sr) {
         int datos = pcm.length * 2;

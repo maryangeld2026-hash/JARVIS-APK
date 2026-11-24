@@ -29,7 +29,7 @@
   /** ¿El texto tiene nombres de tus estudiantes? (eso no va a la nube) */
   const conNombres = (t) => { if (!docente()) return false; const x = L19.norm(t); return nombresEst().some((n) => x.includes(n) || (n.split(" ").filter((w) => w.length > 2).length >= 2 && n.split(" ").filter((w) => w.length > 2).every((w) => x.includes(w)))); };
   const sinNombres = (t) => { if (!docente()) return t; const ns = nombresEst(); return String(t).split("\n").filter((l) => !ns.some((n) => L19.norm(l).includes(n))).join("\n"); };
-  const copiar = (t) => { try { navigator.clipboard.writeText(t); A.toast("Copiado: pégalo donde quieras."); } catch (e) { A.toast("No pude copiar."); } };
+  const copiar = (t) => { try { navigator.clipboard.writeText(t).then(() => A.toast("Copiado: pégalo donde quieras."), () => A.toast("No pude copiar.")); } catch (e) { A.toast("No pude copiar."); } };
 
   // ======================================================================== 2. DICTADO ORDENADO
   let dictando = null;

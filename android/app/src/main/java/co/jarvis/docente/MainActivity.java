@@ -45,6 +45,8 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(VozNeuralPlugin.class);
         registerPlugin(CelularPlugin.class);                 // 3.30: cuidar el celular
         registerPlugin(BuscadorPlugin.class);                // 3.30: buscar en tus cosas por significado
+        registerPlugin(SaludPlugin.class);                   // 3.31: Health Connect
+        registerPlugin(ClimaPlugin.class);                   // 3.31: alertas de lluvia fuerte
         super.onCreate(savedInstanceState);
         Apagado.marcar(this, false);                                           // 3.16: al abrir Jarvis, vuelve a estar encendido
         // 3.0.2: con la letra del celular muy grande, la barra de arriba no cabía y el botón de Ajustes quedaba por fuera

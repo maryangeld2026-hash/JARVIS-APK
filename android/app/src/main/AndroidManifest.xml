@@ -40,6 +40,7 @@
                 <data android:mimeType="image/*" />
                 <data android:mimeType="text/*" />
                 <data android:mimeType="application/*" />
+                <data android:mimeType="audio/*" />
             </intent-filter>
             <intent-filter android:label="Jarvis">
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
@@ -74,6 +75,18 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_jarvis_info" />
         </receiver>
         <!-- 3.4: «No molestar» en horario de clase -->
+        <!-- 3.31: alertas de lluvia fuerte (Android revisa el pronóstico cada 2 horas) -->
+        <service android:name=".ClimaPlugin$Revision" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
+        <!-- 3.31: Health Connect exige explicar para qué se usan los datos de salud -->
+        <activity android:name=".SaludPrivacidad" android:exported="true" android:label="Jarvis y tu salud">
+            <intent-filter><action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" /></intent-filter>
+        </activity>
+        <activity-alias android:name="ViewPermissionUsageActivity" android:exported="true" android:targetActivity=".SaludPrivacidad" android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
         <!-- 3.30: al terminar el «No molestar» con excepciones, vuelve como estaba -->
         <receiver android:name=".CelularPlugin$Fin" android:exported="false" />
         <receiver android:name=".SilencioReceiver" android:exported="false">
@@ -201,6 +214,10 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 3.31: Health Connect (solo lectura: pasos, sueño y pulso) -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
@@ -209,6 +226,7 @@
     <!-- Android 11+: para encontrar el reconocimiento de voz y la voz del teléfono -->
     <queries>
         <package android:name="com.shazam.android" />
+        <package android:name="com.google.android.apps.healthdata" />
         <package android:name="com.google.android.googlequicksearchbox" />
         <intent>
             <action android:name="android.speech.RecognitionService" />

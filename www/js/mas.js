@@ -47,6 +47,7 @@
         const bytes = Uint8Array.from(atob(e.base64), (c) => c.charCodeAt(0));
         const file = new File([bytes], e.nombre || "archivo", { type: e.mime || "application/octet-stream" });
         const img = /^image\//.test(file.type);
+        if (window.JL20 && window.JL20.esAudio(file.type, file.name) && X._a331) return X._a331.audio(e.base64, file.type, file.name);   // 3.31: notas de voz
         return askPick(`Recibí «${file.name}». ¿Qué hago?`, (img
           ? [["Explícame o resuélvelo", "¿Qué hay en esta imagen? Si es un ejercicio o un tablero, explícalo y resuélvelo paso a paso."], ["Califícalo como trabajo", null, () => gradeShared(file)], ["Lee el texto", null, () => ocrFile(file)]]
           : [["Resúmelo", "Resume este documento en puntos clave."], ["Hazme un quiz con esto", "Hazme un quiz de 5 preguntas de selección múltiple con base en este documento, con la respuesta correcta y una explicación."], ["Ideas para la clase", "Dime cómo puedo usar este documento en clase: 3 actividades concretas."]])
@@ -54,6 +55,7 @@
       }
       if (e.texto) {
         const t = e.texto.trim();
+        if (window.JL20 && window.JL20.ytId(t) && X._a331) return X._a331.youtube({ yt: "resumen", url: window.JL20.ytUrl(window.JL20.ytId(t)) });   // 3.31: un video de YouTube
         return askPick(`Recibí este texto:\n\n> ${t.slice(0, 280).replace(/\n/g, "\n> ")}${t.length > 280 ? "…" : ""}\n\n¿Qué hago?`, [
           ["Resúmelo", () => A.handle("Resume esto en puntos clave:\n\n" + t, false)],
           ["Respóndele (a un padre o colega)", () => A.handle("Ayúdame a responder este mensaje con cordialidad y en pocas líneas:\n\n" + t, false)],

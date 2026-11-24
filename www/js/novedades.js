@@ -161,6 +161,7 @@
         else datos.push("No hay correos importantes sin leer.");
       } catch (e) { /* sin Gmail: sigue sin correos */ }
     }
+    if (X._a331 && X._a331.saludDia) { const sd = await X._a331.saludDia(); if (sd) datos.push(sd); }      // 3.31: cómo dormí (si lo activaste)
     const enCurso = (D.tareas || []).filter((t) => t.estado === "in_progress");
     if (enCurso.length) datos.push(`Investigaciones en curso: ${enCurso.map((t) => t.titulo).join("; ")}.`);
     const listas = (D.tareas || []).filter((t) => t.estado === "completed" && !t.visto);
