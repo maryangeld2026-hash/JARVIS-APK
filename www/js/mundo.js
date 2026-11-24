@@ -435,6 +435,8 @@
       if (!/^(?:jarvis\s+)?(?:pon|abre|llama|recuerdame|alarma|que hora|cancela|para|callate)\b/.test(t)) return { a331: "tutor", texto: text };
     }
     const yt = L20.ytIntent(text, ultimoVideo); if (yt) return { a331: "yt", it: yt };
+    if (String(text).length > 160 || /\n/.test(text)) return base.intent(text);        // los textos largos (prompts internos, pantallas) no son órdenes de estas habilidades
+    if (window.JL7 && window.JL7.habMatch && window.JL7.habMatch(text, D.misHab)) return base.intent(text);   // tus habilidades propias van primero
     const im = L20.imagenIntent(text); if (im) return { a331: "img", it: im };
     const pp = L20.picoIntent(text, Date.now()); if (pp) return { a331: pp.fe ? "fe" : "pp", it: pp };
     const al = L20.alertasIntent(text); if (al) return { a331: "al", it: al };

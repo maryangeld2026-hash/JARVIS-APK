@@ -390,7 +390,7 @@
       const f = new Date(desde); f.setMonth(f.getMonth() + (/an/.test(m[3]) ? n * 12 : n));
       return { ve: "agregar", que: "Garantía de " + m[1].trim(), fecha: iso(f), garantia: true };
     }
-    if ((m = t.match(/^(?:mi |la |el |los |las )?(.+?)\s+(?:vence|se vence|caduca|expira|hay que renovarl[oa]|toca renovarl[oa])\s+(?:el\s+)?(.+)$/))) {
+    if (t.split(" ").length <= 14 && (m = t.match(/^(?:mi |la |el |los |las )?((?:\S+\s+){0,5}?\S+)\s+(?:vence|se vence|caduca|expira|hay que renovarl[oa]|toca renovarl[oa])\s+(?:el\s+)?(.+)$/))) {
       const d = diaDe(m[2], now); if (!d) return null;
       const doc = DOCS.find(([re]) => re.test(m[1]));
       const que = doc ? doc[1] : raw.replace(/^\s*(?:jarvis[,\s]+)?(?:mi |la |el |los |las )?/i, "").split(/\s+(?:vence|se vence|caduca|expira|hay que|toca)\b/i)[0].trim();
