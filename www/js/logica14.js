@@ -24,7 +24,7 @@
   // ======================================================================== AJUSTES POR TEMAS
   /** [clave, ícono, título, explicación, palabras de los grupos que entran ahí] (el orden es el de la pantalla) */
   const TEMAS = [
-    ["ia", "🧠", "Inteligencia artificial", "La IA en la nube, la del celular y cuánto usas", /^(?:inteligencia artificial|ia de respaldo|uso de la ia|modelos y probador|segunda ia en la nube|lugares con google maps|modelos gguf|busqueda por significado|gemini nano)/],
+    ["ia", "🧠", "Inteligencia artificial", "La IA en la nube, la del celular y cuánto usas", /^(?:inteligencia artificial|ia de respaldo|uso de la ia|modelos y probador|segunda ia en la nube|lugares con google maps|modelos gguf|busqueda por significado|gemini nano|respaldo gratis)/],
     ["voz", "🎙️", "Voz y conversación", "Cómo suena y cómo te escucha Jarvis", /^(?:voz|la voz de jarvis|voz natural|mientras jarvis habla|manos libres|conversacion|formas de llamar|«?jarvis»? en segundo plano|jarvis en segundo plano|volumen de jarvis|dictado sin internet|dictado ordenado|gemini en vivo|notas de voz compartidas)/],
     ["tu", "👤", "Tú y tu asistente", "Tu nombre, personalidad, memoria y datos", /^(?:tu$|asistente|como te llama|memoria|mis datos|habilidades propias)/],
     ["rutinas", "🗓️", "Rutinas y día a día", "Órdenes programadas, disparadores, salud y casa", /^(?:ordenes programadas|vida diaria|disparadores|medicamentos|resumen de la manana|casa|mi dia y tareas largas|salud \(health connect\)|pico y placa)/],

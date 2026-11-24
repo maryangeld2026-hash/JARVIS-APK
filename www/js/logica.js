@@ -236,10 +236,12 @@
     claude: { nombre: "Claude (Anthropic)", modelo: "claude-haiku-5-5", base: "https://api.anthropic.com/v1",
       prefer: [/^claude-haiku/, /^claude-sonnet/, /^claude/], clave: "https://console.anthropic.com/settings/keys", pista: "sk-ant-…" },
     // 3.2: más proveedores (todos hablan el formato de OpenAI)
-    groq: { nombre: "Groq", tipo: "openai", modelo: "llama-3.1-8b-instant", base: "https://api.groq.com/openai/v1", nota: "muy rápida, con nivel gratuito",
-      prefer: [/instant/, /^llama-[\d.]+-\d+b/, /^llama/, /gemma|qwen|mistral/], clave: "https://console.groq.com/keys", pista: "gsk_…" },
-    openrouter: { nombre: "OpenRouter", tipo: "openai", modelo: "", base: "https://openrouter.ai/api/v1", nota: "muchos modelos, algunos gratis",
-      prefer: [/^google\/gemini-[\d.]+-flash-lite$/, /^google\/gemini-[\d.]+-flash$/, /^openai\/gpt-[\d.]+-mini$/, /:free$/], clave: "https://openrouter.ai/keys", pista: "sk-or-…" },
+    // 3.32: Groq gratis (sin tarjeta, unas 1.000 preguntas al día): GPT-OSS 120B o Qwen 3.8 (los Llama 3.1 ya no están en el plan gratis)
+    groq: { nombre: "Groq", tipo: "openai", modelo: "openai/gpt-oss-120b", base: "https://api.groq.com/openai/v1", nota: "gratis, sin tarjeta, muy rápida",
+      prefer: [/gpt-oss-120b/, /qwen3\.\d+-\d+b|qwen3-\d+b/, /llama-3\.3-70b/, /llama-4/, /gpt-oss/, /instant/, /^llama/, /gemma|qwen|mistral/], clave: "https://console.groq.com/keys", pista: "gsk_…" },
+    // 3.32: primero los modelos gratis («:free»), que no gastan créditos
+    openrouter: { nombre: "OpenRouter", tipo: "openai", modelo: "", base: "https://openrouter.ai/api/v1", nota: "muchos modelos, varios gratis",
+      prefer: [/^google\/gemma-4-31b[\w.-]*:free$/, /^google\/gemma[\w.-]*:free$/, /:free$/, /^google\/gemini-[\d.]+-flash-lite$/, /^google\/gemini-[\d.]+-flash$/, /^openai\/gpt-[\d.]+-mini$/], clave: "https://openrouter.ai/keys", pista: "sk-or-…" },
     // 3.26: DeepSeek V4.1 Flash («deepseek-flash» siempre apunta a la Flash más nueva; «deepseek-chat» quedó obsoleto)
     deepseek: { nombre: "DeepSeek V4.1 Flash", tipo: "openai", modelo: "deepseek-flash", base: "https://api.deepseek.com", nota: "barata y rápida, buena segunda opción",
       prefer: [/^deepseek-flash$/, /^deepseek-v[\d.]+-flash$/, /^deepseek-chat$/], clave: "https://platform.deepseek.com/api_keys", pista: "sk-…" },

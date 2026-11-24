@@ -21,10 +21,17 @@
       base: prov === "propio" ? (a.propioUrl || "").trim().replace(/\/+$/, "") : p.base, a };
   }
   const cfg = () => cfgFor(window.JD.load().ajustes.proveedor, true);
-  function backupCfg() {
+  /** 3.32: varios respaldos en orden (Groq, OpenRouter…); la IA del celular entra al final. */
+  function backupCfgs() {
     const a = window.JD.load().ajustes;
-    if (!a.respaldo || a.respaldo === a.proveedor || !L.PROVIDERS[a.respaldo]) return null;
-    const c = cfgFor(a.respaldo, false);
+    const l = window.JL21 ? window.JL21.respaldos(a) : [a.respaldo];
+    return l.map((p) => backupCfg(p)).filter(Boolean);
+  }
+  function backupCfg(prov) {
+    const a = window.JD.load().ajustes;
+    prov = prov || a.respaldo;
+    if (!prov || prov === a.proveedor || !L.PROVIDERS[prov]) return null;
+    const c = cfgFor(prov, false);
     if (c.prov === "local") return c;
     if (c.prov === "propio") return c.base ? c : null;
     return c.key ? c : null;
@@ -102,9 +109,9 @@
   }
   /** El orden en que se prueba: → [cfg]. */
   function plan(opts) {
-    const a = window.JD.load().ajustes, c = cfg(), b = opts && opts.sinRespaldo ? null : backupCfg();
+    const a = window.JD.load().ajustes, c = cfg(), bs = opts && opts.sinRespaldo ? [] : backupCfgs();
     const lista = [c];
-    if (b) lista.push(b);
+    bs.filter((x) => x.prov !== "local").concat(bs.filter((x) => x.prov === "local")).forEach((x) => lista.push(x));   // la del celular siempre de última
     const auto = a.iaAuto !== false && !(opts && opts.sinRespaldo);
     if (auto && localListo() && !lista.some((x) => x.prov === "local")) lista.push(cfgFor("local", false));   // aunque no la pusieras de respaldo
     const hoy = Date.now(), k = conexion();
@@ -134,7 +141,7 @@
         return t;
       } catch (e) {
         if (window.JDIAG) window.JDIAG.log("ia-falla", `${c.prov} · ${e.code || e.status || ""} · ${String(e.message || "").slice(0, 60)}`);
-        if (!hay || got || e.code === "abort" || !(L.retryable(e) || e.code === "sin_internet" || e.code === "sin_clave" || e.code === "sin_local" || e.status === 429 || e.status === 403 || e.status === 401 || e.status === 404)) throw e;
+        if (!hay || got || e.code === "abort" || !(L.retryable(e) || e.code === "sin_internet" || e.code === "sin_clave" || e.code === "sin_local" || e.status === 429 || e.status === 403 || e.status === 401 || e.status === 404 || (window.JL21 && window.JL21.pasaAlSiguiente(e.status)))) throw e;
         if (nube(c)) {
           if (e.status === 429) ruta.agotado[c.prov] = Date.now() + 10 * 60000;          // se acabó el cupo: 10 minutos con otra
           else if (e.code === "red" || e.code === "lento" || e.code === "sin_internet") ruta.caida = Date.now() + 60000;   // 3.22: solo si falló la red (no por un error del servidor)
@@ -163,6 +170,7 @@
     if (c.prov === "local") return localChat(opts);
     if (opts.system && opts.system.indexOf("\u0001") >= 0) opts = Object.assign({}, opts, { system: opts.system.replace("\u0001", " ") });
     let m = await model(c);
+    if (window.JL21 && window.JL21.corto(c.prov, m)) opts = window.JL21.compactar(opts);   // 3.32: los gratis tienen pocos tokens por minuto
     const tried = [];
     let saltos = 0;
     for (let intento = 0; intento < intentos; intento++) {
@@ -420,5 +428,5 @@
     const t = await via(c, { system: "Responde en una sola palabra.", messages: [{ role: "user", content: "Di: listo" }], stream: false, maxTokens: c.prov === "local" ? 256 : 20 }, 1);
     return { ok: true, texto: t.trim(), ms: Math.round(performance.now() - t0), modelo: await model(c) };
   }
-  window.JIA = { chat, json, test, probarModelo, modelosCuenta, sinCupo: () => Object.assign({}, sinCupo), rotacion: (prov) => rotacion(cfgFor(prov || cfg().prov, false)), stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor, plan: (o) => plan(o || {}).map((x) => x.prov), ruta: () => Object.assign({}, ruta) };
+  window.JIA = { backupCfgs, chat, json, test, probarModelo, modelosCuenta, sinCupo: () => Object.assign({}, sinCupo), rotacion: (prov) => rotacion(cfgFor(prov || cfg().prov, false)), stop, model, warm, last: () => last, fuentes: () => fuentes.slice(), proveedor: () => cfg().prov, cfgFor, plan: (o) => plan(o || {}).map((x) => x.prov), ruta: () => Object.assign({}, ruta) };
 })();
