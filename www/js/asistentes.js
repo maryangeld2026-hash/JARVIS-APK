@@ -327,7 +327,7 @@
     const chk = (cont, label, val, fn) => { const l = mk("label", "lbl check"), i = mk("input"); i.type = "checkbox"; i.checked = val; i.addEventListener("change", () => fn(i.checked)); l.append(i, document.createTextNode(" " + label)); cont.append(l); return i; };
     const boton = (cont, t, fn, cls) => { const b = mk("button", "btn small" + (cls ? " " + cls : ""), t); b.type = "button"; b.addEventListener("click", fn); cont.append(b); return b; };
 
-    s.append(mk("h3", "sub", "Conversación en vivo"));
+    s.append(mk("h3", "sub", "Gemini en vivo"));
     const sel = mk("select", "inp"); sel.append(new Option("Automático: el más nuevo de tu cuenta (Gemini 3.8 Live)", ""));
     const ponModelos = (l) => l.forEach((m) => { if (![...sel.options].some((o) => o.value === m)) sel.append(new Option(m, m)); });
     ponModelos([aj().liveModelo].filter(Boolean).concat(X._live && X._live.modelos ? X._live.modelos() : []));
