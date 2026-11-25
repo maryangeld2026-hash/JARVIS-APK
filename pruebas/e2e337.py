@@ -33,7 +33,7 @@ def main():
         pg = nuevo(A0)
         a = pg.evaluate("JD.load().ajustes")
         check(a["estilo"]["estilo"] == "natural" and a.get("v337") == 1, "al actualizar, la personalidad pasa a «natural»")
-        check(a.get("vozIA") == "gemini" and a.get("vozIAnombre") == "Achird", "con clave de Gemini, la voz natural queda puesta (Achird)")
+        check(a.get("vozIA") == "gemini" and a.get("vozIAnombre") == "Charon", "con clave de Gemini, la voz natural queda puesta (Charon, la de siempre de Jarvis)")
         sp = pg.evaluate("window.__jarvis.systemPrompt()")
         check("persona real de Colombia" in sp and "Trátala de tú" in sp and "cansada, triste" in sp and "J.A.R.V.I.S." not in sp and "«señor»" not in sp, "las instrucciones: natural, de tú, lee el ánimo, sin mayordomo ni «señor»")
         check(pg.evaluate("window.__jarvis.trato()") == "", "sin «señor»: por su nombre o sin nada")

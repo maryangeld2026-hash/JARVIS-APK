@@ -23,7 +23,9 @@
     if (!aj().v337) { aj().v337 = 1; cambio = true; if (estilo() === "jarvis") { (aj().estilo = aj().estilo || {}).estilo = "natural"; } }
     // la voz natural con IA, si tienes clave de Gemini y nunca escogiste otra (si se acaba el cupo o no hay internet, habla la del celular)
     // (en las pruebas automáticas, solo cuando se pide)
-    if (aj().vozIA === undefined && claveGemini() && (!window.__sinVivo || window.__vozPorDefecto)) { aj().vozIA = "gemini"; if (!aj().vozIAnombre) aj().vozIAnombre = "Achird"; cambio = true; }
+    if (aj().vozIA === undefined && claveGemini() && (!window.__sinVivo || window.__vozPorDefecto)) { aj().vozIA = "gemini"; if (!aj().vozIAnombre) aj().vozIAnombre = "Charon"; cambio = true; }
+    // 3.37.1: la 3.37 había puesto «Achird» y en vivo sonaba otra voz distinta a la de siempre: vuelve Charon (la de Jarvis), salvo que tú la hayas escogido
+    if (!aj().v3371) { aj().v3371 = 1; cambio = true; if (aj().vozIAnombre === "Achird" && !aj().vozElegida) aj().vozIAnombre = "Charon"; }
     if (cambio) save();
   }
 

@@ -146,6 +146,7 @@ jobs:
           python3 pruebas/e2e335.py
           python3 pruebas/e2e336.py
           python3 pruebas/e2e337.py
+          python3 pruebas/e2e3371.py
 
       - uses: actions/upload-artifact@v5
         if: always()

@@ -69,7 +69,9 @@
         setLevel(Math.min(1, Math.sqrt(e / (f.length / 16)) * 6));   // (el ruido no cuenta como hablar: solo lo que Gemini entiende como voz)
         send({ realtimeInput: { audio: { data: b64(new Uint8Array(pcm.buffer)), mimeType: "audio/pcm;rate=16000" } } });
       };
-      const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(key)}`);
+      // 3.37.1: el audio proactivo y el diálogo afectivo solo existen en la versión v1alpha de la API (en v1beta la conexión se cierra con error 1007)
+      const ver = S.extras ? "v1alpha" : "v1beta";
+      const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.${ver}.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(key)}`);
       S.ws = ws;
       ws.onopen = () => {
         const sys = S.opts.sys ? S.opts.sys : (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto y natural, en español de Colombia. Si te piden algo que hace la app (temporizador, recordatorios, alarmas, abrir una app, llamar o escribir, clima, linterna, volumen; y de clase: escoger un estudiante, grupos, pasar lista), usa la herramienta jarvis_orden con la orden en palabras. Para cualquier pregunta sobre hechos actuales (noticias, resultados, precios, fechas de eventos, personas en cargos), busca en Google antes de responder. Responde cualquier tema; si de verdad no sabes, dilo.";
@@ -82,9 +84,12 @@
             parameters: { type: "OBJECT", properties: { orden: { type: "STRING", description: "La orden en español, como la diría la persona. Ej.: «pon 5 minutos», «escoge un estudiante de 7A»." } }, required: ["orden"] } }] }] } });
       };
       ws.onmessage = async (ev) => { let j; try { j = JSON.parse(typeof ev.data === "string" ? ev.data : await ev.data.text()); } catch (e) { return; } onMsg(j); };
-      ws.onerror = () => estado("Se perdió la conexión.");
+      ws.onerror = () => { if (S && S.ws === ws && !(S.extras && !S.listo)) estado("Se perdió la conexión."); };   // (si falla el intento con lo nuevo, se reintenta sin avisar)
       ws.onclose = (ev) => {
         if (!(S && S.ws === ws)) return;
+        if (window.JDIAG) window.JDIAG.log("vivo-cierre", ev.code + " " + (ev.reason || "").slice(0, 100));
+        // 3.37.1: abriste el orbe y la conversación en vivo se cayó antes de que hablaran: sigue la escucha normal, sin mensaje de error
+        if (S.listo && !S.algo && ev.code !== 1000 && S.opts.respaldo) { const r = S.opts.respaldo; stop(""); D.ajustes.vivoFallaT = Date.now(); try { window.JD.save(); } catch (e) { /* nada */ } r(""); return; }
         if (!S.listo && S.extras) { D.ajustes.liveSinExtras = S.model; try { window.JD.save(); } catch (e) { /* nada */ } const o = S.opts; stop(""); start(o); return; }   // 3.37: otra vez, sin lo nuevo
         if (!S.listo && S.asinc) { D.ajustes.liveSinAsinc = S.model; try { window.JD.save(); } catch (e) { /* nada */ } }   // 3.30: la próxima vez, sin lo asíncrono
         const motivo = ev.reason ? ` (${ev.reason.slice(0, 120)})` : "";
@@ -105,6 +110,7 @@
     const sc = j.serverContent;
     if (sc) {
       if (sc.interrupted) { cortar(); estado("Te escucho…"); }
+      if (sc.inputTranscription || sc.outputTranscription || sc.modelTurn) S.algo = true;
       if (sc.inputTranscription && sc.inputTranscription.text) { S.ultimo = Date.now(); S.entrada += sc.inputTranscription.text; linea("tu", S.entrada); estado("Te escucho…"); }
       if (sc.outputTranscription && sc.outputTranscription.text) { S.ultimo = Date.now(); S.salida += sc.outputTranscription.text; linea("jarvis", S.salida); estado("Hablando · puedes interrumpir"); }
       ((sc.modelTurn && sc.modelTurn.parts) || []).forEach((p) => { const d = p.inlineData || p.inline_data; if (d && /audio/.test(d.mimeType || d.mime_type || "")) play(d.data); });

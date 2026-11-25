@@ -296,7 +296,7 @@
   function estiloVoz() {
     const e = ((D.ajustes.estilo || {}).estilo) || "jarvis";
     return e === "jarvis" ? "Lee en español latino neutro, como un mayordomo digital elegante y sereno: voz grave y pausada pero ágil, dicción precisa, seguro de sí mismo, con un leve toque de humor seco y sin exagerar"
-      : e === "natural" ? "Dilo en español de Colombia como una persona real que conversa: cálida, cercana y relajada, con ritmo y pausas naturales y la entonación de quien habla (no de quien lee), sin exagerar"   // 3.37
+      : e === "natural" ? "Dilo con voz cálida y natural, como en una conversación, en español de Colombia"   // 3.37.1: corto (con instrucciones largas el modelo a veces las leía)
       : "Dilo en español de Colombia, con voz cálida y natural";
   }
   async function geminiTTS(text, key) {
@@ -305,11 +305,18 @@
       const ids = ((await r.json()).models || []).map((m) => String(m.name).replace(/^models\//, "")).filter((x) => /tts/i.test(x));
       ttsModel.gemini = ids.sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || b.localeCompare(a))[0] || "gemini-2.5-flash-preview-tts";
     }
-    const body = { contents: [{ role: "user", parts: [{ text: estiloVoz() + ": " + text }] }],
-      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre || "Charon" } } } } };
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel.gemini}:generateContent?key=${encodeURIComponent(key)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error("tts " + r.status);
-    const j = await r.json(), p = (((j.candidates || [])[0] || {}).content || {}).parts || [], a = p.find((x) => x.inlineData || x.inline_data);
+    // 3.37.1: si el modelo «contesta» en vez de leer (pasa con preguntas cortas como «¿Qué necesitas?») o no devuelve audio, se repite una vez sin el estilo
+    const pedir = async (conEstilo) => {
+      const body = { contents: [{ role: "user", parts: [{ text: conEstilo ? estiloVoz() + ": " + text : text }] }],
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre || "Charon" } } } } };
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel.gemini}:generateContent?key=${encodeURIComponent(key)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) { let m = ""; try { m = ((await r.json()).error || {}).message || ""; } catch (e) { /* nada */ } throw Object.assign(new Error("tts " + r.status + (m ? ": " + m.slice(0, 120) : "")), { status: r.status }); }
+      const j = await r.json(), p = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+      return p.find((x) => x.inlineData || x.inline_data);
+    };
+    let a;
+    try { a = await pedir(true); } catch (e) { if (e.status !== 500 && e.status !== 400) throw e; }
+    if (!a) a = await pedir(false);
     if (!a) throw new Error("sin audio");
     const d = a.inlineData || a.inline_data, rate = +((String(d.mimeType || d.mime_type).match(/rate=(\d+)/) || [])[1] || 24000);
     const bin = Uint8Array.from(atob(d.data), (c) => c.charCodeAt(0)), pcm = new Int16Array(bin.buffer, 0, bin.length >> 1);
@@ -323,21 +330,39 @@
     if (!r.ok) throw new Error("tts " + r.status);
     return ctx().decodeAudioData(await r.arrayBuffer());
   }
+  // 3.37.1: cuando la voz natural falla, se usa la del celular un rato (1 minuto; 30 si falla seguido) y se dice por qué una sola vez
+  let pausaIA = 0, fallosIA = 0, avisadoIA = false;
+  function fallaIA(e) {
+    const m = String((e && e.message) || e || "");
+    if (window.JDIAG) window.JDIAG.log("voz-ia", m);
+    if (/\b429\b/.test(m)) { D.ajustes.vozIAagotada = new Date().toDateString(); try { window.JD.save(); } catch (er) { /* nada */ } }
+    fallosIA++; pausaIA = Date.now() + (fallosIA >= 2 ? 30 : 1) * 60000;
+    if (!avisadoIA) {
+      avisadoIA = true;
+      const por = /\b429\b/.test(m) ? "se acabó el cupo gratis de hoy" : /\b40[13]\b/.test(m) ? "la clave de Gemini no la acepta" : /\b404\b/.test(m) ? "tu cuenta no tiene el modelo de voz" : !navigator.onLine ? "no hay internet" : "Gemini no respondió a tiempo";
+      A.toast(`🔊 La voz natural no está disponible (${por}). Mientras tanto hablo con la voz del celular.`, 6000);
+    }
+  }
   const speaker = {
-    activo() { const p = D.ajustes.vozIA; return !!(p && (D.ajustes.claves[p] || "").trim() && navigator.onLine && !D.ajustes.ahorroActivo); },
+    activo() { const p = D.ajustes.vozIA; return !!(p && (D.ajustes.claves[p] || "").trim() && navigator.onLine && !D.ajustes.ahorroActivo && Date.now() >= pausaIA && D.ajustes.vozIAagotada !== new Date().toDateString()); },
     prepare(text) {
       const p = D.ajustes.vozIA, key = p && (D.ajustes.claves[p] || "").trim();
       if (!p || !key || !navigator.onLine || D.ajustes.ahorroActivo || text.length > 600 || namesIn(text)) return null;      // los nombres de estudiantes nunca van a la IA
-      if (D.ajustes.vozIAagotada === new Date().toDateString()) return null;                // 3.37: se acabó el cupo de hoy: la voz del celular, sin esperar a que falle cada frase
+      if (D.ajustes.vozIAagotada === new Date().toDateString() || Date.now() < pausaIA) return null;                // 3.37: se acabó el cupo de hoy: la voz del celular, sin esperar a que falle cada frase
       if (cache.has(p + text)) return Promise.resolve(cache.get(p + text));
       const pr = (p === "openai" ? openaiTTS(text, key) : geminiTTS(text, key)).then((b) => { cache.set(p + text, b); if (cache.size > 80) cache.delete(cache.keys().next().value); return b; });
-      return pr.catch((e) => { if (/ 429$/.test(String(e && e.message))) { D.ajustes.vozIAagotada = new Date().toDateString(); try { window.JD.save(); } catch (er) { /* nada */ } } return null; });
+      return pr.then((b) => { fallosIA = 0; return b; }).catch((e) => { fallaIA(e); return null; });
     },
-    play(buf) {
+    async play(buf) {
+      // 3.37.1: si Android no deja sonar el audio (el reproductor queda «suspendido»), habla la voz del celular en vez de quedarse callado
+      const c0 = ctx();
+      if (c0.state !== "running") { try { await Promise.race([c0.resume(), new Promise((r) => setTimeout(r, 700))]); } catch (e) { /* nada */ } }
+      if (c0.state !== "running") throw new Error("audio bloqueado");
       return new Promise((ok) => {
-        const c = ctx(); if (c.state === "suspended") c.resume();
+        const c = ctx();
+        const t = setTimeout(() => ok(), Math.round(buf.duration * 1000 / Math.max(0.7, Math.min(1.5, +D.ajustes.velocidad || 1))) + 1200);   // por si el celular nunca avisa que terminó
         const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = Math.max(0.7, Math.min(1.5, +D.ajustes.velocidad || 1));
-        s.connect(c.destination); s.onended = () => { if (fuente === s) fuente = null; ok(); }; fuente = s; s.start();
+        s.connect(c.destination); s.onended = () => { clearTimeout(t); if (fuente === s) fuente = null; ok(); }; fuente = s; s.start();
       });
     },
     stop() { if (fuente) { try { fuente.stop(); } catch (e) { /* ya paró */ } fuente = null; } },
@@ -385,10 +410,10 @@
     const vs = mk("select", "inp"); [["", "No: la voz del celular"], ["gemini", "Sí, con Gemini"], ["openai", "Sí, con ChatGPT"]].forEach(([k, t]) => vs.append(new Option(t, k)));
     vs.value = D.ajustes.vozIA || "";
     const vn = mk("select", "inp");
-    const fillNames = () => { vn.textContent = ""; (vs.value === "openai" ? ["onyx", "ash", "echo", "nova", "shimmer", "alloy", "coral", "sage"] : ["Achird", "Sulafat", "Charon", "Iapetus", "Algieba", "Rasalgethi", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Callirrhoe", "Puck"]).forEach((k) => vn.append(new Option("Voz: " + k, k))); vn.value = D.ajustes.vozIAnombre && [...vn.options].some((o) => o.value === D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : vn.options[0].value; vn.hidden = !vs.value; };
+    const fillNames = () => { vn.textContent = ""; (vs.value === "openai" ? ["onyx", "ash", "echo", "nova", "shimmer", "alloy", "coral", "sage"] : ["Charon", "Achird", "Sulafat", "Iapetus", "Algieba", "Rasalgethi", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Callirrhoe", "Puck"]).forEach((k) => vn.append(new Option("Voz: " + k, k))); vn.value = D.ajustes.vozIAnombre && [...vn.options].some((o) => o.value === D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : vn.options[0].value; vn.hidden = !vs.value; };
     fillNames();
     vs.addEventListener("change", () => { D.ajustes.vozIA = vs.value; fillNames(); D.ajustes.vozIAnombre = vn.value; save(); cache.clear(); if (vs.value && !(D.ajustes.claves[vs.value] || "").trim()) A.toast("Pon arriba la clave de " + (vs.value === "openai" ? "ChatGPT" : "Gemini") + ".", 5000); V.hush(); V.say("Hola, así sueno con la voz natural."); });
-    vn.addEventListener("change", () => { D.ajustes.vozIAnombre = vn.value; save(); cache.clear(); V.hush(); V.say("Hola, así sueno ahora."); });
+    vn.addEventListener("change", () => { D.ajustes.vozIAnombre = vn.value; D.ajustes.vozElegida = true; save(); cache.clear(); V.hush(); V.say("Hola, así sueno ahora."); });
     sec.append(vs, vn);
     h3("Mensajes");
     const ms = mk("span", "hint");

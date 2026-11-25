@@ -202,14 +202,16 @@
   let speaker = null;
   function setSpeaker(sp) { speaker = sp; }
   const nativeTTS = () => native() && plug("TextToSpeech");
-  async function speakItem(it) {
-    if (it.pre) {
+  /** → "ia" si habló la voz natural, "cel" si habló el celular. cel: 3.37.1, en esta respuesta ya habló el celular (no se mezclan dos voces). */
+  async function speakItem(it, cel) {
+    if (it.pre && !cel) {
       try {
         const audio = await Promise.race([it.pre, new Promise((r) => setTimeout(() => r(null), 12000))]);
-        if (audio && speaker) { await speaker.play(audio); return; }
+        if (audio && speaker) { await speaker.play(audio); return "ia"; }
       } catch (e) { /* habla el celular */ }
     }
-    return speakOne(it.t, it.lang);
+    await speakOne(it.t, it.lang);
+    return "cel";
   }
   /** 3.16: la voz del celular en fila (QUEUE_ADD): la frase siguiente ya está en Android mientras suena esta → sin pausas entre frases. */
   function speakAdd(text, lang) {
@@ -234,6 +236,7 @@
     if (onState) onState(true);
     const aborted = new Promise((r) => { abort = r; });
     let playing = null;                                                               // la frase del celular que está sonando
+    let cel = false;                                                                  // 3.37.1: si una frase salió con la voz del celular, el resto de la respuesta también (antes se oían dos voces)
     const wait = (p, ms) => Promise.race([p, sleep(ms), aborted]);
     while (myGen === gen) {
       if (!q.length && acc) flushAcc();
@@ -244,6 +247,7 @@
         if (playing === cur && Date.now() > cur.fin) playing = null;
         continue;
       }
+      if (cel && q[0].pre) q[0].pre = null;
       if (nativeTTS() && !q[0].pre) {
         const it = takeNext(playing ? 400 : 240);
         const ms = 9000 + it.t.length * 120;
@@ -257,7 +261,8 @@
       if (myGen !== gen) break;
       const it = takeNext(300);
       // 3.15: si el motor de voz nunca avisa que terminó, la cola no se queda trabada
-      await wait(speakItem(it), (it.pre ? 12000 : 8000) + it.t.length * 120);
+      const quien = await wait(speakItem(it, cel), (it.pre ? 12000 : 8000) + it.t.length * 120);
+      if (it.pre && quien !== "ia") cel = true;
     }
     if (playing && myGen === gen) await wait(playing.p, Math.max(0, playing.fin - Date.now()));
     if (myGen !== gen) return;                                                        // hush ya dejó todo en silencio
