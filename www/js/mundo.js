@@ -72,7 +72,7 @@
     if (!listoGemini()) return sinGemini("Crear imágenes");
     let fuente = null;
     if (it.img === "editar") {
-      fuente = ultimaImg;
+      fuente = ultimaImg;                                                     // (3.38: el creador de imágenes también la deja aquí)
       if (!fuente) { R("📷 Escoge la foto que quieres editar."); const f = await foto(false); if (!f) return; const u = await achicar(f, 1600); fuente = { mime: "image/jpeg", data: u.split(",")[1] }; }
     }
     A.setState("thinking"); A.toast("🎨 Creando la imagen…", 4000);
@@ -480,5 +480,5 @@
     const C = window.JL11 && window.JL11.CATALOGO;
     if (C && !C.some((x) => /Imágenes, videos/.test(x[0]))) C.push(["🎨 Imágenes, videos, salud y trámites", ["Haz una imagen de un volcán para mi clase", "Hazme un mapa mental de la fotosíntesis", "Haz un resumen en audio de la Revolución Francesa", "Ayúdame con este ejercicio paso a paso", "¿Tengo pico y placa mañana?", "¿Cuál es el próximo puente?", "Avísame si va a llover fuerte", "¿Cómo dormí esta semana?", "Necesito concentrarme 50 minutos", "Rastrea el paquete 2045678912 de Servientrega", "Mi SOAT vence el 15 de marzo", "¿Qué se me vence?"]]);
   };
-  X._a331 = { imagen, youtube, audio, pico, festivos, alertas, mapa, podcast, tutorEmpezar, salud, saludDia, enfoque, paquete, vencimiento, estado: () => ({ tutor, ultimoVideo }) };
+  X._a331 = { ponerUltima: (d) => { if (d && d.data) ultimaImg = { mime: d.mime || "image/png", data: d.data }; }, imagen, youtube, audio, pico, festivos, alertas, mapa, podcast, tutorEmpezar, salud, saludDia, enfoque, paquete, vencimiento, estado: () => ({ tutor, ultimoVideo }) };
 })();

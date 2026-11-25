@@ -113,7 +113,7 @@ jobs:
         run: npm ci
 
       - name: Pruebas de la lógica
-        run: node --test pruebas/logica.test.js pruebas/logica2.test.js pruebas/logica3.test.js pruebas/logica4.test.js pruebas/logica5.test.js pruebas/logica6.test.js pruebas/logica7.test.js pruebas/logica8.test.js pruebas/logica9.test.js pruebas/logica10.test.js pruebas/logica11.test.js pruebas/logica12.test.js pruebas/logica13.test.js pruebas/logica14.test.js pruebas/logica16.test.js pruebas/logica17.test.js pruebas/logica18.test.js pruebas/logica19.test.js pruebas/logica20.test.js pruebas/logica21.test.js pruebas/logica22.test.js pruebas/logica23.test.js pruebas/logica24.test.js
+        run: node --test pruebas/logica.test.js pruebas/logica2.test.js pruebas/logica3.test.js pruebas/logica4.test.js pruebas/logica5.test.js pruebas/logica6.test.js pruebas/logica7.test.js pruebas/logica8.test.js pruebas/logica9.test.js pruebas/logica10.test.js pruebas/logica11.test.js pruebas/logica12.test.js pruebas/logica13.test.js pruebas/logica14.test.js pruebas/logica16.test.js pruebas/logica17.test.js pruebas/logica18.test.js pruebas/logica19.test.js pruebas/logica20.test.js pruebas/logica21.test.js pruebas/logica22.test.js pruebas/logica23.test.js pruebas/logica24.test.js pruebas/logica25.test.js
 
       - name: Prueba de punta a punta (celular simulado)
         run: |
@@ -148,6 +148,7 @@ jobs:
           python3 pruebas/e2e337.py
           python3 pruebas/e2e3371.py
           python3 pruebas/e2e3372.py
+          python3 pruebas/e2e338.py
 
       - uses: actions/upload-artifact@v5
         if: always()

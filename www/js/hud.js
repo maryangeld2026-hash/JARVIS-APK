@@ -86,7 +86,7 @@
     const momento = enClase ? [c ? `Escoge un estudiante de ${c.nombre}` : "Escoge un estudiante", "Pon 5 minutos", "Haz 4 grupos", "Modo proyector"]
       : h < 9 ? ["¿Qué tengo hoy?", "¿Cómo estará el clima?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos"]
       : h < 18 ? ["¿Va a llover hoy?", "Pon 25 minutos", doc ? (c ? `¿Quiénes están en riesgo en ${c.nombre}?` : "Hazme un quiz de 5 preguntas de fracciones") : "¿Qué tengo pendiente?", "Recuérdame a las 5 llamar a mamá"]
-      : ["¿Qué tengo mañana?", "¿Cómo estará el clima mañana?", "¿Qué sabes de mí?", "Pon 5 minutos"];
+      : ["¿Qué tengo mañana?", "¿Cómo estará el clima mañana?", "Dibújame un gato astronauta", "Pon 5 minutos"];   // 3.38: crear imágenes
     // lo que sueles pedir a esta hora ya sale arriba con 💡: aquí no se repite
     let propias = [];
     try { propias = (X._agente && X._agente.sugerencias ? X._agente.sugerencias() : []).map((s) => L.norm(s.texto)); } catch (e) { /* nada */ }
