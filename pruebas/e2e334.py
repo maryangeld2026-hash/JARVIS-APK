@@ -11,7 +11,8 @@ const on = (n, f) => { (lst[n] = lst[n] || []).push(f); return { remove() {} }; 
 const anyP = (o) => new Proxy(o, { get: (t, n) => (n in t ? t[n] : n === 'then' ? undefined : async () => ({})) });
 const generic2 = anyP({ addListener: on, checkPermissions: async () => ({ display: 'granted' }), requestPermissions: async () => ({}), speak: async (o) => { window.__said.push(o.text); }, getSupportedVoices: async () => ({ voices: [] }) });
 const H = 3600e3, hoy = new Date(); hoy.setHours(0, 0, 0, 0); const T = (d, h, m) => hoy.getTime() + d * 864e5 + h * H + (m || 0) * 60000;
-const EV = () => [{ titulo: 'Reunión de padres', inicio: T(0, 23, 0), fin: T(0, 23, 30), lugar: 'Colegio San José, Bogotá', todoElDia: false },
+const R0 = Math.min(Math.ceil((Date.now() + 2 * H) / 9e5) * 9e5, hoy.getTime() + 24 * H - 15 * 60000);   // (a 2 horas de ahora: la prueba no depende de la hora del servidor)
+const EV = () => [{ titulo: 'Reunión de padres', inicio: R0, fin: R0 + 30 * 60000, lugar: 'Colegio San José, Bogotá', todoElDia: false },
   { titulo: 'Cita médica', inicio: T(1, 9), fin: T(1, 10), lugar: 'Clínica del Country', todoElDia: false }, { titulo: 'Almuerzo', inicio: T(1, 9, 30), fin: T(1, 11), lugar: 'Clínica del Country', todoElDia: false }];
 const P = {
   LocalNotifications: anyP({ addListener: on, schedule: async (o) => { (o.notifications || []).forEach((n) => log('noti ' + n.id + ' ' + n.title + ' | ' + n.body)); }, cancel: async () => {}, checkPermissions: async () => ({ display: 'granted' }), registerActionTypes: async () => {} }),
