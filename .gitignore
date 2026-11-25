@@ -2,3 +2,4 @@ node_modules/
 capturas/
 pruebas/capturas/
 salida/
+__pycache__/
