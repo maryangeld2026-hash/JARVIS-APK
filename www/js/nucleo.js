@@ -81,7 +81,10 @@
     ver(tema);
   }
   // ---------------------------------------------------------------- 3.23.2: portada de los Ajustes
-  const ICONOS = [[/inteligencia artificial/i, "🧠"], [/respaldo/i, "🛟"], [/uso de la ia/i, "📊"], [/^voz natural/i, "🗣️"], [/^voz/i, "🔊"], [/la voz de jarvis/i, "🎩"], [/mientras jarvis habla/i, "✋"],
+  const ICONOS = [[/modelos y probador/i, "🧪"], [/modelos gguf/i, "📦"], [/gemini nano/i, "🔹"], [/significado/i, "🔎"], [/gemini en vivo/i, "📞"], [/dictado/i, "📝"], [/notas de voz/i, "🎧"],
+    [/volumen de jarvis/i, "🔉"], [/mi día y tareas/i, "📋"], [/agenda privada/i, "🔐"], [/avisos en vivo/i, "📣"], [/cuidar el celular/i, "🧹"], [/contestador/i, "📵"], [/widget/i, "🧱"],
+    [/salud/i, "❤️"], [/pico y placa/i, "🚦"], [/agenda y tus salidas/i, "🚗"], [/sueño/i, "🌙"], [/wifi/i, "📶"], [/informe del mes/i, "📈"], [/modos expertos/i, "🎓"], [/encontrar el celular/i, "📍"],
+    [/inteligencia artificial/i, "🧠"], [/respaldo/i, "🛟"], [/uso de la ia/i, "📊"], [/^voz natural/i, "🗣️"], [/^voz/i, "🔊"], [/la voz de jarvis/i, "🎩"], [/mientras jarvis habla/i, "✋"],
     [/segundo plano/i, "👂"], [/manos libres/i, "🙌"], [/conversaci/i, "💬"], [/formas de llamar/i, "📲"], [/^tú$/i, "🙂"], [/asistente/i, "🤖"], [/cómo te llama/i, "🏷️"], [/memoria/i, "🧩"],
     [/mis datos/i, "🪪"], [/habilidades/i, "⚡"], [/programadas/i, "⏰"], [/vida diaria/i, "☀️"], [/disparadores/i, "🎯"], [/medicamentos/i, "💊"], [/resumen de la mañana/i, "🌅"], [/^casa/i, "🏠"],
     [/controlar el celular/i, "🕹️"], [/mensajes/i, "✉️"], [/protecci/i, "🛡️"], [/pantalla/i, "📱"], [/reloj/i, "⌚"], [/subtítulos/i, "💭"], [/traductor/i, "🌐"], [/canciones/i, "🎵"],

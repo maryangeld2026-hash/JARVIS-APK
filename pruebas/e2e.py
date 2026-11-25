@@ -143,7 +143,7 @@ def main():
         pg.wait_for_function("LASTJ().includes('Son las')", timeout=15000)
         check(True, "la conversación sigue: respondió la 2ª orden sin tocar el micrófono")
         check(pg.locator("#btn-mic .rx").count() == 1 and pg.locator("#leds i").count() == 4, "HUD: reactor y luces de estado")
-        check(pg.locator("#hoy .hoy-chips .chip").count() >= 2, "HUD: panel Hoy con sugerencias")
+        check(len(pg.evaluate("JX.sugerenciasInicio()")) == 4, "HUD: 4 sugerencias del momento para el inicio")
         pg.screenshot(path=f"{OUT}/0-hud.png")
         check(pg.evaluate("window.__said.some(s => s.includes('3 minutos'))"), "lo dice en voz alta")
 

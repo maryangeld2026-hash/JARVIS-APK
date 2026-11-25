@@ -1,0 +1,81 @@
+/* Jarvis 3.36 · la pantalla, más ordenada. Se carga de última y vale para todos los diseños (cristal, ligero y clásico):
+   solo cambia tamaños y acomodo; los botones, ids y lo que hace cada uno son los mismos. */
+
+/* ---------------------------------------------------------------- botones cómodos para el dedo (Android pide ~48 px) */
+.top .icon-btn { width: 44px; height: 44px; }
+@media (max-width: 380px) { .top .icon-btn { width: 42px; height: 42px; } }
+.chip { min-height: 40px; height: auto; padding-top: 6px; padding-bottom: 6px; line-height: 1.25; }
+.hoy-items .hi, .ahora-b .chip, .doc-acts .chip, .local-fila .chip { min-height: 38px; }
+.convbar { gap: 8px; }
+.convbar .conv-b { width: 40px; height: 40px; flex-shrink: 0; }
+.convbar .conv-n { min-height: 40px; }
+
+/* ---------------------------------------------------------------- arriba: el reloj solo cuando no hay conversación
+   (Android ya muestra la hora); lo útil (temporizador, recordatorio, «Ahora» de la clase, 💡) sigue a la vista */
+.hoy-chips { display: none; }
+#v-hablar:has(.msg) .hoy-top { display: none; }
+#v-hablar:has(.msg) .hoy:not(:has(.ahora, .hoy-items)) { display: none; }
+#v-hablar:has(.msg) .hoy { padding-top: 4px; padding-bottom: 4px; }
+
+/* el modo experto activo, en la barra de la conversación */
+.modo-chip { min-height: 32px; height: 32px; padding: 0 10px; font-size: 12.5px; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--a); border-color: rgba(var(--a-rgb), .5); background: rgba(var(--a-rgb), .1); }
+.modo-chip.flota { position: fixed; top: calc(var(--safe-t, 0px) + 70px); right: 14px; z-index: 9; }
+
+/* ---------------------------------------------------------------- el inicio: saludo, configuración y 4 sugerencias */
+.empty { max-width: 340px; }
+.empty .sug { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.empty .sug .chip { width: 100%; font-size: 13.5px; text-align: center; }
+.empty .sug .chip.ver-todo { grid-column: 1 / -1; color: var(--a); border-color: rgba(var(--a-rgb), .45); }
+.empty .bienv { margin: 12px 0 4px; }
+
+/* ---------------------------------------------------------------- el panel del micrófono, compacto
+   fila 1: [Seguir] — micrófono — [En vivo] (o [Callar] mientras Jarvis piensa o habla)   ·   fila 2: [adjuntar][escribir][enviar] */
+.live:empty { min-height: 0; padding: 0; }
+.dock { padding: 6px 10px 8px; }
+.dock-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.dock-izq { display: flex; align-items: center; gap: 6px; justify-self: start; min-width: 0; }
+.dock-der { display: flex; align-items: center; gap: 6px; justify-self: end; min-width: 0; }
+.dock-row .pill { height: 44px; min-width: 0; padding: 0 14px; font-size: 13.5px; }
+.dock-row .live-btn { width: 44px; height: 44px; border-radius: 50%; color: var(--ok); flex-shrink: 0; }
+.dock-row .live-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.mic, .mic.reactor { width: 64px; height: 64px; transition: transform .2s ease, box-shadow .2s; }
+.mic.reactor > svg:not(.rx) { width: 24px; height: 24px; }
+.mic .ring { inset: -6px; }
+/* escuchando, el micrófono crece (sin mover lo demás) */
+[data-state="listening"] .mic { transform: scale(1.22); }
+/* «Callar» solo cuando Jarvis está pensando o hablando; mientras tanto, en su lugar va «En vivo» */
+#btn-callar { display: none; }
+body.puede-callar #btn-callar, [data-state="speaking"] #btn-callar, [data-state="thinking"] #btn-callar { display: flex; }
+body.puede-callar .dock-der .live-btn, [data-state="speaking"] .dock-der .live-btn, [data-state="thinking"] .dock-der .live-btn { display: none; }
+.write { margin-top: 6px; }
+.write input { height: 44px; }
+
+/* ---------------------------------------------------------------- botones bajo la respuesta: 3 a la vista y «⋯ Más» */
+.resp-acts { overflow: visible; flex-wrap: wrap; gap: 6px; }
+.ra { min-width: 56px; min-height: 44px; justify-content: center; }
+.ra.on { border-color: rgba(var(--a-rgb), .6); }
+.ra-mas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ra-mas[hidden] { display: none; }
+
+/* ---------------------------------------------------------------- «Lo que puedo hacer»: buscador y secciones plegables */
+.cat-buscar { margin-bottom: 4px; }
+.cat-sec { border: 1px solid var(--line); border-radius: 14px; margin: 8px 0; background: rgba(255, 255, 255, .02); }
+.cat-sec > summary { list-style: none; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; font-weight: 700; cursor: pointer; }
+.cat-sec > summary::-webkit-details-marker { display: none; }
+.cat-sec > summary > span:first-child { flex: 1; }
+.cat-sec > summary::after { content: "›"; font-size: 20px; color: var(--muted); transition: transform .15s; }
+.cat-sec[open] > summary::after { transform: rotate(90deg); }
+.cat-sec .cat-sug { padding: 0 12px 12px; justify-content: flex-start; }
+.cat-sec .aj-n { font: 700 11px/1 var(--mono, monospace); color: var(--muted); padding: 4px 7px; border-radius: 8px; background: rgba(255, 255, 255, .06); }
+
+/* ---------------------------------------------------------------- Ajustes: subtítulos dentro de un grupo unido */
+.aj-sub { margin: 16px 0 6px; font-size: 13px; letter-spacing: .04em; color: var(--a); }
+
+/* la configuración de la primera vez: botones a su tamaño, no a lo ancho */
+.bienv-fila { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bienv-fila > span, .bienv-fila > input { flex: 1 0 100%; }
+.bienv-fila .chip { margin-right: 0; }
+
+/* con los botones de arriba más grandes, en pantallas angostas se esconden las lucecitas (como ya hacía el diseño Cristal) */
+@media (max-width: 430px) { .top .leds { display: none; } .top .status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }

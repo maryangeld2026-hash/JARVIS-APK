@@ -317,7 +317,7 @@
     const l = ((await P.modelos().catch(() => ({}))) || {}).lista || [];
     const nom = (a) => (A.nombreLocal ? A.nombreLocal(a) : a);
     if (it.lo === "lista") {
-      if (!l.length) return R("No tienes ninguna IA del celular descargada. Di, por ejemplo, «descarga Qwen 3.5 4B» o ve a Ajustes › IA de respaldo.");
+      if (!l.length) return R("No tienes ninguna IA del celular descargada. Di, por ejemplo, «descarga Qwen 3.5 4B» o ve a Ajustes › Inteligencia artificial › Si la IA principal falla.");
       return R("🧠 **IA del celular (sin internet)**\n" + l.map((x) => `- ${x.activo ? "✅ " : ""}${nom(x.nombre)} · ${(x.mb / 1024).toFixed(1).replace(".", ",")} GB${x.ve ? " · ve fotos" : ""}${x.oye ? " · entiende tu voz" : ""}`).join("\n") + "\n\nDime «usa …» para cambiar.", "tool", `Tienes ${l.length}. En uso: ${nom((l.find((x) => x.activo) || l[0]).nombre)}.`);
     }
     if (it.lo === "usar") {
@@ -329,7 +329,7 @@
       return R(`Hecho. Sin internet ahora respondo con ${nom(LOC[k].archivo)}, ${A.trato()}.`);
     }
     const k = L13.elegirLocal(it.q, LOC);
-    if (!k) return R("No conozco esa IA. En Ajustes › IA de respaldo están las que puedo bajar.", "err");
+    if (!k) return R("No conozco esa IA. En Ajustes › Inteligencia artificial › Si la IA principal falla están las que puedo bajar.", "err");
     D.ajustes.localModelo = k; save();
     R(`Para bajar ${LOC[k].nombre.split(" (")[0]} (${(LOC[k].mb / 1024).toFixed(1).replace(".", ",")} GB) te abro Ajustes: toca «Descargar», mejor con wifi. Las que ya tienes se quedan.`);
     const b = $("#btn-ajustes"); if (b) b.click();

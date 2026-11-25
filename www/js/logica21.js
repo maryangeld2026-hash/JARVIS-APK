@@ -37,7 +37,7 @@
     const l = cadena(a, nombres, locales);
     return "🛟 **Así responde Jarvis:**\n" + l.map((x, i) => `${i + 1}. ${ic[(estados || {})[x.prov]] || "▫️"} **${x.nombre}** (${x.papel})`).join("\n") +
       (l.length < 3 ? "\n\nTe falta un respaldo gratis en la nube: di «usa Groq de respaldo»." : "") +
-      (!l.some((x) => x.prov === "local") ? "\n\nY sin internet no hay quién responda: descarga la IA del celular en Ajustes › IA de respaldo." : "");
+      (!l.some((x) => x.prov === "local") ? "\n\nY sin internet no hay quién responda: descarga la IA del celular en Ajustes › Inteligencia artificial › Si la IA principal falla." : "");
   }
 
   /** «usa Groq de respaldo», «pon OpenRouter de segundo respaldo», «¿cuál es mi respaldo?», «prueba el respaldo» */

@@ -75,18 +75,24 @@
     if (D.tutor && D.tutor.on) items.append(mk("span", "hi", "🎓 Tutor" + (D.tutor.tema ? " · " + D.tutor.tema : "")));
     if (window.JX.hoyExtra) window.JX.hoyExtra().forEach((x) => { const e = mk("span", "hi" + (x.cls ? " " + x.cls : ""), x.txt); if (x.cmd) e.dataset.cmd = x.cmd; items.append(e); });
     if (items.childElementCount) box.append(items);
-    // sugerencias según el momento del día (como los botones del HUD)
+  }
+  /** 3.36: las sugerencias del inicio (antes también salían arriba, repetidas): lo que sueles pedir a esta hora + lo del momento del día. */
+  function sugerencias() {
+    const now = new Date(), h = now.getHours(), c = A.courseFor(null);
     // 3.8: Jarvis es un asistente general; las sugerencias de clase salen solo con el modo docente y en horas de clase
     const doc = D.ajustes.docente === true, L3x = window.JL3;
     let enClase = false;
     if (doc) { const sch = L3x && D.ajustes.horario ? L3x.parseSchedule(D.ajustes.horario) : []; const cn = sch.length ? L3x.classNow(sch, now) : null; enClase = sch.length ? !!(cn.ahora || (cn.siguiente && cn.siguiente.en <= 20)) : now.getDay() >= 1 && now.getDay() <= 5 && h >= 7 && h < 13; }
-    const sug = enClase ? [c ? `Escoge un estudiante de ${c.nombre}` : "Escoge un estudiante", "Pon 5 minutos", "Haz 4 grupos", "Modo proyector"]
-      : h < 9 ? ["¿Qué tengo hoy?", "¿Cómo estará el clima?", "Recuérdame a las 5 llamar a mamá"]
-      : h < 18 ? ["¿Va a llover hoy?", "Pon 25 minutos", doc ? (c ? `¿Quiénes están en riesgo en ${c.nombre}?` : "Hazme un quiz de 5 preguntas de fracciones") : "¿Qué tengo pendiente?"]
-      : ["¿Qué tengo mañana?", "¿Cómo estará el clima mañana?", "¿Qué sabes de mí?"];
-    const chips = mk("div", "hoy-chips");
-    sug.forEach((x) => { const b = mk("button", "chip", x); b.type = "button"; b.dataset.cmd = x; chips.append(b); });
-    box.append(chips);
+    const momento = enClase ? [c ? `Escoge un estudiante de ${c.nombre}` : "Escoge un estudiante", "Pon 5 minutos", "Haz 4 grupos", "Modo proyector"]
+      : h < 9 ? ["¿Qué tengo hoy?", "¿Cómo estará el clima?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos"]
+      : h < 18 ? ["¿Va a llover hoy?", "Pon 25 minutos", doc ? (c ? `¿Quiénes están en riesgo en ${c.nombre}?` : "Hazme un quiz de 5 preguntas de fracciones") : "¿Qué tengo pendiente?", "Recuérdame a las 5 llamar a mamá"]
+      : ["¿Qué tengo mañana?", "¿Cómo estará el clima mañana?", "¿Qué sabes de mí?", "Pon 5 minutos"];
+    // lo que sueles pedir a esta hora ya sale arriba con 💡: aquí no se repite
+    let propias = [];
+    try { propias = (X._agente && X._agente.sugerencias ? X._agente.sugerencias() : []).map((s) => L.norm(s.texto)); } catch (e) { /* nada */ }
+    const vistos = new Set(propias), out = [];
+    momento.forEach((t) => { const k = L.norm(t); if (!vistos.has(k) && out.length < 4) { vistos.add(k); out.push(t); } });
+    return out;
   }
 
   let hadTimer = false;
@@ -214,5 +220,6 @@
     return baseIntent(text);
   };
   X.run = function (it, text) { if (it.kind === "fondo") return fondo(it.on, true); return baseRun(it, text); };
-  X._hud = { hoy, fondo, onWake };
+  X._hud = { hoy, fondo, onWake, sugerencias };
+  X.sugerenciasInicio = sugerencias;
 })();

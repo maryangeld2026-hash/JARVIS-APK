@@ -322,8 +322,8 @@
     const P = native() && plug("IALocal");
     if (!P) throw Object.assign(new Error("La IA del celular funciona en la app instalada (el APK)."), { code: "sin_local" });
     const st = await P.estado().catch(() => ({}));
-    if (!st.listo) throw Object.assign(new Error("La IA del celular no está descargada. Ve a Ajustes › IA de respaldo y toca «Descargar»."), { code: "sin_local" });
-    if ((!st.gemma || st.ve === false) && messages.some((m) => m.image || m.doc)) throw new Error("La IA del celular que estás usando no ve fotos ni PDF. Usa Gemma 4 o Qwen 3.5 con visión (Ajustes › IA de respaldo) para que los vea sin internet.");
+    if (!st.listo) throw Object.assign(new Error("La IA del celular no está descargada. Ve a Ajustes › Inteligencia artificial › Si la IA principal falla y toca «Descargar»."), { code: "sin_local" });
+    if ((!st.gemma || st.ve === false) && messages.some((m) => m.image || m.doc)) throw new Error("La IA del celular que estás usando no ve fotos ni PDF. Usa Gemma 4 o Qwen 3.5 con visión (Ajustes › Inteligencia artificial › Si la IA principal falla) para que los vea sin internet.");
     const imagenes = messages.filter((m) => m.image).slice(-4).map((m) => ({ data: m.image.data, mime: m.image.mime }));
     // 3.14: un PDF sin internet: sus primeras páginas como imágenes para Gemma
     let notaPdf = "";

@@ -90,8 +90,8 @@ def main():
         pg.click("#pm-lista .pm-auto input[type=radio]"); pg.wait_for_timeout(200)
         check(pg.evaluate("JD.load().ajustes.modelo") == "", "volver a «Automático»")
         # 3) DeepSeek como segunda
-        pg.fill("#aj-326 .pm-ds input", "sk-ds"); pg.dispatch_event("#aj-326 .pm-ds input", "change"); pg.wait_for_timeout(100)
-        pg.click("#aj-326 button:has-text('Usar DeepSeek de respaldo')"); pg.wait_for_timeout(300)
+        pg.fill("#ajustes .pm-ds input", "sk-ds"); pg.dispatch_event("#ajustes .pm-ds input", "change"); pg.wait_for_timeout(100)
+        pg.click("#ajustes .pm-ds button:has-text('Usar DeepSeek de respaldo')"); pg.wait_for_timeout(300)
         check(pg.evaluate("JD.load().ajustes.respaldo") == "deepseek" and pg.evaluate("JD.load().ajustes.claves.deepseek") == "sk-ds", "«Usar DeepSeek de respaldo» con su clave")
         pg.click("#btn-ajustes-cerrar"); pg.wait_for_timeout(300)
         CAIDA["v"] = True

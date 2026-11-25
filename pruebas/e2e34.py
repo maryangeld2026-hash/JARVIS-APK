@@ -61,6 +61,7 @@ def main():
         pg.wait_for_function("document.querySelector('.msg.jarvis:last-of-type .resp-acts')", timeout=15000)
         labels = pg.eval_on_selector_all(".msg.jarvis:last-of-type .ra small", "els => els.map(e => e.textContent)")
         check(set(["Proyectar", "Word", "Más corto", "Oír", "Graficar", "WhatsApp", "Copiar"]) <= set(labels), "botones bajo la respuesta: " + ", ".join(labels))
+        pg.click(".msg.jarvis:last-of-type .ra[title='Más opciones']"); pg.wait_for_timeout(150)   # 3.36: lo demás va en «⋯ Más»
         pg.click(".msg.jarvis:last-of-type .ra[title=WhatsApp]"); pg.wait_for_timeout(200)
         check(any("wa.me" in u for u in pg.evaluate("window.__abiertos")), "WhatsApp: abre wa.me con el texto")
         pg.click(".msg.jarvis:last-of-type .ra[title=Graficar]"); pg.wait_for_timeout(400)

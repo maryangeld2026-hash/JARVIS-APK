@@ -85,17 +85,26 @@
   // ======================================================================== BOTONES BAJO CADA RESPUESTA
   function afterAnswer(e, m) {
     if (!e || e.querySelector(".resp-acts")) return;
-    const box = mk("div", "resp-acts"), text = m.content;
-    const b = (ic, t, fn) => { const x = mk("button", "ra", ""); x.type = "button"; x.title = t; x.setAttribute("aria-label", t); x.append(mk("span", "", ic), mk("small", "", t)); x.addEventListener("click", (ev) => { ev.stopPropagation(); fn(x); }); box.append(x); };
-    b("📽", "Proyectar", () => X._ && X._.projectText ? X._.projectText(text) : A.toast("El proyector no está listo."));
-    b("📄", "Word", () => H().docWord({ titulo: titleOf(text), md: text }).catch((er) => A.toast("No pude hacer el Word: " + er.message, 6000)));
-    b("✂", "Más corto", () => A.handle("Dilo más corto: en 2 o 3 frases.", false));
+    // 3.36: a la vista solo Oír, Copiar y Compartir (y Proyectar en modo docente); lo demás, en «⋯ Más»
+    const box = mk("div", "resp-acts"), mas = mk("div", "ra-mas"), text = m.content;
+    mas.hidden = true;
+    const b = (ic, t, fn, donde) => { const x = mk("button", "ra", ""); x.type = "button"; x.title = t; x.setAttribute("aria-label", t); x.append(mk("span", "", ic), mk("small", "", t)); x.addEventListener("click", (ev) => { ev.stopPropagation(); fn(x); }); (donde || box).append(x); return x; };
+    const doc = D.ajustes.docente === true;
+    const plano = () => (L.plainMath ? L.plainMath(text) : text);
     b("🔊", "Oír", () => { V.hush(); L.forSpeech(text).split(/(?<=[.!?…])\s+/).forEach((f) => V.say(f)); });
+    b("📋", "Copiar", () => { const t = plano(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => A.toast("Copiado.")).catch(() => N.share({ title: "Jarvis", text: t }).catch(() => {})); });
+    b("📤", "Compartir", () => N.share({ title: titleOf(text), text: plano() }).catch(() => (navigator.clipboard ? navigator.clipboard.writeText(plano()).then(() => A.toast("Copiado: pégalo donde quieras.")) : null)));
+    const proy = () => (X._ && X._.projectText ? X._.projectText(text) : A.toast("El proyector no está listo."));
+    if (doc) b("📽", "Proyectar", proy);
+    b("✂", "Más corto", () => A.handle("Dilo más corto: en 2 o 3 frases.", false), mas);
     const fx = L4.fnFromAnswer(text);
-    if (fx && L3.compileFn(fx)) b("📈", "Graficar", () => H().plot(fx));
-    b("💬", "WhatsApp", () => openUrl(L4.waLink(text)));
-    b("📋", "Copiar", (x) => { const t = L.plainMath ? L.plainMath(text) : text; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => A.toast("Copiado.")).catch(() => N.share({ title: "Jarvis", text: t }).catch(() => {})); });
-    e.append(box);
+    if (fx && L3.compileFn(fx)) b("📈", "Graficar", () => H().plot(fx), mas);
+    b("💬", "WhatsApp", () => openUrl(L4.waLink(text)), mas);
+    b("📄", "Word", () => H().docWord({ titulo: titleOf(text), md: text }).catch((er) => A.toast("No pude hacer el Word: " + er.message, 6000)), mas);
+    if (!doc) b("📽", "Proyectar", proy, mas);
+    const mb = b("⋯", "Más", (x) => { mas.hidden = !mas.hidden; x.setAttribute("aria-expanded", String(!mas.hidden)); x.classList.toggle("on", !mas.hidden); });
+    mb.classList.add("ra-mas-btn"); mb.setAttribute("aria-expanded", "false"); mb.title = "Más opciones"; mb.setAttribute("aria-label", "Más opciones");
+    e.append(box, mas);
   }
   const titleOf = (t) => (String(t).split("\n").find((l) => l.trim()) || "Respuesta de Jarvis").replace(/^#+\s*|\*\*/g, "").slice(0, 70);
   function openUrl(url) {

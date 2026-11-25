@@ -274,7 +274,15 @@
     const p = (D.modosPropios || []).find((x) => "propio:" + x.nombre === k);
     return p ? { k, nombre: "✨ " + p.nombre, instr: p.instr } : null;
   }
-  function pintarModo() { const m = modoActual(); let b = $("#modo-exp"); if (!m) { if (b) b.remove(); return; } if (!b) { b = mk("button", "chip"); b.id = "modo-exp"; b.type = "button"; b.style.cssText = "position:fixed;top:calc(var(--safe-t,0px) + 52px);left:50%;transform:translateX(-50%);z-index:9;font-size:.8rem;opacity:.9"; b.addEventListener("click", () => modo({ mo: "salir" })); document.body.append(b); } b.textContent = m.nombre + " · tocar para salir"; }
+  /** 3.36: el modo activo va en la barra de la conversación (antes flotaba encima del reloj). */
+  function pintarModo() {
+    const m = modoActual(); let b = $("#modo-exp");
+    if (!m) { if (b) b.remove(); return; }
+    if (!b) { b = mk("button", "chip modo-chip"); b.id = "modo-exp"; b.type = "button"; b.addEventListener("click", () => modo({ mo: "salir" })); }
+    const bar = $("#convbar"), ref = bar && bar.querySelector(".conv-b");
+    if (bar && b.parentNode !== bar) bar.insertBefore(b, ref || null); else if (!bar && !b.parentNode) { b.classList.add("flota"); document.body.append(b); }
+    b.textContent = m.nombre + " ✕"; b.title = "Salir del modo " + m.nombre.replace(/^\S+\s/, ""); b.setAttribute("aria-label", b.title);
+  }
   function modo(it) {
     D.modosPropios = D.modosPropios || [];
     if (it.mo === "salir") { const m = modoActual(); aj().modoExperto = ""; save(); pintarModo(); return R(m ? `Listo, salí del modo ${m.nombre.replace(/^\S+\s/, "")}. Vuelvo a ser Jarvis normal.` : "Ya estoy en modo normal."); }

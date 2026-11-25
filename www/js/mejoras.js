@@ -68,13 +68,26 @@
     const inn = mk("div", "sheet-in"), hd = mk("div", "sheet-h"), sc = mk("div", "scroll");
     const x = mk("button", "icon-btn", "✕"); x.type = "button"; x.addEventListener("click", () => sh.remove());
     hd.append(mk("h2", "", "Lo que puedo hacer"), x);
-    sc.append(mk("p", "hint", "Toca un ejemplo para probarlo. También puedes decirlo con tus palabras."));
+    // 3.36: buscador y secciones plegables (antes era una lista seguida de más de 100 ejemplos)
+    const q = mk("input", "inp cat-buscar"); q.type = "search"; q.placeholder = "🔍 Buscar: clima, WhatsApp, recordatorio…"; q.setAttribute("aria-label", "Buscar en lo que puedo hacer");
+    sc.append(q, mk("p", "hint", "Toca una sección y luego un ejemplo para probarlo. También puedes decirlo con tus palabras."));
+    const secciones = [];
     L11.CATALOGO.forEach(([titulo, ej]) => {
       if (/docente/i.test(titulo) && D.ajustes.docente === false) return;
-      sc.append(mk("h3", "sub", titulo));
+      const d = mk("details", "cat-sec"), sm = mk("summary");
+      sm.append(mk("span", "", titulo), mk("span", "aj-n", String(ej.length)));
       const box = mk("div", "sug cat-sug");
       ej.forEach((t) => { const b = mk("button", "chip", t); b.type = "button"; b.addEventListener("click", () => { sh.remove(); A.handle(t, false); }); box.append(b); });
-      sc.append(box);
+      d.append(sm, box); sc.append(d); secciones.push(d);
+    });
+    const nada = mk("p", "hint cat-nada", "No encontré ese ejemplo, pero igual puedes pedírmelo con tus palabras."); nada.hidden = true; sc.append(nada);
+    q.addEventListener("input", () => {
+      const v = L11.norm(q.value); let hay = 0;
+      secciones.forEach((d) => {
+        let n = 0; d.querySelectorAll(".chip").forEach((c) => { const ok = !v || L11.norm(c.textContent + " " + d.querySelector("summary").textContent).includes(v); c.hidden = !ok; if (ok) n++; });
+        d.hidden = !n; d.open = !!v && n > 0; hay += n;
+      });
+      nada.hidden = !v || hay > 0;
     });
     inn.append(hd, sc); sh.append(inn); document.body.append(sh); sh.hidden = false;
     A.say("Aquí tienes lo que puedo hacer. Toca un ejemplo para probarlo.");
@@ -84,7 +97,7 @@
   function ordenarAjustes() {
     const sc = $("#ajustes .scroll"); if (!sc) return;
     if (!$("#aj-buscar", sc)) {
-      const b = mk("input", "inp aj-buscar"); b.id = "aj-buscar"; b.type = "search"; b.placeholder = "🔍 Buscar en los ajustes (voz, batería, clave…)";
+      const b = mk("input", "inp aj-buscar"); b.id = "aj-buscar"; b.type = "search"; b.placeholder = "🔍 Buscar en los ajustes";
       b.addEventListener("input", () => {
         const q = L11.norm(b.value);
         $$("details.aj-grupo", sc).forEach((d) => { const hit = !q || L11.norm(d.textContent).includes(q); d.hidden = !hit; d.open = !!q && hit; });
@@ -127,7 +140,8 @@
       A.toast("¡Listo! Pregúntame «¿qué puedes hacer?» para ver todo.", 5000);
     });
     c.append(fin);
-    em.append(c);
+    // 3.36: la configuración va primero (antes quedaba debajo de los ejemplos, tapada por el micrófono)
+    const sg = $(".sug", em); if (sg) em.insertBefore(c, sg); else em.append(c);
   }
 
   // ======================================================================== ÓRDENES

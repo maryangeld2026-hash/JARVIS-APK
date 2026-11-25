@@ -78,11 +78,11 @@ def main():
         check("clave" in last() and "Groq" in last(), "sin clave: explica cómo sacarla gratis (y que no la escriba en el chat)")
         # Ajustes: pegar la clave, probar y usar
         pg.click("#btn-ajustes"); pg.wait_for_timeout(800)
-        tema = pg.evaluate("(document.querySelector('#aj-332 details.aj-grupo') || {dataset:{}}).dataset.tema")
-        check(tema == "ia", "Ajustes › Inteligencia artificial › «Respaldo gratis en la nube»")
-        pg.evaluate("document.querySelectorAll('#aj-332 details').forEach(d => { d.hidden = false; d.open = true; })")
-        pg.fill("#aj-332 .resp-gratis >> nth=0 >> input", "gsk_prueba123")
-        pg.click("#aj-332 .resp-gratis >> nth=0 >> button:has-text('Probar y usar')"); pg.wait_for_timeout(1500)
+        tema = pg.evaluate("((document.querySelector('#ajustes .resp-gratis') || document.body).closest('details.aj-grupo') || {dataset:{}}).dataset.tema")   # 3.36: dentro de «Si la IA principal falla»
+        check(tema == "ia", "Ajustes › Inteligencia artificial › Si la IA principal falla › gratis en la nube")
+        pg.evaluate("const d = document.querySelector('#ajustes .resp-gratis').closest('details.aj-grupo'); d.hidden = false; d.open = true")
+        pg.fill("#ajustes .resp-gratis >> nth=0 >> input", "gsk_prueba123")
+        pg.click("#ajustes .resp-gratis >> nth=0 >> button:has-text('Probar y usar')"); pg.wait_for_timeout(1500)
         a = pg.evaluate("JD.load().ajustes")
         check(a.get("respaldo") == "groq" and a["claves"].get("groq") == "gsk_prueba123", "Groq queda de primer respaldo " + str([a.get("respaldo"), a.get("respaldo2")]))
         check(any(x.get("model") == "openai/gpt-oss-120b" for x in GROQ), "usa GPT-OSS 120B de Groq (no el Llama viejo)")

@@ -143,7 +143,7 @@
     const s = mk("div"); s.id = "aj-329";
     // --- GGUF
     s.append(mk("h3", "sub", "Modelos GGUF en el celular"));
-    s.append(mk("p", "hint", "Cualquier modelo GGUF de Hugging Face (Gemma, Qwen, Llama, Phi, Mistral, LFM…) corre dentro del celular con llama.cpp, como en PocketPal AI. Se escogen y se usan igual que la IA del celular (Ajustes › IA de respaldo)."));
+    s.append(mk("p", "hint", "Cualquier modelo GGUF de Hugging Face (Gemma, Qwen, Llama, Phi, Mistral, LFM…) corre dentro del celular con llama.cpp, como en PocketPal AI. Se escogen y se usan igual que la IA del celular (Ajustes › Inteligencia artificial › Si la IA principal falla)."));
     const st = mk("p", "hint"); st.id = "gg-st";
     const cat = mk("div", "doc-acts");
     L18.CATALOGO.forEach(([k, repo, archivo, mb, , nombre]) => { const b = mk("button", "chip", nombre.split(" (")[0] + ` · ${gb(mb)} GB`); b.type = "button"; b.addEventListener("click", () => bajarGguf(archivo, L18.urlArchivo(repo, archivo), mb, st)); cat.append(b); });

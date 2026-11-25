@@ -69,6 +69,7 @@ def main():
         # catálogo
         say("¿qué puedes hacer?", 400)
         check(pg.is_visible("#cat-sh") and pg.locator("#cat-sh .chip").count() > 30, "catálogo de lo que hace Jarvis")
+        pg.fill("#cat-sh .cat-buscar", "arroz"); pg.wait_for_timeout(150)   # 3.36: secciones plegables con buscador
         pg.click("#cat-sh >> text=Pon 10 minutos para el arroz"); pg.wait_for_timeout(500)
         check(not pg.is_visible("#cat-sh") and pg.evaluate("(JD.load().timers || []).some(t => t.nombre === 'arroz')"), "catálogo: tocar un ejemplo lo hace")
         # pensar

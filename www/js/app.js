@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.35.0";
+  const VERSION = "3.36.0";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -53,9 +53,12 @@
     e.append(mk("b", "", `Hola${D.ajustes.nombre ? ", " + D.ajustes.nombre : ""}. Soy Jarvis.`),
       mk("span", "", D.ajustes.claves[D.ajustes.proveedor] ? "Toca el micrófono y háblame, o escribe." : "Toca el micrófono y pídeme algo. Para conversar con la IA, pon tu clave en Ajustes (el engranaje)."));
     const s = mk("div", "sug");
-    const ej = ["¿Qué puedes hacer?", "¿Cómo estará el clima mañana?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos", "¿Qué tengo hoy?"];
-    (D.ajustes.docente === true ? ej.concat(["Escoge un estudiante", "Hazme un quiz de fracciones de 5 preguntas"]) : ej.concat(["Cuando diga modo enfoque, silencia el celular y pon 25 minutos", "Activa el modo docente"])).forEach((x) => {
-      const c = mk("button", "chip", x); c.type = "button"; c.addEventListener("click", () => handle(x, false)); s.append(c);
+    // 3.36: 4 sugerencias del momento (y de la clase, en modo docente) + «¿Qué puedes hacer?», que muestra todo
+    let ej = [];
+    try { ej = window.JX && window.JX.sugerenciasInicio ? window.JX.sugerenciasInicio() : []; } catch (er) { ej = []; }
+    if (!ej.length) ej = ["¿Qué tengo hoy?", "¿Cómo estará el clima mañana?", "Recuérdame a las 5 llamar a mamá", "Pon 5 minutos"];
+    ej.slice(0, 4).concat(["¿Qué puedes hacer?"]).forEach((x) => {
+      const c = mk("button", "chip" + (x === "¿Qué puedes hacer?" ? " ver-todo" : ""), x); c.type = "button"; c.addEventListener("click", () => handle(x, false)); s.append(c);
     });
     e.append(s);
     return e;

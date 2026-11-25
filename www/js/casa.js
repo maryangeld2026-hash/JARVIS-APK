@@ -331,7 +331,7 @@
   function settingsSection() {
     const box = $("#aj2"); if (!box || $("#aj-310")) return;
     const sec = mk("div"); sec.id = "aj-310";
-    sec.append(mk("h3", "sub", "Más"));
+    sec.append(mk("h3", "sub", "Encontrar el celular y ayuda"));   // 3.36: antes «Más», un tema con un solo grupo
     const lbl = (t) => sec.append(mk("label", "lbl", t));
     const chk = (label, val, fn) => { const l = mk("label", "lbl check"), i = mk("input"); i.type = "checkbox"; i.checked = !!val; i.addEventListener("change", () => fn(i.checked)); l.append(i, document.createTextNode(" " + label)); sec.append(l); };
     const btn = (t, fn) => { const b = mk("button", "btn", t); b.type = "button"; b.addEventListener("click", fn); return b; };

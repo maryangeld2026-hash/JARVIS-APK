@@ -138,7 +138,7 @@
   // ======================================================================== POR VOZ
   async function enChat(it) {
     const prov = it.prov || aj().proveedor;
-    if (!L.PROVIDERS[prov] || ["local", "propio"].includes(prov)) return R("El probador es para las IA de la nube (Gemini, DeepSeek, ChatGPT…). La del celular la pruebas en Ajustes › IA de respaldo.");
+    if (!L.PROVIDERS[prov] || ["local", "propio"].includes(prov)) return R("El probador es para las IA de la nube (Gemini, DeepSeek, ChatGPT…). La del celular la pruebas en Ajustes › Inteligencia artificial › Si la IA principal falla.");
     let ms;
     try { ms = await IA.modelosCuenta(prov); } catch (e) { return R(e.message || String(e), "err"); }
     if (it.pm === "lista") {
