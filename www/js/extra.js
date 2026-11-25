@@ -296,6 +296,7 @@
   function estiloVoz() {
     const e = ((D.ajustes.estilo || {}).estilo) || "jarvis";
     return e === "jarvis" ? "Lee en español latino neutro, como un mayordomo digital elegante y sereno: voz grave y pausada pero ágil, dicción precisa, seguro de sí mismo, con un leve toque de humor seco y sin exagerar"
+      : e === "natural" ? "Dilo en español de Colombia como una persona real que conversa: cálida, cercana y relajada, con ritmo y pausas naturales y la entonación de quien habla (no de quien lee), sin exagerar"   // 3.37
       : "Dilo en español de Colombia, con voz cálida y natural";
   }
   async function geminiTTS(text, key) {
@@ -327,9 +328,10 @@
     prepare(text) {
       const p = D.ajustes.vozIA, key = p && (D.ajustes.claves[p] || "").trim();
       if (!p || !key || !navigator.onLine || D.ajustes.ahorroActivo || text.length > 600 || namesIn(text)) return null;      // los nombres de estudiantes nunca van a la IA
+      if (D.ajustes.vozIAagotada === new Date().toDateString()) return null;                // 3.37: se acabó el cupo de hoy: la voz del celular, sin esperar a que falle cada frase
       if (cache.has(p + text)) return Promise.resolve(cache.get(p + text));
       const pr = (p === "openai" ? openaiTTS(text, key) : geminiTTS(text, key)).then((b) => { cache.set(p + text, b); if (cache.size > 80) cache.delete(cache.keys().next().value); return b; });
-      return pr.catch(() => null);
+      return pr.catch((e) => { if (/ 429$/.test(String(e && e.message))) { D.ajustes.vozIAagotada = new Date().toDateString(); try { window.JD.save(); } catch (er) { /* nada */ } } return null; });
     },
     play(buf) {
       return new Promise((ok) => {
@@ -383,7 +385,7 @@
     const vs = mk("select", "inp"); [["", "No: la voz del celular"], ["gemini", "Sí, con Gemini"], ["openai", "Sí, con ChatGPT"]].forEach(([k, t]) => vs.append(new Option(t, k)));
     vs.value = D.ajustes.vozIA || "";
     const vn = mk("select", "inp");
-    const fillNames = () => { vn.textContent = ""; (vs.value === "openai" ? ["onyx", "ash", "echo", "nova", "shimmer", "alloy", "coral", "sage"] : ["Charon", "Iapetus", "Algieba", "Rasalgethi", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Callirrhoe", "Puck"]).forEach((k) => vn.append(new Option("Voz: " + k, k))); vn.value = D.ajustes.vozIAnombre && [...vn.options].some((o) => o.value === D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : vn.options[0].value; vn.hidden = !vs.value; };
+    const fillNames = () => { vn.textContent = ""; (vs.value === "openai" ? ["onyx", "ash", "echo", "nova", "shimmer", "alloy", "coral", "sage"] : ["Achird", "Sulafat", "Charon", "Iapetus", "Algieba", "Rasalgethi", "Orus", "Fenrir", "Kore", "Aoede", "Leda", "Callirrhoe", "Puck"]).forEach((k) => vn.append(new Option("Voz: " + k, k))); vn.value = D.ajustes.vozIAnombre && [...vn.options].some((o) => o.value === D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : vn.options[0].value; vn.hidden = !vs.value; };
     fillNames();
     vs.addEventListener("change", () => { D.ajustes.vozIA = vs.value; fillNames(); D.ajustes.vozIAnombre = vn.value; save(); cache.clear(); if (vs.value && !(D.ajustes.claves[vs.value] || "").trim()) A.toast("Pon arriba la clave de " + (vs.value === "openai" ? "ChatGPT" : "Gemini") + ".", 5000); V.hush(); V.say("Hola, así sueno con la voz natural."); });
     vn.addEventListener("change", () => { D.ajustes.vozIAnombre = vn.value; save(); cache.clear(); V.hush(); V.say("Hola, así sueno ahora."); });

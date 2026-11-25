@@ -186,7 +186,7 @@
     let saltos = 0;
     for (let intento = 0; intento < intentos; intento++) {
       const key = c.prov + ":" + m;
-      const fast = !(c.a.sinRapido || {})[key];
+      const fast = opts.fast !== false && !(c.a.sinRapido || {})[key];   // 3.37: «fast: false» = que piense a fondo
       let got = false;
       const o = Object.assign({}, opts, { fast, modelo: m, onDelta: (d, all) => { got = true; if (opts.onDelta) opts.onDelta(d, all); } });
       try { return await chat1(c, o); }

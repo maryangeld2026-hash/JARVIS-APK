@@ -61,7 +61,7 @@ def main():
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(base); pg.wait_for_timeout(300)
         pg.evaluate("window.JD ? JD.save(true) : 0")
-        pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, trato: 'profesor', asignatura: 'matemáticas', estilo: { estilo: 'cercano' } } }))""")
+        pg.evaluate("""localStorage.setItem('jarvis.android.v1', JSON.stringify({ ajustes: { claves: { gemini: 'AIzaX' }, seguir: false, voz: true, trato: 'profesor', asignatura: 'matemáticas', estilo: { estilo: 'cercano' }, v337: 1 } }))""")
         pg.reload(); pg.wait_for_timeout(2200)
         say = lambda t, w=500: (pg.fill("#in-texto", t), pg.press("#in-texto", "Enter"), pg.wait_for_timeout(w))
         last = lambda: pg.evaluate("LASTJ()")

@@ -45,11 +45,12 @@
   }
 
   // ======================================================================== MODO «PENSAR»
-  async function pensar(q) {
+  /** hist: 3.37, la conversación reciente (cuando Jarvis decide solo pensar más, la pregunta puede depender de lo anterior). */
+  async function pensar(q, hist) {
     const { m, e } = A.add("assistant", "", ""); e.classList.add("typing"); A.setState("thinking");
     let last = 0;
     try {
-      const full = await IA.chat({ system: (A.systemPrompt ? A.systemPrompt(true) : "") + " " + L11.PENSAR, messages: [{ role: "user", content: q }], maxTokens: 3500, temperature: 0.3,
+      const full = await IA.chat({ system: (A.systemPrompt ? A.systemPrompt(true) : "") + " " + L11.PENSAR, messages: (hist || []).concat([{ role: "user", content: q }]), maxTokens: 3500, temperature: 0.3, fast: false,   // 3.37: aquí sí piensa a fondo
         onDelta: (_, all) => { const now = performance.now(); if (now - last > 300) { last = now; e.innerHTML = A.md("🧠 *Pensando…*\n\n" + all.slice(-600)); } } });
       const s = L11.separarPensar(full);
       m.content = s.respuesta + (s.razon ? "\n\n<details><summary>Ver cómo lo pensé</summary>\n\n" + s.razon + "\n\n</details>" : "");

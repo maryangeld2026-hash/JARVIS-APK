@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.36.0";
+  const VERSION = "3.37.0";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -20,7 +20,7 @@
   function toast(text, ms = 3200) { const t = $("#toast"); t.textContent = text; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms); }
   function applyVoice() { V.setOptions({ rate: +D.ajustes.velocidad || 1, pitch: +D.ajustes.tono || 1, voice: D.ajustes.vozIdx == null ? -1 : +D.ajustes.vozIdx, webVoice: D.ajustes.vozWeb || "" }); }
   applyVoice();
-  const say = (t) => { if (D.ajustes.voz) V.say(L.forSpeech(t)); };
+  const say = (t) => { if (D.ajustes.voz) V.say(L.forSpeech(window.JL24 ? window.JL24.pulir(t) : t)); };
 
   // ======================================================================== PESTAÑAS
   function tab(name) {
@@ -75,7 +75,12 @@
     return { m, e };
   }
   /** Jarvis contesta algo propio (herramientas): lo muestra y lo dice. */
-  function reply(text, cls = "tool", spoken) { add("assistant", text, cls); say(D.ajustes.bolsillo ? text : (spoken || text)); if (window.JX) window.JX.onReply(spoken || text); }
+  /** 3.37: la personalidad natural (como una persona real). */
+  const natural = () => ((D.ajustes.estilo || {}).estilo) === "natural";
+  const L24 = () => window.JL24;
+  function reply(text, cls = "tool", spoken) {
+    if (L24()) { if (natural() && cls !== "err" && !window.__sinVariar) { const r = Math.random(); text = L24().variar(text, () => r); if (spoken) spoken = L24().variar(spoken, () => r); } text = L24().pulir(text); if (spoken) spoken = L24().pulir(spoken); }   // 3.37: no siempre «Listo…», y sin «, .»
+    add("assistant", text, cls); say(D.ajustes.bolsillo ? text : (spoken || text)); if (window.JX) window.JX.onReply(spoken || text); }
 
   let pendingReminder = null, lastByVoice = false;
   async function handle(text, byVoice) {
@@ -114,7 +119,7 @@
     const a = D.ajustes, now = new Date(), doc = a.docente === true;
     const hace = "recordatorios y alarmas («recuérdame a las 3 llamar a mamá», «pon una alarma a las 6»), temporizador («pon 10 minutos»), llamar y mandar WhatsApp o SMS a tus contactos (la app pide confirmar), abrir apps, linterna, volumen, clima («dime el clima de mañana»), notas de voz, el calendario del celular, mapas, música en YouTube, modo ahorro" +
       (doc ? "; y de la clase: escoger un estudiante, hacer grupos, pasar lista, quices, notas y ticket de salida" : "");
-    return `Eres Jarvis, el asistente personal de voz de ${a.nombre ? "«" + a.nombre + "»" : "la persona"}, en Colombia. Dirígete a la persona como «${trato()}». ` +
+    return `Eres Jarvis, el asistente personal de voz de ${a.nombre ? "«" + a.nombre + "»" : "la persona"}, en Colombia. ${trato() ? `Dirígete a la persona como «${trato()}».` : "Trátala de tú, con confianza."} ` +
       "Hablas en español de Colombia, de forma directa. " + L7.personaPrompt(a.estilo) + " Tu respuesta se lee en voz alta. Las fórmulas, en LaTeX entre $…$. Responde cualquier pregunta de cualquier tema con lo que sabes, sin negarte por costumbre; si es algo muy actual y no tienes el dato, dilo con honestidad. " +
       (doc ? `La persona también es docente${a.asignatura ? " de " + a.asignatura : ""}; sus cursos: ${D.cursos.map((c) => c.nombre).join(", ") || "ninguno todavía"}. No inventes datos de estudiantes. ` : "") +
       (live ? `Esta app hace: ${hace}. ` :
@@ -135,7 +140,7 @@
     e.classList.add("typing");
     let spoken = 0, first = true, buf = "", lastDraw = 0, gotFirst = false, shown = "", raw = "";
     // si la IA tarda en arrancar, Jarvis dice algo corto de una vez (como «A ver…» en el computador): cero silencio
-    const ackT = D.ajustes.voz && lastByVoice ? setTimeout(() => { if (!gotFirst && !V.isSpeaking()) V.say(L.ackFor(text)); }, 700) : null;
+    const ackT = D.ajustes.voz && lastByVoice ? setTimeout(() => { if (!gotFirst && !V.isSpeaking()) V.say(L.ackFor(text, Math.random, natural())); }, 700) : null;
     const draw = (force) => {
       const now = performance.now();
       if (!force && now - lastDraw < 220) return;
@@ -213,6 +218,8 @@
     if (V.isSpeaking()) V.hush();
     if (state === "thinking") { IA.stop(); }
     // 3.23.2: el orbe es el asistente (escucha normal). La conversación en vivo tiene su propio botón ((o)).
+    // 3.37: si escogiste conversar en vivo (lo más humano: lo puedes interrumpir y responde con voz natural), tocar el orbe la abre; si no arranca, sigue la escucha normal
+    if (!auto && !wake && window.JX && window.JX.vivoPrincipal && window.JX._live && window.JX.vivoPrincipal()) return window.JX._live.start({ respaldo: () => listenNormal(auto, wake) });
     return listenNormal(auto, wake);
   }
   async function listenNormal(auto, wake) {
@@ -246,6 +253,7 @@
   // 3.5: al activarse (por «Jarvis», el asistente o la burbuja) saluda —«¿Sí, profesor?»— y espera a que termine de hablar para escuchar
   function trato() {
     const doc = D.ajustes.docente === true;
+    if (!D.ajustes.trato && natural()) return D.ajustes.nombre || "";   // 3.37: natural: por su nombre (o sin nada), no «señor»
     let t = D.ajustes.trato || (doc ? "profesor" : "señor");
     if (!doc && /^profe/.test(t)) t = t === "profesora" ? "señora" : "señor";       // 3.16: sin el modo docente, nada de «profesor»
     return t === "nombre" ? (D.ajustes.nombre || (doc ? "profe" : "señor")) : t;
@@ -254,7 +262,7 @@
   async function wake() {
     if (state === "listening") return;
     V.hush();
-    const tr = trato(), f = ["¿Sí, " + tr + "?", "A su servicio, " + tr + ".", "Dígame, " + tr + ".", "Le escucho, " + tr + "."];
+    const tr = trato(), f = natural() && L24() ? L24().ESCUCHO.natural : ["¿Sí, " + tr + "?", "A su servicio, " + tr + ".", "Dígame, " + tr + ".", "Le escucho, " + tr + "."];
     if (D.ajustes.voz) {
       V.say(f[saludo++ % f.length]);
       await Promise.race([V.idle(), new Promise((r) => setTimeout(r, 2500))]);
@@ -287,7 +295,7 @@
       case "callar": V.hush(); IA.stop(); return;
       case "ajustes": openSettings(); return reply("Abrí los Ajustes.");
       case "minimizar": reply("Listo, me minimizo. Aquí sigo."); await V.idle(); return appWindow("minimizar");
-      case "salir": reply(["Apagando sistemas. Hasta pronto, " + trato() + ".", "Me desconecto. Aquí estaré cuando me necesite, " + trato() + "."][Date.now() % 2]); await Promise.race([V.idle(), new Promise((r) => setTimeout(r, 4000))]); return appWindow("salir");
+      case "salir": reply(natural() && L24() ? L24().ADIOS[Date.now() % L24().ADIOS.length] : ["Apagando sistemas. Hasta pronto, " + trato() + ".", "Me desconecto. Aquí estaré cuando me necesite, " + trato() + "."][Date.now() % 2]); await Promise.race([V.idle(), new Promise((r) => setTimeout(r, 4000))]); return appWindow("salir");
       case "hora": return reply(`Son las ${hora(now).replace(/\.$/, "")}.`);
       case "fecha": return reply(`Hoy es ${now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`);
       case "tiempo": { const s = it.segundos || D.ultimoTiempo || 300; startTimer(s); return reply(`Listo: ${L.spokenDuration(s)}. Te aviso cuando termine.`); }

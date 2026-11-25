@@ -14,7 +14,7 @@ def gem(route):
     b = json.loads(r.post_data or "{}"); t = json.dumps(b, ensure_ascii=False)
     if ":generateContent" in u:
         return route.fulfill(json={"candidates": [{"content": {"parts": [{"text": json.dumps(QUIZ)}]}}]})
-    ans = "Más corto: la recta $y = 2x + 1$ sube." if "más corto" in t.lower() else "La recta es $y = 2x + 1$, con pendiente 2. Corta el eje y en 1."
+    ans = "Más corto: la recta $y = 2x + 1$ sube." if "dilo más corto" in t.lower() else "La recta es $y = 2x + 1$, con pendiente 2. Corta el eje y en 1."
     return route.fulfill(status=200, headers={"content-type": "text/event-stream"}, body=e2e.sse(ans))
 
 NATIVE = """

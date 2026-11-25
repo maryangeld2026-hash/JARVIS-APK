@@ -260,7 +260,7 @@
     const st = D.ajustes.estilo = D.ajustes.estilo || {};
     sec.append(mk("label", "lbl", "Cómo te habla Jarvis"));
     const row = mk("div", "row wrap");
-    const s1 = mk("select", "inp half"); [["jarvis", "Jarvis (mayordomo elegante, humor seco)"], ["cercano", "Cálido y cercano"], ["formal", "Formal (de usted)"], ["amigo", "Como un amigo"]].forEach(([k, t]) => s1.append(new Option(t, k))); s1.value = st.estilo || "jarvis";
+    const s1 = mk("select", "inp half"); [["natural", "Natural (como una persona real, de tú)"], ["jarvis", "Jarvis (mayordomo elegante, humor seco)"], ["cercano", "Cálido y cercano"], ["formal", "Formal (de usted)"], ["amigo", "Como un amigo"]].forEach(([k, t]) => s1.append(new Option(t, k))); s1.value = st.estilo || "jarvis";
     const s2 = mk("select", "inp half"); [["normal", "Respuestas normales"], ["corto", "Muy cortas"], ["detallado", "Con detalles"]].forEach(([k, t]) => s2.append(new Option(t, k))); s2.value = st.largo || "normal";
     s1.addEventListener("change", () => { st.estilo = s1.value; save(); }); s2.addEventListener("change", () => { st.largo = s2.value; save(); });
     row.append(s1, s2); sec.append(row);

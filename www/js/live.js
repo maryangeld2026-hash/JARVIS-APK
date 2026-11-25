@@ -50,6 +50,8 @@
       const model = await liveModel(key);
       S.model = model;
       // 3.30: los modelos nuevos siguen conversando mientras Jarvis hace la orden (si alguna vez no arrancó así, ya no se intenta)
+      // 3.37: audio proactivo (no le contesta al ruido ni a otras conversaciones) y diálogo afectivo (se adapta a cómo suenas); si el modelo no los acepta, se recuerda y sigue sin ellos
+      S.extras = D.ajustes.liveHumano !== false && D.ajustes.liveSinExtras !== model && !S.opts.sys;
       S.asinc = !!(window.JL19 && window.JL19.liveAsincrono(model) && D.ajustes.liveSinAsinc !== model && D.ajustes.liveAsinc !== false);
       S.ctxIn = new AudioContext();
       S.ctxOut = new AudioContext({ sampleRate: 24000 });
@@ -71,7 +73,8 @@
       S.ws = ws;
       ws.onopen = () => {
         const sys = S.opts.sys ? S.opts.sys : (A.systemPrompt ? A.systemPrompt(true) : "Eres Jarvis, un asistente personal en Colombia.") + " Estás en una conversación de voz en vivo: responde corto y natural, en español de Colombia. Si te piden algo que hace la app (temporizador, recordatorios, alarmas, abrir una app, llamar o escribir, clima, linterna, volumen; y de clase: escoger un estudiante, grupos, pasar lista), usa la herramienta jarvis_orden con la orden en palabras. Para cualquier pregunta sobre hechos actuales (noticias, resultados, precios, fechas de eventos, personas en cargos), busca en Google antes de responder. Responde cualquier tema; si de verdad no sabes, dilo.";
-        send({ setup: { model: "models/" + model,
+        const extra = S.extras ? { proactivity: { proactiveAudio: true }, enableAffectiveDialog: true } : {};   // 3.37: decide cuándo hablar y se adapta a tu ánimo
+        send({ setup: { ...extra, model: "models/" + model,
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre && !/^[a-z]/.test(D.ajustes.vozIAnombre) ? D.ajustes.vozIAnombre : "Charon" } } } },
           systemInstruction: { parts: [{ text: sys }] },
           inputAudioTranscription: {}, outputAudioTranscription: {},
@@ -82,6 +85,7 @@
       ws.onerror = () => estado("Se perdió la conexión.");
       ws.onclose = (ev) => {
         if (!(S && S.ws === ws)) return;
+        if (!S.listo && S.extras) { D.ajustes.liveSinExtras = S.model; try { window.JD.save(); } catch (e) { /* nada */ } const o = S.opts; stop(""); start(o); return; }   // 3.37: otra vez, sin lo nuevo
         if (!S.listo && S.asinc) { D.ajustes.liveSinAsinc = S.model; try { window.JD.save(); } catch (e) { /* nada */ } }   // 3.30: la próxima vez, sin lo asíncrono
         const motivo = ev.reason ? ` (${ev.reason.slice(0, 120)})` : "";
         if (!S.listo && S.opts.respaldo) { const r = S.opts.respaldo; stop(""); D.ajustes.vivoFallaT = Date.now(); r("No arrancó la conversación en vivo" + motivo + "."); return; }   // 3.23: sigue con la escucha normal

@@ -294,8 +294,11 @@
     p = p || {};
     const out = [];
     const est = p.estilo || "jarvis";
+    const L24 = typeof window !== "undefined" && window.JL24 ? window.JL24 : typeof require === "function" ? require("./logica24.js") : null;
     if (est === "jarvis") out.push(JARVIS);
+    else if (est === "natural" && L24) out.push(L24.NATURAL);      // 3.37: como una persona real, de «tú»
     else out.push(est === "formal" ? "Usa un tono formal y respetuoso, de «usted»." : est === "amigo" ? "Habla como un amigo de confianza: cercano, relajado, de «tú»." : "Usa un tono cálido y cercano.");
+    if (L24) out.push(L24.ANIMO.trim());                              // 3.37: lee el ánimo y se ajusta
     out.push("Conversa con naturalidad, como en una charla hablada: frases completas y fluidas, sin listas ni títulos salvo que te pidan una lista o pasos. No preguntes cosas innecesarias: si lo que piden es razonable, hazlo y dilo; pregunta solo si falta un dato imprescindible, y una sola cosa. No cierres con «¿quieres que…?» ni ofrezcas más ayuda por costumbre.");
     out.push(p.largo === "corto" ? "Responde muy corto: 1 o 2 frases, salvo que te pidan más." : p.largo === "detallado" ? "Cuando expliques algo, da detalles y ejemplos." : "Responde breve (2 a 4 frases), salvo que te pidan un texto, una explicación detallada o una lista.");
     if (p.humor) out.push("Puedes usar un toque de humor ligero cuando venga al caso.");

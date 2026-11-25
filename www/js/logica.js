@@ -440,6 +440,9 @@
   /** Texto para leer en voz alta: sin marcas de formato, y las fórmulas dichas en palabras. */
   function forSpeech(text) {
     let s = String(text || "");
+    // 3.37: la plata se dice como plata («$49.500» → «49.500 pesos»; antes, con dos «$», se leía como fórmula) y los emojis no se leen
+    s = s.replace(/\$\s?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?=\s*(?:mil|millones?)\b))/g, (m, n) => n + (/\.\d{3}$|\.\d{3},/.test(n) ? " pesos" : ""));
+    s = s.replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]/gu, "").replace(/[·•→]/g, ", ");
     s = s.replace(/```[\s\S]*?```/g, " ").replace(/\$\$?([^$]+)\$\$?/g, (m, f) => " " + mathWords(f) + " ");
     s = s.replace(/^\s*#{1,4}\s+/gm, "").replace(/^\s*>\s?/gm, "").replace(/\*\*|__|`/g, "").replace(/^\s*[-•*]\s+/gm, "").replace(/^\s*\|.*\|\s*$/gm, " ");
     s = s.replace(/https?:\/\/\S+/g, "el enlace").replace(/\s+/g, " ").replace(/\s+([.,;:!?])/g, "$1").trim();
@@ -550,11 +553,11 @@
 
   /** Lo que dice mientras la IA arranca (como el «A ver…» del computador), según lo que preguntaste. */
   const ACKS = { pregunta: ["Veamos…", "Permítame un momento…", "Un instante…"], pedido: ["Enseguida…", "En ello…", "Un momento, por favor…"], otro: ["Mmm…", "Veamos…"] };   // 3.16: al estilo de Jarvis
-  function ackFor(text, rnd = Math.random) {
+  function ackFor(text, rnd = Math.random, natural = false) {
     const t = norm(text);
     const k = /^(?:que|como|cual|cuales|cuando|donde|quien|por que|cuanto|explica|explicame|dime)\b/.test(t) || /\?$/.test(String(text).trim()) ? "pregunta"
       : /^(?:haz|hazme|crea|creame|escribe|escribeme|redacta|prepara|preparame|dame|genera|ayudame|organiza|planea)\b/.test(t) ? "pedido" : "otro";
-    const l = ACKS[k];
+    const l = (natural && typeof window !== "undefined" && window.JL24 ? window.JL24.ACK_NATURAL : ACKS)[k];      // 3.37: con la personalidad natural, «A ver…», «Dale…»
     return l[Math.floor(rnd() * l.length) % l.length];
   }
 

@@ -34,6 +34,7 @@ ANSWER = ("Claro, profe. Para explicar los números negativos, empieza con algo 
 
 FAKE_VOICE = """
 (() => {
+  window.__sinVariar = true; window.__sinVivo = true;   // 3.37 (y el orbe con la escucha normal, sin conectarse a Gemini en vivo): en las pruebas, las respuestas fijas no cambian de palabra («Listo» siempre es «Listo»)
   window.LASTJ = () => { const a = document.querySelectorAll('.msg.jarvis'); return a.length ? a[a.length - 1].textContent : ''; };
   window.__said = [];
   window.__heard = [];
