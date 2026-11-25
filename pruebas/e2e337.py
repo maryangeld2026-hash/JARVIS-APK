@@ -56,7 +56,7 @@ def main():
         say("mañana tengo una entrevista de trabajo", 1500)
         sg = pg.evaluate("JD.load().seguimientos || []")
         check(len(sg) == 1 and sg[0]["tema"] == "la entrevista de trabajo", "anota la entrevista de mañana " + str(sg))
-        pg.evaluate("const d = JD.load(); d.seguimientos[0].dia -= 864e5; d.ajustes.segUlt = ''; JX._a337.preguntar()"); pg.wait_for_timeout(300)
+        pg.evaluate("const d = JD.load(); d.seguimientos[0].dia -= 2 * 864e5; d.ajustes.segUlt = ''; JX._a337.preguntar()"); pg.wait_for_timeout(300)
         q = pg.evaluate("LASTJ()")
         check("entrevista de trabajo" in q and "?" in q, "al día siguiente: «¿cómo te fue en la entrevista de trabajo?» · " + q[:60])
         check(pg.evaluate("JD.load().chat.slice(-1)[0].cls") == "", "la pregunta queda en la conversación (tu respuesta le llega a la IA con contexto)")
