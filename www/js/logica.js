@@ -251,6 +251,10 @@
     // Solo acepta llamadas desde un servidor (no desde la vista web): Jarvis la llama por la vía nativa de Android, sin streaming.
     numes: { nombre: "Numes", tipo: "openai", modelo: "", base: "https://api.numes.ai/api/v1", nota: "modelos abiertos gratis (pueden tardar)", nativo: true, sinStream: true, lento: true,
       prefer: [/glm-[\d.]+-flash[\w.-]*:free$/, /glm[\w.-]*:free$/, /qwen[\w.-]*:free$/, /deepseek[\w.-]*:free$/, /gemma[\w.-]*:free$/, /nemotron[\w.-]*:free$/, /:free$/], clave: "https://numes.ai/dashboard/keys", pista: "clave de inferencia" },
+    // 3.37.2: SenseNova (SenseTime), plataforma internacional: gratis mientras está en fase beta (unas 1.500 preguntas cada 5 horas por modelo).
+    // Su pasarela es estricta y no deja llamar desde la vista web: va por la vía nativa de Android, sin streaming y sin «response_format».
+    sensenova: { nombre: "SenseNova", tipo: "openai", modelo: "sensenova-6.8-flash", base: "https://token.sensenova.ai/v1", nota: "gratis en fase beta", nativo: true, sinStream: true,
+      prefer: [/^sensenova-[\d.]+-flash$/, /^sensenova-[\d.]+-flash-lite$/, /^sensenova-[\d.]+(?!.*\bu\d)/], clave: "https://platform.sensenova.ai/console", pista: "clave de Console › API Keys" },
     propio: { nombre: "Servidor propio (Ollama o LM Studio en tu PC)", tipo: "openai", modelo: "", base: "", propio: true, sinClave: true, nota: "en tu wifi, sin costo",
       prefer: [/qwen|llama|gemma|mistral|phi/i], clave: "https://ollama.com/download", pista: "(no necesita clave)" },
     local: { nombre: "IA del celular (sin internet)", tipo: "local", modelo: "", base: "", sinClave: true, nota: "funciona sin internet; más lenta y sencilla",
@@ -325,7 +329,8 @@
         content: m.image ? [{ type: "text", text: String(m.content || "") }, { type: "image_url", image_url: { url: `data:${m.image.mime};base64,${m.image.data}` } }] : String(m.content || "") })));
       const body = { model, messages: msgs, stream, max_tokens: maxTokens, temperature };
       if (provider === "numes") { body.stream = false; body.provider = { max_price: { prompt: 0, completion: 0 } }; }   // 3.33: nunca un modelo de pago
-      if (json) body.response_format = { type: "json_object" };
+      if (provider === "sensenova") body.stream = false;                 // 3.37.2: por la vía nativa (sin streaming)
+      if (json && provider !== "sensenova") body.response_format = { type: "json_object" };   // (SenseNova lo rechaza: el JSON lo pide la instrucción)
       const headers = { "content-type": "application/json" };
       if (key) headers.Authorization = `Bearer ${key}`;
       if (provider === "openrouter") { headers["X-Title"] = "Jarvis Docente"; }

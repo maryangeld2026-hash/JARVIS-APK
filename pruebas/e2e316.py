@@ -93,7 +93,7 @@ def main():
         TTS.clear()
         say("y el café de olla otra vez", 4500)
         check(0 < len(TTS) <= 4, f"voz natural: {len(TTS)} pedidos a la IA para 7 frases")
-        check(all("mayordomo" in t for t in TTS) and all("profe" not in t for t in TTS), "voz natural con estilo de mayordomo elegante")
+        check(all("mayordomo" not in t and "español latino" not in t for t in TTS) and all("profe" not in t for t in TTS), "voz natural: solo el texto (3.37.2: antes la instrucción de estilo se leía en voz alta)")
         pg.evaluate("JD.load().ajustes.vozIA = ''")
         # «pon la voz de Jarvis»
         pg.evaluate("JD.load().ajustes.vozIdx = 0; JD.load().ajustes.tono = 1.3")

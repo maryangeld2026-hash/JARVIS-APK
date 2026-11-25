@@ -1,7 +1,7 @@
 /* Jarvis para Android · la pantalla: conversación por voz, asistente personal, herramientas de la clase (modo docente), quices y ajustes. */
 (function () {
   "use strict";
-  const VERSION = "3.37.1";
+  const VERSION = "3.37.2";
   const L = window.JL, L7 = window.JL7, D = window.JD.load(), V = window.JV, N = window.JN, IA = window.JIA;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -258,12 +258,25 @@
     if (!doc && /^profe/.test(t)) t = t === "profesora" ? "señora" : "señor";       // 3.16: sin el modo docente, nada de «profesor»
     return t === "nombre" ? (D.ajustes.nombre || (doc ? "profe" : "señor")) : t;
   }
-  let saludo = 0;
+  let saludo = 0, tonoCtx = null;
+  /** Dos notas suaves y cortas: «te escucho». */
+  function tono() {
+    try {
+      tonoCtx = tonoCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (tonoCtx.state === "suspended") tonoCtx.resume().catch(() => {});
+      const t0 = tonoCtx.currentTime + 0.02;
+      [[660, 0], [880, 0.11]].forEach(([fr, d]) => { const o = tonoCtx.createOscillator(), g = tonoCtx.createGain(); o.type = "sine"; o.frequency.value = fr; g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(0.22, t0 + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.12); o.connect(g); g.connect(tonoCtx.destination); o.start(t0 + d); o.stop(t0 + d + 0.14); });
+    } catch (e) { /* sin sonido */ }
+    if (navigator.vibrate) { try { navigator.vibrate(25); } catch (e) { /* nada */ } }
+  }
   async function wake() {
     if (state === "listening") return;
     V.hush();
     const tr = trato(), f = natural() && L24() ? L24().ESCUCHO.natural : ["¿Sí, " + tr + "?", "A su servicio, " + tr + ".", "Dígame, " + tr + ".", "Le escucho, " + tr + "."];
-    if (D.ajustes.voz) {
+    // 3.37.2: con la voz natural (Gemini), un «¿Sí?» tendría que ir a internet y volver: tardaba y sonaba otra voz; en vez de eso, un tono corto
+    const vozNube = D.ajustes.vozIA && ((D.ajustes.claves || {})[D.ajustes.vozIA] || "").trim() && navigator.onLine && !D.ajustes.ahorroActivo;
+    if (D.ajustes.voz && vozNube) { tono(); await new Promise((r) => setTimeout(r, 260)); }
+    else if (D.ajustes.voz) {
       V.say(f[saludo++ % f.length]);
       await Promise.race([V.idle(), new Promise((r) => setTimeout(r, 2500))]);
       await new Promise((r) => setTimeout(r, 250));            // que el micrófono no oiga el final del saludo

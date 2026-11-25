@@ -51,3 +51,13 @@ test("los modelos que escoge Jarvis en los gratis", () => {
   assert.equal(L0.pickModel("openrouter", ["openai/gpt-5-mini", "google/gemma-4-31b-it:free", "meta-llama/llama-4-scout:free"]), "google/gemma-4-31b-it:free");
   assert.equal(L0.pickModel("openrouter", ["openai/gpt-5-mini", "nvidia/nemotron-3-ultra:free"]), "nvidia/nemotron-3-ultra:free");
 });
+
+test("SenseNova de respaldo (3.37.2)", () => {
+  const LL = require("../www/js/logica.js");
+  assert.ok(L.GRATIS.some((g) => g.prov === "sensenova" && /platform\.sensenova\.ai/.test(g.clave)));
+  assert.deepEqual(L.respaldoIntent("usa sensenova de respaldo"), { rs: "poner", prov: "sensenova", pos: 1 });
+  const r = LL.chatRequest("sensenova", { key: "k", model: "sensenova-6.8-flash", system: "s", messages: [{ role: "user", content: "hola" }], json: true });
+  assert.equal(r.url, "https://token.sensenova.ai/v1/chat/completions");
+  assert.equal(r.body.stream, false); assert.equal(r.body.response_format, undefined);
+  assert.deepEqual(LL.pickModels("sensenova", ["sensenova-6.8-flash-lite", "sensenova-6.8-flash", "sensenova-u1.5-fast"]), ["sensenova-6.8-flash", "sensenova-6.8-flash-lite"]);
+});

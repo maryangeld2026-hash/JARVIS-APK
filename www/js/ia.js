@@ -14,7 +14,7 @@
     return fetchX(url, Object.assign({}, opts, { signal: c.signal })).finally(() => clearTimeout(t));
   }
   /** 3.33: las API que no aceptan llamadas desde la vista web (Numes) van por la vía nativa de Android (CapacitorHttp). */
-  const NATIVO = /^https:\/\/api\.(?:numes\.ai|notion\.com)\//;                   // 3.34: también Notion
+  const NATIVO = /^https:\/\/(?:api\.(?:numes\.ai|notion\.com)|token\.sensenova\.(?:ai|cn))\//;   // 3.37.2: también SenseNova                   // 3.34: también Notion
   function fetchX(url, init) {
     const C = window.Capacitor, H = C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.CapacitorHttp;
     if (!H || !NATIVO.test(url)) return fetch(url, init);

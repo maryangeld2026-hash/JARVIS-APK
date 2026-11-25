@@ -305,9 +305,10 @@
       const ids = ((await r.json()).models || []).map((m) => String(m.name).replace(/^models\//, "")).filter((x) => /tts/i.test(x));
       ttsModel.gemini = ids.sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || b.localeCompare(a))[0] || "gemini-2.5-flash-preview-tts";
     }
-    // 3.37.1: si el modelo «contesta» en vez de leer (pasa con preguntas cortas como «¿Qué necesitas?») o no devuelve audio, se repite una vez sin el estilo
-    const pedir = async (conEstilo) => {
-      const body = { contents: [{ role: "user", parts: [{ text: conEstilo ? estiloVoz() + ": " + text : text }] }],
+    // 3.37.2: SOLO el texto. Antes iba «Lee en español latino neutro, como un mayordomo…: texto» y el modelo de voz leía esa instrucción en voz alta
+    // (además, la frase duraba tanto que Jarvis creía que se había trabado y entraba la voz del celular encima). Si no devuelve audio, se repite una vez.
+    const pedir = async () => {
+      const body = { contents: [{ role: "user", parts: [{ text }] }],
         generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: D.ajustes.vozIAnombre || "Charon" } } } } };
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel.gemini}:generateContent?key=${encodeURIComponent(key)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       if (!r.ok) { let m = ""; try { m = ((await r.json()).error || {}).message || ""; } catch (e) { /* nada */ } throw Object.assign(new Error("tts " + r.status + (m ? ": " + m.slice(0, 120) : "")), { status: r.status }); }
@@ -315,8 +316,8 @@
       return p.find((x) => x.inlineData || x.inline_data);
     };
     let a;
-    try { a = await pedir(true); } catch (e) { if (e.status !== 500 && e.status !== 400) throw e; }
-    if (!a) a = await pedir(false);
+    try { a = await pedir(); } catch (e) { if (e.status !== 500) throw e; }
+    if (!a) a = await pedir();
     if (!a) throw new Error("sin audio");
     const d = a.inlineData || a.inline_data, rate = +((String(d.mimeType || d.mime_type).match(/rate=(\d+)/) || [])[1] || 24000);
     const bin = Uint8Array.from(atob(d.data), (c) => c.charCodeAt(0)), pcm = new Int16Array(bin.buffer, 0, bin.length >> 1);

@@ -261,8 +261,11 @@
       if (myGen !== gen) break;
       const it = takeNext(300);
       // 3.15: si el motor de voz nunca avisa que terminó, la cola no se queda trabada
-      const quien = await wait(speakItem(it, cel), (it.pre ? 12000 : 8000) + it.t.length * 120);
-      if (it.pre && quien !== "ia") cel = true;
+      // 3.37.2: con la voz natural, el tope cuenta la espera del audio (12 s) y lo que dura la frase (la reproducción tiene su propio tope);
+      // antes, con un tope corto, una frase larga se daba por trabada y entraba la voz del celular encima de la natural
+      const quien = await wait(speakItem(it, cel), it.pre ? 12000 + 60000 + it.t.length * 150 : 8000 + it.t.length * 120);
+      if (it.pre && quien !== "ia" && speaker && speaker.stop) { try { speaker.stop(); } catch (e) { /* nada */ } }   // nunca dos voces a la vez
+      if (it.pre && quien === "cel") cel = true;
     }
     if (playing && myGen === gen) await wait(playing.p, Math.max(0, playing.fin - Date.now()));
     if (myGen !== gen) return;                                                        // hush ya dejó todo en silencio

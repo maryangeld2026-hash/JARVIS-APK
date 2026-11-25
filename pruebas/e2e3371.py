@@ -15,8 +15,9 @@ def gem(route):
     if "/models?" in u: return route.fulfill(json={"models": [{"name": "models/gemini-3.5-flash", "supportedGenerationMethods": ["generateContent"]}, {"name": "models/gemini-3.1-flash-tts-preview", "supportedGenerationMethods": ["generateContent"]}]})
     if "tts" in u:
         t = json.loads(body)["contents"][0]["parts"][0]["text"]
-        con_estilo = t.startswith("Dilo")
-        falla = any(k in t for k in MODO["falla"]) or (MODO["sinEstilo"] and con_estilo)
+        primera = MODO["sinEstilo"] and t not in MODO.setdefault("vistos", set())
+        if primera: MODO["vistos"].add(t)
+        falla = any(k in t for k in MODO["falla"]) or primera
         TTS.append((t, "500" if falla else "ok"))
         if falla: return route.fulfill(status=500, json={"error": {"code": 500, "message": "Model tried to generate text, but it should only be used for TTS."}})
         return route.fulfill(json={"candidates": [{"content": {"parts": [{"inlineData": {"mimeType": "audio/L16;codec=pcm;rate=24000", "data": PCM}}]}}]})
@@ -48,7 +49,7 @@ def main():
         # 3) si el modelo «contesta» en vez de leer, se repite sin el estilo y sigue la voz natural
         TTS.clear(); MODO["sinEstilo"] = True; RESP[0] = "Esta es otra respuesta distinta. Con dos frases."; pg.evaluate("window.__said = []; JV.hush()")
         say("y otra cosa", 6000)
-        check(any(x[1] == "500" for x in TTS) and any(x[1] == "ok" and not x[0].startswith("Dilo") for x in TTS) and not pg.evaluate("window.__said"), "si Gemini no lee con el estilo, lo pide otra vez sin él (sigue la voz natural)")
+        check(any(x[1] == "500" for x in TTS) and any(x[1] == "ok" for x in TTS) and all(not x[0].startswith(("Dilo", "Lee ")) for x in TTS) and not pg.evaluate("window.__said"), "si Gemini no devuelve el audio, lo pide otra vez (sigue la voz natural, solo con el texto)")
         MODO["sinEstilo"] = False
         # 4) si una frase falla del todo: desde ahí, el resto de la respuesta con la voz del celular (no se mezclan) y un aviso claro
         TTS.clear(); MODO["falla"] = {"Segunda"}; pg.evaluate("window.__said = []; JV.hush()")
