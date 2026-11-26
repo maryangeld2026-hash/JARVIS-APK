@@ -74,17 +74,21 @@
   }
 
   // ======================================================================== CREAR
+  /** La imagen sin mostrarla (3.39: también la usan los videos). → {r: {b64|url, mime, por} | null, fallas} */
+  async function generar(prompt, fmt, seed) {
+    const fallas = []; let r = null;
+    for (const [nombre, fn] of [["Gemini", () => conGemini(prompt, fmt)], ["SenseNova", () => conSense(prompt, fmt)], ["Pollinations", () => conPollinations(prompt, fmt, seed)]]) {
+      try { r = await fn(); if (r) break; } catch (e) { fallas.push(e.message || String(e)); if (window.JDIAG) window.JDIAG.log("imagen", nombre + ": " + (e.message || e)); }
+    }
+    return { r, fallas };
+  }
   async function crear(o) {
     o = Object.assign({ estilo: "", formato: "cuadrada", seed: Math.floor(Math.random() * 1e6) }, o);
     if (!o.formato) o.formato = "cuadrada";
     if (!navigator.onLine) return R("🎨 Para crear imágenes necesito internet.", "err");
     const prompt = L.promptFinal(sinNombres(o.desc), o.estilo);
     A.setState("thinking"); A.toast("🎨 Creando la imagen… (puede tardar unos segundos)", 5000);
-    const fallas = [];
-    let r = null;
-    for (const [nombre, fn] of [["Gemini", () => conGemini(prompt, o.formato)], ["SenseNova", () => conSense(prompt, o.formato)], ["Pollinations", () => conPollinations(prompt, o.formato, o.seed)]]) {
-      try { r = await fn(); if (r) break; } catch (e) { fallas.push(e.message || String(e)); if (window.JDIAG) window.JDIAG.log("imagen", nombre + ": " + (e.message || e)); }
-    }
+    const { r, fallas } = await generar(prompt, o.formato, o.seed);
     A.setState("idle");
     if (!r) {
       return R("🎨 No pude crear la imagen ahora" + (fallas.length ? ` (${fallas.slice(-1)[0]})` : "") + ". Intenta de nuevo en un minuto." +
@@ -213,5 +217,5 @@
     const C = window.JL11 && window.JL11.CATALOGO;
     if (C && !C.some((x) => /Crear imágenes/.test(x[0]))) C.unshift(["🎨 Crear imágenes", ["Dibújame un gato astronauta", "Haz un logo para mi panadería", "Imagen de un atardecer en Cartagena, vertical para estados", "Crea una invitación de cumpleaños estilo caricatura", "Quiero crear una imagen"]]);
   };
-  X._a338 = { crear, hoja, guardar, compartir, ultima: () => ultima };
+  X._a338 = { crear, generar, datos, sinNombres: (t) => sinNombres(t), hoja, guardar, compartir, ultima: () => ultima };
 })();

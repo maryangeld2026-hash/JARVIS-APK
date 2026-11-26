@@ -73,6 +73,7 @@ body.puede-callar .dock-der .live-btn, [data-state="speaking"] .dock-der .live-b
 .gen-img { display: block; width: 100%; max-width: 420px; border-radius: 14px; margin: 8px 0 4px; background: rgba(255, 255, 255, .04); min-height: 120px; }
 .gen-por { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
 .img-desc { min-height: 84px; resize: vertical; }
+.gen-vid { display: block; width: 100%; max-width: 420px; max-height: 70vh; border-radius: 14px; margin: 8px 0 4px; background: #000; }
 .img-ops { justify-content: flex-start; margin: 4px 0 10px; }
 
 /* ---------------------------------------------------------------- Ajustes: subtítulos dentro de un grupo unido */
