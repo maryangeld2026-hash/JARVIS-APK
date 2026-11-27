@@ -362,12 +362,34 @@
       return new Promise((ok) => {
         const c = ctx();
         const t = setTimeout(() => ok(), Math.round(buf.duration * 1000 / Math.max(0.7, Math.min(1.5, +D.ajustes.velocidad || 1))) + 1200);   // por si el celular nunca avisa que terminó
-        const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = Math.max(0.7, Math.min(1.5, +D.ajustes.velocidad || 1));
-        s.connect(c.destination); s.onended = () => { clearTimeout(t); if (fuente === s) fuente = null; ok(); }; fuente = s; s.start();
+        const s = c.createBufferSource(); s.buffer = suavizar(buf); s.playbackRate.value = Math.max(0.7, Math.min(1.5, +D.ajustes.velocidad || 1));
+        // 3.40: por un control de volumen, para poder bajar el sonido suave al callarlo (cortarlo en seco hace «clic»)
+        const g = c.createGain(); g.gain.value = 1; s.connect(g); g.connect(c.destination);
+        s.onended = () => { clearTimeout(t); if (fuente === s) { fuente = null; volumen = null; } try { g.disconnect(); } catch (e) { /* nada */ } ok(); }; fuente = s; volumen = g; s.start();
       });
     },
-    stop() { if (fuente) { try { fuente.stop(); } catch (e) { /* ya paró */ } fuente = null; } },
+    stop() {
+      if (!fuente) return;
+      const s = fuente, g = volumen, c = ctx(); fuente = null; volumen = null;
+      // 3.40: bajar el volumen en 15 ms y luego parar (sin «clic»)
+      try { if (g) { g.gain.cancelScheduledValues(c.currentTime); g.gain.setValueAtTime(g.gain.value, c.currentTime); g.gain.setTargetAtTime(0, c.currentTime, 0.012); } s.stop(c.currentTime + 0.07); } catch (e) { try { s.stop(); } catch (er) { /* ya paró */ } }
+    },
   };
+  let volumen = null;
+  /** 3.40: el audio de la voz natural empieza y termina en seco (a veces con un chasquido al final): se le pone un fundido corto
+      (8 ms al empezar, 25 ms al terminar) y se le quita el silencio sobrante del final. Era el «scratch» al terminar de hablar. */
+  function suavizar(buf) {
+    if (!buf || buf.__suave) return buf;
+    const ch = buf.getChannelData(0), n = ch.length, r = buf.sampleRate;
+    let fin = n; while (fin > r * 0.1 && Math.abs(ch[fin - 1]) < 0.002) fin--;      // el silencio del final (deja al menos 0,1 s)
+    fin = Math.min(n, fin + Math.round(r * 0.06));
+    const ini = Math.round(r * 0.008), sal = Math.round(r * 0.025);
+    for (let i = 0; i < Math.min(ini, fin); i++) ch[i] *= i / ini;
+    for (let i = 0; i < sal && fin - 1 - i >= 0; i++) ch[fin - 1 - i] *= i / sal;
+    for (let i = fin; i < n; i++) ch[i] = 0;
+    buf.__suave = true;
+    return buf;
+  }
 
   // ======================================================================== SINCRONIZAR CON EL PC
   async function syncPC() {

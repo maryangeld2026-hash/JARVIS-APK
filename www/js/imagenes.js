@@ -82,13 +82,67 @@
     }
     return { r, fallas };
   }
+  // ---------------------------------------------------------------- 3.40: imágenes 2.0
+  const L27 = window.JL27, L26 = window.JL26;
+  const nube = () => aj().proveedor !== "local" && !!clave(aj().proveedor) && navigator.onLine;
+  /** Lo que se le pide a la IA de imágenes: el texto exacto va aparte (lo pone Jarvis encima) y, si hay IA de texto,
+      la descripción se mejora y se pasa a inglés (las IA de imágenes entienden mejor y salen imágenes más ricas). */
+  async function preparar(o) {
+    const te = L27.textoExacto(sinNombres(o.desc));
+    const est = L.ESTILOS.find((x) => x[0] === o.estilo);
+    let prompt = "";
+    if (aj().imgMejorar !== false && nube() && IA && IA.chat) {
+      try {
+        prompt = L27.promptLimpio(await Promise.race([IA.chat({ system: "You write prompts for AI image generators.", messages: [{ role: "user", content: L27.PROMPT_MEJORAR(te.desc, est ? est[2] : "") }], stream: false, maxTokens: 220, temperature: 0.7 }), new Promise((_, no) => setTimeout(() => no(new Error("lento")), 9000))]));
+        if (prompt.length < 15) prompt = "";
+      } catch (e) { prompt = ""; }
+    }
+    if (prompt) prompt += (est ? ` Style: ${est[2]}.` : "");
+    else prompt = L.promptFinal(te.desc, o.estilo);
+    if (te.texto) prompt += L27.SIN_TEXTO(te.pos);
+    return { prompt, texto: te.texto, pos: te.pos };
+  }
+  /** El texto exacto, encima de la imagen y bien escrito (letras grandes, con borde oscuro para que se lea en cualquier fondo). */
+  async function conTexto(r, texto, pos) {
+    const d = r.b64 ? { b64: r.b64, mime: r.mime || "image/png" } : await datos(r);
+    const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error("imagen")); i.src = `data:${d.mime};base64,${d.b64}`; });
+    const W = im.naturalWidth || im.width, H = im.naturalHeight || im.height, c = mk("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d"); g.drawImage(im, 0, 0, W, H);
+    let fs = Math.round(Math.min(W, H) * 0.1); g.textAlign = "center"; g.textBaseline = "middle";
+    let ls; do { g.font = `800 ${fs}px sans-serif`; ls = L26.renglones(texto, W * 0.86, (s) => g.measureText(s).width); fs = Math.round(fs * 0.9); } while (ls.length > 3 && fs > 14);
+    fs = Math.round(fs / 0.9); g.font = `800 ${fs}px sans-serif`;
+    const alto = ls.length * fs * 1.2, y0 = pos === "arriba" ? H * 0.06 + fs * 0.6 : H - H * 0.06 - alto + fs * 0.6;
+    g.lineJoin = "round"; g.lineWidth = Math.max(4, fs * 0.16); g.strokeStyle = "rgba(0,0,0,.75)"; g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = fs * 0.25;
+    ls.forEach((l, k) => { const y = y0 + k * fs * 1.2; g.strokeText(l, W / 2, y); g.shadowBlur = 0; g.fillText(l, W / 2, y); });
+    const b64 = c.toDataURL("image/png").split(",")[1];
+    return Object.assign({}, r, { b64, mime: "image/png", url: undefined });
+  }
+  /** «🖼️ 3 opciones»: tres versiones más para escoger la que más guste. */
+  async function opcionesVarias(u) {
+    const lento = /Pollinations/.test(u.por || "");
+    A.setState("thinking"); A.toast(lento ? "🖼️ Haciendo 3 opciones con el servicio gratis (va de a una: unos 2 minutos)…" : "🖼️ Haciendo 3 opciones…", 6000);
+    const { prompt, texto, pos } = await preparar(u);
+    const una = async () => { let { r } = await generar(prompt, u.formato, Math.floor(Math.random() * 1e6)); if (r && texto) { try { r = await conTexto(r, texto, pos); } catch (e) { /* nada */ } } return r; };
+    let l = [];
+    if (lento) { for (let i = 0; i < 3; i++) { l.push(await una()); if (i < 2) await new Promise((ok) => setTimeout(ok, 46000)); } }
+    else l = await Promise.all([una(), una(), una()]);
+    A.setState("idle");
+    l = l.filter(Boolean);
+    if (!l.length) return R("🖼️ No pude hacer más opciones ahora. Intenta en un minuto.", "err");
+    const { e } = A.add("assistant", "🖼️ Toca la que más te guste:", "tool");
+    const grid = mk("div", "img-grid");
+    l.forEach((r) => { const im = mk("img", "img-op"); im.src = r.b64 ? `data:${r.mime};base64,${r.b64}` : r.url; im.addEventListener("click", () => { ultima = Object.assign({}, u, r, { src: im.src }); mostrar(ultima); }); grid.append(im); });
+    e.append(grid); $("#chat").scrollTop = $("#chat").scrollHeight;
+    A.say("Aquí tienes tres opciones. Toca la que más te guste.");
+  }
   async function crear(o) {
     o = Object.assign({ estilo: "", formato: "cuadrada", seed: Math.floor(Math.random() * 1e6) }, o);
     if (!o.formato) o.formato = "cuadrada";
     if (!navigator.onLine) return R("🎨 Para crear imágenes necesito internet.", "err");
-    const prompt = L.promptFinal(sinNombres(o.desc), o.estilo);
     A.setState("thinking"); A.toast("🎨 Creando la imagen… (puede tardar unos segundos)", 5000);
-    const { r, fallas } = await generar(prompt, o.formato, o.seed);
+    const { prompt, texto, pos } = await preparar(o);
+    let { r, fallas } = await generar(prompt, o.formato, o.seed);
+    if (r && texto) { try { r = await conTexto(r, texto, pos); } catch (e) { /* queda sin el texto */ } }
     A.setState("idle");
     if (!r) {
       return R("🎨 No pude crear la imagen ahora" + (fallas.length ? ` (${fallas.slice(-1)[0]})` : "") + ". Intenta de nuevo en un minuto." +
@@ -109,6 +163,7 @@
     b("💾 Guardar en la galería", () => guardar(u));
     b("📤 Compartir", () => compartir(u));
     b("🔄 Otra versión", () => crear({ desc: u.desc, estilo: u.estilo, formato: u.formato }));
+    b("🖼️ 3 opciones", () => opcionesVarias(u));
     b("🎭 Otro estilo", () => opciones("estilo", u));
     b("📐 Otro formato", () => opciones("formato", u));
     b("✏️ Cambiarle algo", () => { const i = $("#in-texto"); if (i) { i.value = "cámbiale: "; i.focus(); } A.toast("Escribe qué le cambio (por ejemplo: «cámbiale: que sea de noche»).", 4000); });
@@ -166,7 +221,14 @@
     };
     const ir = mk("button", "btn primary wide", "🎨 Crear"); ir.type = "button";
     ir.addEventListener("click", () => { const d = ta.value.trim(); if (d.length < 3) { ta.focus(); return A.toast("Escribe qué quieres que dibuje.", 3000); } sh.remove(); A.add("user", "🎨 " + d); crear({ desc: d, estilo: sel.estilo, formato: sel.formato }); });
-    sc.append(ta, mk("p", "hint", "Estilo (opcional):"), fila("estilo", L.ESTILOS), mk("p", "hint", "Formato:"), fila("formato", L.FORMATOS), ir,
+    // 3.40: plantillas de un toque (llenan la descripción, el estilo y el formato)
+    const pl = mk("div", "sug img-ops");
+    L27.PLANTILLAS.forEach(([k, t, est, fmt, ej]) => { const c = mk("button", "chip", t); c.type = "button"; c.addEventListener("click", () => {
+      ta.value = ej; sel.estilo = est; sel.formato = fmt;
+      sc.querySelectorAll(".img-ops[data-que]").forEach((r) => r.querySelectorAll(".chip").forEach((y) => y.classList.toggle("on", y.dataset.k === sel[r.dataset.que])));
+      ta.focus(); }); pl.append(c); });
+    sc.append(mk("p", "hint", "Plantillas (toca una y cambia lo que quieras):"), pl, ta, mk("p", "hint", "Estilo (opcional):"), fila("estilo", L.ESTILOS), mk("p", "hint", "Formato:"), fila("formato", L.FORMATOS), ir,
+      mk("p", "hint", "Si escribes «que diga …» o pones el texto entre comillas, Jarvis lo escribe encima, bien escrito."),
       mk("p", "hint", "También lo puedes decir: «dibújame un perro con gafas, estilo caricatura, vertical»."));
     inn.append(hd, sc); sh.append(inn); document.body.append(sh); sh.hidden = false;
     setTimeout(() => ta.focus(), 100);
@@ -187,6 +249,9 @@
     const l = mk("label", "lbl check"), i = mk("input"); i.type = "checkbox"; i.checked = aj().imgPollinations !== false;
     i.addEventListener("change", () => { aj().imgPollinations = i.checked; save(); });
     l.append(i, document.createTextNode(" Usar Pollinations (gratis, sin clave) cuando las otras no puedan")); s.append(l);
+    const l2 = mk("label", "lbl check"), i2 = mk("input"); i2.type = "checkbox"; i2.checked = aj().imgMejorar !== false;
+    i2.addEventListener("change", () => { aj().imgMejorar = i2.checked; save(); });
+    l2.append(i2, document.createTextNode(" Mejorar la descripción con la IA antes de crear la imagen (salen más detalladas)")); s.append(l2);
     box.append(s);
   }
 
@@ -214,6 +279,7 @@
     A = api; D = api.D;
     try { base.init(api); } catch (e) { console.error("init", e); }
     enMenu(); setTimeout(enMenu, 2000);
+    if (window.JL27 && !L.ESTILOS.some((x) => x[0] === "cine")) window.JL27.ESTILOS_MAS.forEach((x) => { if (!L.ESTILOS.some((y) => y[0] === x[0])) L.ESTILOS.push(x); });   // 3.40: más estilos
     const C = window.JL11 && window.JL11.CATALOGO;
     if (C && !C.some((x) => /Crear imágenes/.test(x[0]))) C.unshift(["🎨 Crear imágenes", ["Dibújame un gato astronauta", "Haz un logo para mi panadería", "Imagen de un atardecer en Cartagena, vertical para estados", "Crea una invitación de cumpleaños estilo caricatura", "Quiero crear una imagen"]]);
   };

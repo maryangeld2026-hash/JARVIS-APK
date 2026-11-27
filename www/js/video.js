@@ -88,76 +88,153 @@
   }
   const cargarImg = (src) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error("No pude abrir una imagen.")); im.src = src; });
 
-  /** Graba el video en el celular: cada imagen con movimiento suave, fundido entre escenas, el texto abajo y la voz. → Blob */
-  function grabar(imgs, escenas, formato, voz) {
+  /** 3.40: la música de fondo, hecha en el celular (acordes suaves y, si es alegre, un arpegio). Sin derechos de autor. */
+  function musica(ac, destino, animo, dur, conVoz) {
+    const M = (window.JL27 && window.JL27.MUSICA[animo]) || window.JL27.MUSICA.tranquilo, beat = 60 / M.bpm, compas = beat * 4;
+    const maestro = ac.createGain(), t0 = ac.currentTime + 0.05, vol = conVoz ? 0.07 : 0.16;
+    const filtro = ac.createBiquadFilter(); filtro.type = "lowpass"; filtro.frequency.value = 1800; maestro.connect(filtro); filtro.connect(destino);
+    maestro.gain.setValueAtTime(0.0001, t0); maestro.gain.exponentialRampToValueAtTime(vol, t0 + 1.2);
+    maestro.gain.setValueAtTime(vol, Math.max(t0 + 1.3, t0 + dur - 1.6)); maestro.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+    for (let k = 0, t = t0; t < t0 + dur; k++, t += compas) {
+      const ac0 = M.acordes[k % M.acordes.length];
+      ac0.forEach((f, n) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = n ? "sine" : "triangle"; o.frequency.value = n ? f : f / 2;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + compas + 0.3);
+        o.connect(g); g.connect(maestro); o.start(t); o.stop(t + compas + 0.35); });
+      if (M.arpegio) ac0.concat([ac0[0] * 2]).forEach((f, n) => { const tt = t + n * beat, o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.value = f * 2;
+        g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(0.18, tt + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, tt + beat * 0.9);
+        o.connect(g); g.connect(maestro); o.start(tt); o.stop(tt + beat); });
+    }
+  }
+  /** Graba el video en el celular: portada con el título, cada imagen con movimiento suave, transiciones que van cambiando
+      (fundido, deslizar, acercar), el texto abajo, la voz y la música. → Blob */
+  function grabar(imgs, escenas, formato, voz, extra) {
+    extra = extra || {};
     return new Promise((ok, no) => {
       if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return no(new Error("Este celular no permite grabar videos desde la app."));
       const [W, H] = L.TAM[formato] || L.TAM.vertical;
       const cv = mk("canvas"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
       const stream = cv.captureStream(30);
-      let ac = null, total = 0;
-      if (voz) {
-        ac = new AudioContext(); const dest = ac.createMediaStreamDestination();
+      const INTRO = extra.titulo ? 1.8 : 0;
+      let ac = null, dest = null, total = 0;
+      if (voz || extra.musica) { try { ac = new AudioContext(); dest = ac.createMediaStreamDestination(); } catch (e) { ac = null; } }
+      if (ac && voz) {
         const buf = ac.createBuffer(1, voz.pcm.length, voz.rate), ch = buf.getChannelData(0); for (let i = 0; i < voz.pcm.length; i++) ch[i] = voz.pcm[i] / 32768;
+        const r = Math.round(voz.rate * 0.02); for (let i = 0; i < r && i < ch.length; i++) ch[ch.length - 1 - i] *= i / r;    // sin «clic» al final
         const src = ac.createBufferSource(); src.buffer = buf; src.connect(dest); voz.src = src; total = buf.duration;
-        dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
       }
-      const dur = L.tiempos(escenas, total), fin = dur.reduce((a, b) => a + b, 0);
+      const dur = extra.seg && !total ? escenas.map(() => Math.max(2.5, extra.seg / escenas.length)) : L.tiempos(escenas, total);
+      const fin = INTRO + dur.reduce((a, b) => a + b, 0);
+      if (ac && extra.musica) musica(ac, dest, extra.animo || "tranquilo", fin + 0.3, !!voz);
+      if (ac) dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
       const mime = L.mimeVideo((m) => MediaRecorder.isTypeSupported(m));
       let rec; try { rec = new MediaRecorder(stream, Object.assign({ videoBitsPerSecond: 3500000 }, mime ? { mimeType: mime } : {})); } catch (e) { return no(new Error("No pude empezar a grabar: " + e.message)); }
       const partes = []; rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) partes.push(ev.data); };
       rec.onstop = () => { try { if (ac) ac.close(); } catch (e) { /* nada */ } ok(new Blob(partes, { type: (rec.mimeType || mime || "video/webm").replace(/;.*$/, "") })); };
-      const pinta = (im, i, p, alfa) => {
-        const c = L.camara(i, p), k = Math.max(W / im.width, H / im.height) * c.s, w = im.width * k, h = im.height * k;
-        g.globalAlpha = alfa; g.drawImage(im, (W - w) / 2 + c.x * W, (H - h) / 2 + c.y * H, w, h); g.globalAlpha = 1;
+      const pinta = (im, i, p, alfa, dx, esc) => {
+        const c = L.camara(i, p), k = Math.max(W / im.width, H / im.height) * c.s * (esc || 1), w = im.width * k, h = im.height * k;
+        g.globalAlpha = alfa; g.drawImage(im, (W - w) / 2 + c.x * W + (dx || 0), (H - h) / 2 + c.y * H, w, h); g.globalAlpha = 1;
       };
-      const letrero = (txt, alfa) => {
+      const letrero = (txt, alfa, grande) => {
         if (!txt) return;
-        const fs = Math.round(W * 0.06); g.font = `700 ${fs}px sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+        const fs = Math.round(W * (grande ? 0.085 : 0.06)); g.font = `800 ${fs}px sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
         const ls = L.renglones(txt, W * 0.84, (s) => g.measureText(s).width), alto = ls.length * fs * 1.25 + fs;
+        if (grande) { g.globalAlpha = alfa; g.lineJoin = "round"; g.lineWidth = fs * 0.14; g.strokeStyle = "rgba(0,0,0,.7)"; g.fillStyle = "#fff";
+          ls.forEach((l, k) => { const y = H / 2 - alto / 2 + fs * 0.9 + k * fs * 1.25; g.strokeText(l, W / 2, y); g.fillText(l, W / 2, y); }); g.globalAlpha = 1; return; }
         g.globalAlpha = 0.55 * alfa; g.fillStyle = "#000"; g.fillRect(0, H - alto - H * 0.08, W, alto);
         g.globalAlpha = alfa; g.fillStyle = "#fff"; ls.forEach((l, k) => g.fillText(l, W / 2, H - H * 0.08 - alto + fs * 0.9 + k * fs * 1.25)); g.globalAlpha = 1;
       };
-      const t0 = performance.now(), FUNDIDO = 0.6;
+      const t0 = performance.now(), TR = 0.7, TRANS = (window.JL27 && window.JL27.transicion) || (() => "fundido");
       const cuadro = () => {
-        const t = (performance.now() - t0) / 1000;
+        const ta = (performance.now() - t0) / 1000;
+        g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+        if (ta < INTRO) {                                                   // portada: la primera imagen oscurecida y el título grande
+          pinta(imgs[0], 0, ta / INTRO * 0.3, 1); g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(0, 0, W, H);
+          letrero(extra.titulo, Math.min(1, ta / 0.5) * Math.min(1, (INTRO - ta) / 0.4 + 0.2), true);
+          return;
+        }
+        const t = ta - INTRO;
         let i = 0, ini = 0; while (i < dur.length - 1 && t >= ini + dur[i]) { ini += dur[i]; i++; }
         const p = Math.min(1, (t - ini) / dur[i]);
-        g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
         pinta(imgs[i], i, p, 1);
         const falta = ini + dur[i] - t;
-        if (i < dur.length - 1 && falta < FUNDIDO) pinta(imgs[i + 1], i + 1, 0, 1 - falta / FUNDIDO);
+        if (i < dur.length - 1 && falta < TR) {
+          const q = 1 - falta / TR, tipo = TRANS(i + 1);
+          if (tipo === "deslizar") pinta(imgs[i + 1], i + 1, 0, 1, W * (1 - q * q * (3 - 2 * q)));
+          else if (tipo === "acercar") pinta(imgs[i + 1], i + 1, 0, q, 0, 1.25 - 0.25 * q);
+          else pinta(imgs[i + 1], i + 1, 0, q);
+        }
+        if (t >= fin - INTRO - 0.6) { g.fillStyle = `rgba(0,0,0,${Math.min(1, (t - (fin - INTRO - 0.6)) / 0.6)})`; g.fillRect(0, 0, W, H); }   // fundido a negro al final
         letrero(escenas[i].texto, Math.min(1, (t - ini) / 0.4));
-        if (t >= fin + 0.3) { clearInterval(reloj); if (rec.state !== "inactive") rec.stop(); }
+        if (ta >= fin + 0.3) { clearInterval(reloj); if (rec.state !== "inactive") rec.stop(); }
       };
       rec.start(500); cuadro();
       const reloj = setInterval(cuadro, 1000 / 30);
-      if (voz && voz.src) voz.src.start();
+      if (voz && voz.src) voz.src.start(ac.currentTime + INTRO);
     });
   }
 
   async function hechoEnCelular(o, paso) {
+    const L27 = window.JL27;
     const soloGratisLento = !clave("sensenova") && (!clave("gemini") || aj().imgGeminiNo === hoy());
-    const n = soloGratisLento ? 3 : 5;
+    const n = soloGratisLento ? Math.min(4, L27.escenasPara(o.seg, 4)) : L27.escenasPara(o.seg, 8);      // 3.40: según la duración pedida
     paso("🎬 Escribiendo el guion…");
     let guion = null;
-    if (hayIA() && navigator.onLine) { try { guion = L.escenasValidas(await IA.json({ system: "Eres guionista de videos cortos para redes. Respondes solo JSON.", messages: [{ role: "user", content: L.PROMPT_GUION(sinNombres(o.desc), n) }], maxTokens: 1500, temperature: 0.7 }), n); } catch (e) { guion = null; } }
+    if (hayIA() && navigator.onLine) { try { guion = L.escenasValidas(await IA.json({ system: "Eres guionista de videos cortos para redes. Respondes solo JSON.", messages: [{ role: "user", content: L.PROMPT_GUION(sinNombres(o.desc), n) }], maxTokens: 1800, temperature: 0.7 }), n); } catch (e) { guion = null; } }
     if (!guion) guion = L.escenasSimples(sinNombres(o.desc), n);
-    const imgs = [];
-    for (let i = 0; i < guion.escenas.length; i++) {
-      paso(`🎨 Creando la imagen ${i + 1} de ${guion.escenas.length}…` + (soloGratisLento ? " (con el servicio gratis va de a una, tarda un poco)" : ""));
+    const N = guion.escenas.length, imgs = new Array(N).fill(null);
+    let hechas = 0;
+    const una = async (i) => {
       const { r } = await X._a338.generar(L25.promptFinal(guion.escenas[i].imagen, o.estilo || ""), o.formato, Math.floor(Math.random() * 1e6));
-      if (r) { try { const d = r.b64 ? { b64: r.b64, mime: r.mime || "image/png" } : await X._a338.datos(r); imgs.push(await cargarImg(`data:${d.mime};base64,${d.b64}`)); } catch (e) { /* se repite la anterior */ } }
-      if (imgs.length < i + 1) { if (!imgs.length) continue; imgs.push(imgs[imgs.length - 1]); }
-      if (r && /Pollinations/.test(r.por) && i < guion.escenas.length - 1) { paso(`⏳ Imagen ${i + 1} lista. El servicio gratis pide esperar un momento entre imágenes…`); await dormir(46000); }
+      if (r) { try { const d = r.b64 ? { b64: r.b64, mime: r.mime || "image/png" } : await X._a338.datos(r); imgs[i] = await cargarImg(`data:${d.mime};base64,${d.b64}`); } catch (e) { /* se repite otra */ } }
+      hechas++; paso(`🎨 Imágenes del video: ${hechas} de ${N}…`);
+      return r;
+    };
+    if (soloGratisLento) {
+      for (let i = 0; i < N; i++) {
+        paso(`🎨 Creando la imagen ${i + 1} de ${N} (con el servicio gratis va de a una, tarda un poco)…`);
+        const r = await una(i);
+        if (r && /Pollinations/.test(r.por) && i < N - 1) { paso(`⏳ Imagen ${i + 1} lista. El servicio gratis pide esperar un momento entre imágenes…`); await dormir(46000); }
+      }
+    } else {
+      // 3.40: de a tres al tiempo (antes, una por una)
+      paso(`🎨 Creando ${N} imágenes…`);
+      let k = 0; await Promise.all([0, 1, 2].map(async () => { while (k < N) { const i = k++; await una(i); } }));
     }
-    if (!imgs.length) throw new Error("No pude crear las imágenes del video.");
-    while (imgs.length < guion.escenas.length) imgs.push(imgs[imgs.length - 1]);
+    const hay = imgs.filter(Boolean);
+    if (!hay.length) throw new Error("No pude crear las imágenes del video.");
+    for (let i = 0; i < N; i++) if (!imgs[i]) imgs[i] = imgs[i - 1] || hay[0];
     let voz = null;
     if (o.voz !== false) { paso("🎙️ Grabando la voz…"); voz = await vozNarrada(guion.escenas.map((e) => e.voz).filter(Boolean).join(" ")); }
-    paso("🎬 Armando el video (se graba en tiempo real, unos segundos)…");
-    const blob = await grabar(imgs, guion.escenas, o.formato, voz);
-    return { b64: await b64DeBlob(blob), mime: blob.type || "video/webm", por: "Jarvis en tu celular (imágenes de IA" + (voz ? " y su voz" : "") + ")", titulo: guion.titulo };
+    paso("🎬 Armando el video con música (se graba en tiempo real, unos segundos)…");
+    const blob = await grabar(imgs, guion.escenas, o.formato, voz, { titulo: guion.titulo, musica: o.musica !== false && aj().videoMusica !== false, animo: L27.animoDe(o.desc), seg: o.seg });
+    return { b64: await b64DeBlob(blob), mime: blob.type || "video/webm", por: "Jarvis en tu celular (imágenes de IA" + (voz ? ", su voz" : "") + (aj().videoMusica !== false && o.musica !== false ? " y música" : "") + ")", titulo: guion.titulo };
+  }
+
+  // ---------------------------------------------------------------- 3.40: VIDEO CON TUS FOTOS
+  function escogerFotos() {
+    return new Promise((ok) => { const i = mk("input"); i.type = "file"; i.accept = "image/*"; i.multiple = true; i.style.display = "none"; i.addEventListener("change", () => { ok([...(i.files || [])].slice(0, 15)); i.remove(); }); document.body.append(i); i.click(); });
+  }
+  const achicarImg = (file) => new Promise((ok, no) => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1400 / Math.max(im.width, im.height)); const c = mk("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(im.src); cargarImg(c.toDataURL("image/jpeg", 0.88)).then(ok, no); }; im.onerror = () => no(new Error("foto")); im.src = URL.createObjectURL(file); });
+  async function conFotos(o) {
+    if (ocupado) return R("🎬 Ya estoy haciendo un video. Espera a que termine.");
+    R("🖼️ Escoge las fotos para el video (de 2 a 15). Se arma aquí, en tu celular: las fotos no se suben a ningún lado.");
+    const fs = await escogerFotos();
+    if (!fs.length) return;
+    if (fs.length < 2) return R("🎬 Escoge al menos 2 fotos.", "err");
+    ocupado = true; A.setState("thinking");
+    const paso = avance(`🎬 Preparando el video con tus ${fs.length} fotos…`);
+    try {
+      const imgs = []; for (const f of fs) { try { imgs.push(await achicarImg(f)); } catch (e) { /* esa no */ } }
+      if (imgs.length < 2) throw new Error("No pude abrir las fotos.");
+      const titulo = o.desc ? o.desc.charAt(0).toUpperCase() + o.desc.slice(1) : "";
+      const escenas = imgs.map(() => ({ texto: "", voz: "" }));
+      paso("🎬 Armando el video con música (se graba en tiempo real)…");
+      const formato = o.formato || (imgs.filter((im) => im.height > im.width).length >= imgs.length / 2 ? "vertical" : "horizontal");
+      const blob = await grabar(imgs, escenas, formato, null, { titulo, musica: aj().videoMusica !== false, animo: window.JL27.animoDe(o.desc || "fotos"), seg: o.seg || Math.min(60, imgs.length * 3.2) });
+      ocupado = false; A.setState("idle"); paso("🎬 ¡Listo!");
+      ultimo = { desc: o.desc || "mis fotos", formato, b64: await b64DeBlob(blob), mime: blob.type || "video/webm", por: "Jarvis en tu celular (con tus fotos y música)", titulo: titulo || "Tus fotos", fotos: true };
+      mostrar(ultimo);
+    } catch (e) { ocupado = false; A.setState("idle"); paso("🎬 No pude hacer el video."); R("🎬 No pude hacer el video: " + (e.message || e), "err"); }
   }
 
   // ======================================================================== CREAR Y MOSTRAR
@@ -188,7 +265,7 @@
     const b = (t, fn) => { const x = mk("button", "chip", t); x.type = "button"; x.addEventListener("click", fn); box.append(x); };
     b("💾 Guardar en la galería", () => guardar(v));
     b("📤 Compartir", () => compartir(v));
-    b("🔄 Otra versión", () => crear({ desc: v.desc, formato: v.formato, voz: v.voz }));
+    if (!v.fotos) b("🔄 Otra versión", () => crear({ desc: v.desc, formato: v.formato, voz: v.voz, seg: v.seg }));
     e.append(box);
     $("#chat").scrollTop = $("#chat").scrollHeight;
     A.say("Listo, aquí está tu video.");
@@ -216,9 +293,13 @@
     const r = mk("div", "sug img-ops");
     L25.FORMATOS.forEach(([k, t]) => { const c = mk("button", "chip" + (fmt === k ? " on" : ""), t); c.type = "button"; c.dataset.k = k; c.addEventListener("click", () => { fmt = k; r.querySelectorAll(".chip").forEach((y) => y.classList.toggle("on", y.dataset.k === fmt)); }); r.append(c); });
     const lv = mk("label", "lbl check"), cv = mk("input"); cv.type = "checkbox"; cv.checked = aj().videoVoz !== false; lv.append(cv, document.createTextNode(" Con la voz de Jarvis narrando"));
+    const lm = mk("label", "lbl check"), cm = mk("input"); cm.type = "checkbox"; cm.checked = aj().videoMusica !== false; lm.append(cm, document.createTextNode(" Con música de fondo"));
+    let seg = (pre && pre.seg) || 20;
+    const rd = mk("div", "sug img-ops"); [[15, "⚡ 15 s"], [20, "20 s"], [30, "30 s"], [60, "1 min"]].forEach(([k, t]) => { const c = mk("button", "chip" + (seg === k ? " on" : ""), t); c.type = "button"; c.dataset.k = k; c.addEventListener("click", () => { seg = k; rd.querySelectorAll(".chip").forEach((y) => y.classList.toggle("on", +y.dataset.k === seg)); }); rd.append(c); });
+    const fot = mk("button", "btn wide", "🖼️ Mejor, con mis fotos"); fot.type = "button"; fot.addEventListener("click", () => { sh.remove(); conFotos({ desc: ta.value.trim(), seg: 0 }); });
     const ir = mk("button", "btn primary wide", "🎬 Crear video"); ir.type = "button";
-    ir.addEventListener("click", () => { const d = ta.value.trim(); if (d.length < 3) { ta.focus(); return A.toast("Escribe de qué es el video.", 3000); } sh.remove(); A.add("user", "🎬 " + d); crear({ desc: d, formato: fmt, voz: cv.checked }); });
-    sc.append(ta, mk("p", "hint", "Formato:"), r, lv, ir, mk("p", "hint", "Si tu clave de Gemini permite Veo, el video lo hace la IA de Google. Si no, Jarvis lo arma gratis en tu celular con imágenes de IA, movimiento y su voz (15 a 30 segundos)."));
+    ir.addEventListener("click", () => { const d = ta.value.trim(); if (d.length < 3) { ta.focus(); return A.toast("Escribe de qué es el video.", 3000); } sh.remove(); A.add("user", "🎬 " + d); crear({ desc: d, formato: fmt, voz: cv.checked, musica: cm.checked, seg }); });
+    sc.append(ta, mk("p", "hint", "Formato:"), r, mk("p", "hint", "Duración:"), rd, lv, lm, ir, fot, mk("p", "hint", "Si tu clave de Gemini permite Veo, el video lo hace la IA de Google. Si no, Jarvis lo arma gratis en tu celular con imágenes de IA, movimiento y su voz (15 a 30 segundos)."));
     inn.append(hd, sc); sh.append(inn); document.body.append(sh); sh.hidden = false;
     setTimeout(() => ta.focus(), 100);
   }
@@ -243,6 +324,7 @@
     const chk = (label, val, fn) => { const l = mk("label", "lbl check"), i = mk("input"); i.type = "checkbox"; i.checked = val; i.addEventListener("change", () => fn(i.checked)); l.append(i, document.createTextNode(" " + label)); s.append(l); };
     chk("Intentar primero con Veo (video hecho por IA; gasta de tu cuenta de Google)", aj().videoVeo !== false, (v) => { aj().videoVeo = v; aj().vidVeoNo = ""; save(); });
     chk("Narrar los videos con la voz de Jarvis", aj().videoVoz !== false, (v) => { aj().videoVoz = v; save(); });
+    chk("Ponerles música de fondo (hecha en el celular, sin derechos de autor)", aj().videoMusica !== false, (v) => { aj().videoMusica = v; save(); });
     box.append(s);
   }
   function enMenu() {
@@ -256,13 +338,16 @@
   const base = { init: X.init, intent: X.intent, run: X.run, settings: X.settings };
   X.intent = function (text) {
     if (!D) return base.intent(text);
+    const f = window.JL27 && window.JL27.fotosIntent(text);
+    if (f) return { v339: "fotos", it: Object.assign(f, { seg: window.JL27.duracionDe(text) }) };
     const v = L.videoIntent(text);
-    if (v) return { v339: v.vi, it: v };
+    if (v) { if (window.JL27) { v.seg = window.JL27.duracionDe(text); if (v.seg) v.desc = v.desc.replace(/,?\s*de\s+(?:\d{1,2}\s*(?:s|seg|segundos)|un minuto|medio minuto)\b/i, "").trim(); } return { v339: v.vi, it: v }; }
     return base.intent(text);
   };
   X.run = async function (it, text) {
     if (!it.v339) return base.run(it, text);
     if (it.v339 === "infinall") return infinall(it.it);
+    if (it.v339 === "fotos") return conFotos(it.it);
     return crear(it.it);
   };
   X.settings = function () {
@@ -275,7 +360,7 @@
     enMenu(); setTimeout(enMenu, 2500);
     const C = window.JL11 && window.JL11.CATALOGO;
     const cat = C && C.find((x) => /Crear imágenes/.test(x[0]));
-    if (cat && !cat[1].some((x) => /video/i.test(x))) { cat[0] = "🎨 Crear imágenes y videos"; cat[1].push("Hazme un video de un perro surfeando", "Haz un video de invitación para el cumpleaños de mi mamá", "Abre Infinall para un anuncio de mi panadería"); }
+    if (cat && !cat[1].some((x) => /video/i.test(x))) { cat[0] = "🎨 Crear imágenes y videos"; cat[1].push("Hazme un video con mis fotos del paseo", "Hazme un video de 30 segundos de un perro surfeando", "Haz un video de invitación para el cumpleaños de mi mamá", "Abre Infinall para un anuncio de mi panadería"); }
   };
-  X._a339 = { crear, hoja, infinall, grabar, ultimo: () => ultimo };
+  X._a339 = { crear, conFotos, hoja, infinall, grabar, ultimo: () => ultimo };
 })();

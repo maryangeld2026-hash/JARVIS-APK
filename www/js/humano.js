@@ -6,7 +6,7 @@
   "use strict";
   const X = window.JX;
   if (!X) return;
-  const L = window.JL24, LL = window.JL;
+  const L = window.JL24, LL = window.JL, IA = window.JIA;
   let A = null, D = null;
   const $ = (s, r = document) => r.querySelector(s);
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -81,6 +81,37 @@
     return R(it.on ? "Dale. Cuando me cuentes que tienes una cita, una entrevista o un examen, después te pregunto cómo te fue." : "Listo, no te vuelvo a preguntar cómo te fue en tus cosas.");
   }
 
+  // ======================================================================== 3.40: APRENDE DE TUS CORRECCIONES
+  /** «eso fue muy largo», «habla más despacio», «no me digas señor»: Jarvis lo cambia de una vez y lo recuerda (no hay que ir a Ajustes). */
+  function aprende(c) {
+    const est = aj().estilo = aj().estilo || {};
+    if (c.largo) est.largo = c.largo;
+    if (c.velocidad) { aj().velocidad = Math.max(0.6, Math.min(1.6, Math.round(((+aj().velocidad || 1) + c.velocidad) * 100) / 100)); if (A.applyVoice) A.applyVoice(); }
+    if (c.trato) { aj().trato = aj().nombre ? "nombre" : ""; if (c.tu && est.estilo !== "amigo" && est.estilo !== "natural") est.estilo = "natural"; }
+    if (c.emojis === false) est.sinEmojis = true;
+    if (c.humor != null) est.humor = c.humor;
+    (D.aprendido = D.aprendido || []).push({ t: Date.now(), que: Object.keys(c).filter((k) => k !== "dice").join(",") }); if (D.aprendido.length > 50) D.aprendido.shift();
+    save();
+    return R(c.dice + (c.velocidad ? ` (velocidad ${String(aj().velocidad).replace(".", ",")})` : "") + " Si quieres cambiarlo otra vez, solo dímelo.");
+  }
+
+  // ======================================================================== 3.40: «¿DE QUÉ HABLAMOS AYER?»
+  async function recuerdo(it) {
+    const L27 = window.JL27;
+    const convs = [{ chat: D.chat || [] }].concat((D.convs || []).map((c) => ({ chat: c.chat || [] })));
+    const l = L27.mensajesDel(convs, it.dia, Date.now()).filter((m) => !/^(?:¿?de qu[eé] hablamos|res[uú]meme lo que hablamos)/i.test(m.content));
+    const cuando = it.dia === "semana" ? "esta semana" : it.dia;
+    if (!l.length) return R(`🗓️ No tengo conversaciones de ${cuando}.`);
+    if (!nube()) return R(`🗓️ ${cuando.charAt(0).toUpperCase() + cuando.slice(1)} me preguntaste:\n` + l.filter((m) => m.role === "user").slice(0, 8).map((m) => "- " + String(m.content).slice(0, 90)).join("\n"));
+    A.setState("thinking");
+    try {
+      let txt = L27.PROMPT_RECUERDO(it.dia, l);
+      if (aj().docente === true) (D.cursos || []).forEach((c) => (c.estudiantes || []).forEach((n) => { if (n && n.length > 3) txt = txt.split(n).join("un estudiante"); }));
+      const t = await IA.chat({ system: "Resumes conversaciones pasadas con calidez y precisión, en español de Colombia.", messages: [{ role: "user", content: txt }], stream: false, maxTokens: 600 });
+      A.setState("idle"); return R(`🗓️ **Lo que hablamos ${cuando}:**\n${t}`);
+    } catch (e) { A.setState("idle"); return R(e.message || String(e), "err"); }
+  }
+
   // ======================================================================== AJUSTES
   function seccion() {
     const box = $("#aj2"); if (!box || $("#aj-337")) return;
@@ -101,6 +132,11 @@
     if (!D) return base.intent(text);
     const raw = String(text || "");
     const o = raw.length < 80 ? ordenIntent(raw) : null; if (o) return { h337: "orden", it: o };
+    const L27 = window.JL27;
+    if (L27) {
+      const c = L27.correccionIntent(raw); if (c) return { h337: "aprende", it: c };        // 3.40: aprende de tus correcciones
+      const rc = L27.recuerdoIntent(raw); if (rc) return { h337: "recuerdo", it: rc };      // 3.40: «¿de qué hablamos ayer?»
+    }
     try { if (raw.length < 220 && !/\n/.test(raw)) anotarSeguimiento(raw); } catch (e) { /* nada */ }
     const r = base.intent(text); if (r) return r;
     // lo que va a la IA: si es difícil, se piensa a fondo (con la conversación de antes)
@@ -110,6 +146,8 @@
   X.run = async function (it, text) {
     if (!it.h337) return base.run(it, text);
     if (it.h337 === "orden") return orden(it.it);
+    if (it.h337 === "aprende") return aprende(it.it);
+    if (it.h337 === "recuerdo") return recuerdo(it.it);
     if (it.h337 === "pensar") return pensarSolo(it.q);
   };
   X.settings = function () {

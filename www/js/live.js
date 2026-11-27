@@ -115,6 +115,7 @@
       if (sc.outputTranscription && sc.outputTranscription.text) { S.ultimo = Date.now(); S.salida += sc.outputTranscription.text; linea("jarvis", S.salida); estado("Hablando · puedes interrumpir"); }
       ((sc.modelTurn && sc.modelTurn.parts) || []).forEach((p) => { const d = p.inlineData || p.inline_data; if (d && /audio/.test(d.mimeType || d.mime_type || "")) play(d.data); });
       if (sc.turnComplete) {
+        finTurno();
         if (S.entrada.trim()) A.add("user", "🎙️ " + S.entrada.trim());
         if (S.salida.trim()) A.add("assistant", S.salida.trim(), "");
         S.entrada = ""; S.salida = ""; S.lineaTu = S.lineaJ = null;
@@ -141,12 +142,29 @@
     const bin = Uint8Array.from(atob(data), (c) => c.charCodeAt(0)), pcm = new Int16Array(bin.buffer, 0, bin.length >> 1);
     const c = S.ctxOut, buf = c.createBuffer(1, pcm.length, 24000), ch = buf.getChannelData(0);
     for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
-    const s = c.createBufferSource(); s.buffer = buf; s.connect(c.destination);
-    const at = Math.max(c.currentTime + 0.02, S.cola); s.start(at); S.cola = at + buf.duration;
+    // 3.40: todo pasa por un control de volumen: al terminar el turno o al interrumpir, el sonido baja suave (sin «clic»)
+    if (!S.vol) { S.vol = c.createGain(); S.vol.connect(c.destination); }
+    const s = c.createBufferSource(); s.buffer = buf; s.connect(S.vol);
+    const at = Math.max(c.currentTime + 0.02, S.cola);
+    if (at > S.cola + 0.005) { const r = Math.min(ch.length, Math.round(24000 * 0.006)); for (let i = 0; i < r; i++) ch[i] *= i / r; }   // si hubo un hueco, el pedazo nuevo entra suave
+    s.start(at); S.cola = at + buf.duration;
     S.fuentes.push(s); s.onended = () => { S && (S.fuentes = S.fuentes.filter((x) => x !== s)); if (S && !S.fuentes.length) { document.body.dataset.state = "listening"; } };
     document.body.dataset.state = "speaking";
   }
-  function cortar() { if (!S) return; S.fuentes.forEach((s) => { try { s.stop(); } catch (e) { /* ya paró */ } }); S.fuentes = []; S.cola = 0; }
+  function cortar() {
+    if (!S) return;
+    const c = S.ctxOut, t = c.currentTime, v = S.vol;
+    if (v) { try { v.gain.cancelScheduledValues(t); v.gain.setValueAtTime(v.gain.value, t); v.gain.setTargetAtTime(0, t, 0.012); } catch (e) { /* nada */ } }
+    S.fuentes.forEach((s) => { try { s.stop(t + 0.07); } catch (e) { /* ya paró */ } }); S.fuentes = []; S.cola = 0;
+    if (v) setTimeout(() => { try { v.gain.cancelScheduledValues(c.currentTime); v.gain.setValueAtTime(1, c.currentTime); } catch (e) { /* nada */ } }, 120);
+  }
+  /** 3.40: al terminar el turno, los últimos 25 ms bajan suave (el audio en vivo llega en pedazos y el último termina en seco). */
+  function finTurno() {
+    if (!S || !S.vol || !S.cola) return;
+    const c = S.ctxOut, v = S.vol, fin = S.cola;
+    if (fin - c.currentTime < 0.03) return;
+    try { v.gain.setValueAtTime(1, fin - 0.025); v.gain.linearRampToValueAtTime(0, fin); v.gain.setValueAtTime(1, fin + 0.02); } catch (e) { /* nada */ }
+  }
   /** 3.11: visión en vivo. 1 foto por segundo (640 px) a Gemini mientras la conversación está abierta; se apaga al colgar. */
   async function camara() {
     const s = S; if (!s) return;
